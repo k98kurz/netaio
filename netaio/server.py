@@ -13,17 +13,20 @@ from typing import Any, Callable, Coroutine, Hashable
 import asyncio
 
 
+def not_found_handler(_: MessageProtocol) -> MessageProtocol | None:
+    return make_error_response("not found")
 
 
 class TCPServer:
     host: str
     port: int
     handlers: dict[Hashable, Handler]
+    default_handler: Handler
     header_class: type[HeaderProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     extract_key: Callable[[MessageProtocol], Hashable]
-    respond_with_error: Callable[[str], MessageProtocol]
+    make_error: Callable[[str], MessageProtocol]
     subscriptions: dict[Hashable, set[asyncio.StreamWriter]]
     clients: set[asyncio.StreamWriter]
 
@@ -33,7 +36,8 @@ class TCPServer:
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             key_extractor: Callable[[MessageProtocol], Hashable] = key_extractor,
-            make_error_response: Callable[[str], MessageProtocol] = make_error_response
+            make_error_response: Callable[[str], MessageProtocol] = make_error_response,
+            default_handler: Handler = not_found_handler
         ):
         self.host = host
         self.port = port
@@ -44,7 +48,8 @@ class TCPServer:
         self.body_class = body_class
         self.message_class = message_class
         self.extract_key = key_extractor
-        self.respond_with_error = make_error_response
+        self.make_error = make_error_response
+        self.default_handler = default_handler
 
     def add_handler(
             self, key: Hashable,
@@ -87,23 +92,30 @@ class TCPServer:
                 del self.subscriptions[key]
 
     async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-        """Handle a client connection."""
+        """Handle a client connection. When a client connects, it is
+            added to the clients set. The client is then read from until
+            the connection is lost, and the proper handlers are called
+            if they are defined and the message is valid.
+        """
         self.clients.add(writer)
+        header_length = self.header_class.header_length()
 
         try:
             while True:
-                try:
-                    header_bytes = await reader.readexactly(self.header_class.header_length())
-                    header = self.header_class.decode(header_bytes)
+                header_bytes = await reader.readexactly(header_length)
+                header = self.header_class.decode(header_bytes)
 
-                    body_bytes = await reader.readexactly(header.body_length)
-                    body = self.body_class.decode(body_bytes)
+                body_bytes = await reader.readexactly(header.body_length)
+                body = self.body_class.decode(body_bytes)
 
-                    message = self.message_class(
-                        header=header,
-                        body=body
-                    )
+                message = self.message_class(
+                    header=header,
+                    body=body
+                )
 
+                if not message.check():
+                    response = self.make_error("invalid message")
+                else:
                     key = self.extract_key(message)
 
                     if key in self.handlers:
@@ -112,17 +124,16 @@ class TCPServer:
                         if isinstance(response, Coroutine):
                             response = await response
                     else:
-                        response = self.respond_with_error("not found")
+                        response = self.default_handler(message)
 
-                    if response is not None:
-                        writer.write(response.encode())
-                        await writer.drain()
-
-                except asyncio.IncompleteReadError:
-                    break  # Client disconnected
-                except Exception as e:
-                    print("Error handling client:", e)
-                    break
+                if response is not None:
+                    writer.write(response.encode())
+                    await writer.drain()
+        except asyncio.IncompleteReadError:
+            pass  # Client disconnected
+        except Exception as e:
+            print("Error handling client:", e)
+            pass
         finally:
             self.clients.discard(writer)
             for key, subscribers in list(self.subscriptions.items()):

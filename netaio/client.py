@@ -6,7 +6,6 @@ from .common import (
     BodyProtocol,
     MessageProtocol,
     key_extractor,
-    make_error_response,
     Handler
 )
 from typing import Any, Callable, Coroutine, Hashable
@@ -23,7 +22,6 @@ class TCPClient:
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, Handler]
     extract_key: Callable[[MessageProtocol], Hashable]
-    respond_with_error: Callable[[str], MessageProtocol]
 
     def __init__(
             self, host="127.0.0.1", port=8888,
@@ -32,7 +30,6 @@ class TCPClient:
             message_class: type[MessageProtocol] = Message,
             handlers: dict[Hashable, Handler] = {},
             extract_key: Callable[[MessageProtocol], Hashable] = key_extractor,
-            respond_with_error: Callable[[str], MessageProtocol] = make_error_response
         ):
         self.host = host
         self.port = port
@@ -41,7 +38,6 @@ class TCPClient:
         self.message_class = message_class
         self.handlers = handlers
         self.extract_key = extract_key
-        self.respond_with_error = respond_with_error
 
     def add_handler(
             self, key: Hashable,
@@ -98,6 +94,19 @@ class TCPClient:
                 return result
 
         return msg
+
+    async def receive_loop(self):
+        """Receive messages from the server indefinitely. Use with
+            asyncio.create_task() to run concurrently, then use
+            task.cancel() to stop.
+        """
+        while True:
+            try:
+                await self.receive_once()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                break
 
     async def close(self):
         """Close the connection to the server."""

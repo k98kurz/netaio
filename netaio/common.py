@@ -59,6 +59,10 @@ class MessageProtocol(Protocol):
     def body(self) -> BodyProtocol:
         ...
 
+    def check(self) -> bool:
+        """Check if the message is valid."""
+        ...
+
     def encode(self) -> bytes:
         """Encode the message into a bytes object."""
         ...
@@ -175,6 +179,10 @@ class Body:
 class Message:
     header: Header
     body: Body
+
+    def check(self) -> bool:
+        """Check if the message is valid."""
+        return self.header.checksum == crc32(self.body.encode())
 
     @classmethod
     def decode(cls, data: bytes) -> Message:
