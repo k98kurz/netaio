@@ -6,10 +6,12 @@ from .common import (
     BodyProtocol,
     MessageProtocol,
     key_extractor,
-    Handler
+    Handler,
+    default_client_logger
 )
-from typing import Any, Callable, Coroutine, Hashable
+from typing import Callable, Coroutine, Hashable
 import asyncio
+import logging
 
 
 class TCPClient:
@@ -22,6 +24,7 @@ class TCPClient:
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, Handler]
     extract_key: Callable[[MessageProtocol], Hashable]
+    logger: logging.Logger
 
     def __init__(
             self, host="127.0.0.1", port=8888,
@@ -30,6 +33,7 @@ class TCPClient:
             message_class: type[MessageProtocol] = Message,
             handlers: dict[Hashable, Handler] = {},
             extract_key: Callable[[MessageProtocol], Hashable] = key_extractor,
+            logger: logging.Logger = default_client_logger
         ):
         self.host = host
         self.port = port
@@ -38,6 +42,7 @@ class TCPClient:
         self.message_class = message_class
         self.handlers = handlers
         self.extract_key = extract_key
+        self.logger = logger
 
     def add_handler(
             self, key: Hashable,
@@ -48,6 +53,7 @@ class TCPClient:
             MessageProtocol, None, or a Coroutine that resolves to
             MessageProtocol | None.
         """
+        self.logger.info("Adding handler for key=%s", key)
         self.handlers[key] = handler
 
     def on(self, key: Hashable):
@@ -63,20 +69,25 @@ class TCPClient:
 
     async def connect(self):
         """Connect to the server."""
+        self.logger.info("Connecting to %s:%d", self.host, self.port)
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
     async def send(self, message: MessageProtocol):
         """Send a message to the server."""
+        self.logger.info("Sending message to server...")
         self.writer.write(message.encode())
         await self.writer.drain()
+        self.logger.info("Message sent to server")
 
     async def receive_once(self) -> MessageProtocol:
         """Receive a message from the server. If a handler was
             registered for the message key, the handler will be called
             with the message as an argument, and the result will be
             returned if it is not None; otherwise, the received message
-            will be returned.
+            will be returned. If the message checksum fails, the message
+            will be discarded and None will be returned.
         """
+        self.logger.info("Receiving message from server...")
         data = await self.reader.readexactly(self.header_class.header_length())
         header = self.header_class.decode(data)
         body = await self.reader.readexactly(header.body_length)
@@ -84,7 +95,13 @@ class TCPClient:
         msg = self.message_class(header=header, body=body)
         key = self.extract_key(msg)
 
+        if not msg.check():
+            self.logger.error("Message checksum failed")
+            return None
+
+        self.logger.info("Message received from server")
         if key in self.handlers:
+            self.logger.info("Calling handler for key=%s", key)
             handler = self.handlers[key]
             result = handler(msg)
             if isinstance(result, Coroutine):
@@ -104,11 +121,19 @@ class TCPClient:
             try:
                 await self.receive_once()
             except asyncio.CancelledError:
+                self.logger.info("Receive loop cancelled")
                 break
-            except Exception:
+            except Exception as e:
+                self.logger.error("Error in receive_loop", exc_info=True)
                 break
 
     async def close(self):
         """Close the connection to the server."""
+        self.logger.info("Closing connection to server...")
         self.writer.close()
         await self.writer.wait_closed()
+        self.logger.info("Connection to server closed")
+
+    def set_logger(self, logger: logging.Logger):
+        """Replace the current logger."""
+        self.logger = logger

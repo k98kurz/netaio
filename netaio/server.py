@@ -7,10 +7,12 @@ from .common import (
     MessageProtocol,
     key_extractor,
     make_error_response,
-    Handler
+    Handler,
+    default_server_logger
 )
 from typing import Any, Callable, Coroutine, Hashable
 import asyncio
+import logging
 
 
 def not_found_handler(_: MessageProtocol) -> MessageProtocol | None:
@@ -29,6 +31,7 @@ class TCPServer:
     make_error: Callable[[str], MessageProtocol]
     subscriptions: dict[Hashable, set[asyncio.StreamWriter]]
     clients: set[asyncio.StreamWriter]
+    logger: logging.Logger
 
     def __init__(
             self, host="127.0.0.1", port=8888,
@@ -37,7 +40,8 @@ class TCPServer:
             message_class: type[MessageProtocol] = Message,
             key_extractor: Callable[[MessageProtocol], Hashable] = key_extractor,
             make_error_response: Callable[[str], MessageProtocol] = make_error_response,
-            default_handler: Handler = not_found_handler
+            default_handler: Handler = not_found_handler,
+            logger: logging.Logger = default_server_logger
         ):
         self.host = host
         self.port = port
@@ -50,6 +54,7 @@ class TCPServer:
         self.extract_key = key_extractor
         self.make_error = make_error_response
         self.default_handler = default_handler
+        self.logger = logger
 
     def add_handler(
             self, key: Hashable,
@@ -60,6 +65,7 @@ class TCPServer:
             MessageProtocol, None, or a Coroutine that resolves to
             MessageProtocol | None.
         """
+        self.logger.info("Adding handler for key=%s", key)
         self.handlers[key] = handler
 
     def on(self, key: Hashable):
@@ -77,6 +83,7 @@ class TCPServer:
         """Subscribe a client to a specific key. The key must be a
             Hashable object.
         """
+        self.logger.info("Subscribing client to key=%s", key)
         if key not in self.subscriptions:
             self.subscriptions[key] = set()
         self.subscriptions[key].add(writer)
@@ -86,6 +93,7 @@ class TCPServer:
             are left, the key will be removed from the subscriptions
             dictionary.
         """
+        self.logger.info("Unsubscribing client from key=%s", key)
         if key in self.subscriptions:
             self.subscriptions[key].remove(writer)
             if not self.subscriptions[key]:
@@ -97,6 +105,7 @@ class TCPServer:
             the connection is lost, and the proper handlers are called
             if they are defined and the message is valid.
         """
+        self.logger.info("Client connected from %s", writer.get_extra_info("peername"))
         self.clients.add(writer)
         header_length = self.header_class.header_length()
 
@@ -114,27 +123,31 @@ class TCPServer:
                 )
 
                 if not message.check():
+                    self.logger.info("Invalid message received from %s", writer.get_extra_info("peername"))
                     response = self.make_error("invalid message")
                 else:
                     key = self.extract_key(message)
+                    self.logger.info("Message received from %s with key=%s", writer.get_extra_info("peername"), key)
 
                     if key in self.handlers:
+                        self.logger.info("Calling handler for key=%s", key)
                         handler = self.handlers[key]
                         response = handler(message)
                         if isinstance(response, Coroutine):
                             response = await response
                     else:
+                        self.logger.info("No handler found for key=%s, calling default handler", key)
                         response = self.default_handler(message)
 
                 if response is not None:
-                    writer.write(response.encode())
-                    await writer.drain()
+                    await self.send(writer, response.encode())
         except asyncio.IncompleteReadError:
+            self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
             pass  # Client disconnected
         except Exception as e:
-            print("Error handling client:", e)
-            pass
+            self.logger.error("Error handling client:", exc_info=True)
         finally:
+            self.logger.info("Removing closed client %s", writer.get_extra_info("peername"))
             self.clients.discard(writer)
             for key, subscribers in list(self.subscriptions.items()):
                 if writer in subscribers:
@@ -147,7 +160,7 @@ class TCPServer:
     async def start(self):
         server = await asyncio.start_server(self.handle_client, self.host, self.port)
         async with server:
-            print(f"Server started on {self.host}:{self.port}")
+            self.logger.info(f"Server started on {self.host}:{self.port}")
             await server.serve_forever()
 
     async def send(
@@ -158,18 +171,21 @@ class TCPServer:
             the exception and removes the client from the given
             collection.
         """
+        self.logger.info("Sending data to %s", client.get_extra_info("peername"))
         try:
             client.write(data)
             await client.drain()
         except Exception as e:
-            print("Error sending to client:", e)
+            self.logger.error("Error sending to client:", exc_info=True)
             if collection is not None:
+                self.logger.info("Removing client %s from collection", client.get_extra_info("peername"))
                 collection.discard(client)
 
     async def broadcast(self, message: MessageProtocol):
         """Send the message to all connected clients concurrently using
             asyncio.gather.
         """
+        self.logger.info("Broadcasting message to all clients")
         data = message.encode()
         tasks = [self.send(client, data, self.clients) for client in self.clients]
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -179,13 +195,22 @@ class TCPServer:
             concurrently using asyncio.gather.
         """
         if key not in self.subscriptions:
+            self.logger.info("No subscribers found for key=%s, skipping notification", key)
             return
+
+        self.logger.info("Notifying %d clients for key=%s", len(self.subscriptions[key]), key)
 
         subscribers = self.subscriptions.get(key, set())
         if not subscribers:
+            self.logger.info("No subscribers found for key=%s, removing from subscriptions", key)
             del self.subscriptions[key]
             return
 
         data = message.encode()
         tasks = [self.send(client, data, subscribers) for client in subscribers]
         await asyncio.gather(*tasks, return_exceptions=True)
+        self.logger.info("Notified %d clients for key=%s", len(subscribers), key)
+
+    def set_logger(self, logger: logging.Logger):
+        """Replace the current logger."""
+        self.logger = logger

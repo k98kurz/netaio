@@ -4,12 +4,23 @@ from enum import Enum
 from typing import Hashable, Protocol, runtime_checkable, Callable, Coroutine, Any
 from zlib import crc32
 import struct
+import logging
 
 
 @runtime_checkable
 class HeaderProtocol(Protocol):
     @property
     def body_length(self) -> int:
+        """At a minimum, a Header must have body_length and message_type
+            properties.
+        """
+        ...
+
+    @property
+    def message_type(self) -> MessageType:
+        """At a minimum, a Header must have body_length and message_type
+            properties.
+        """
         ...
 
     @staticmethod
@@ -34,6 +45,11 @@ class HeaderProtocol(Protocol):
 
 @runtime_checkable
 class BodyProtocol(Protocol):
+    @property
+    def content(self) -> bytes:
+        """At a minimum, a Body must have a content property."""
+        ...
+
     @classmethod
     def decode(cls, data: bytes) -> BodyProtocol:
         """Decode the body from the data."""
@@ -53,10 +69,12 @@ class BodyProtocol(Protocol):
 class MessageProtocol(Protocol):
     @property
     def header(self) -> HeaderProtocol:
+        """A Message must have header and body properties."""
         ...
 
     @property
     def body(self) -> BodyProtocol:
+        """A Message must have header and body properties."""
         ...
 
     def check(self) -> bool:
@@ -89,7 +107,7 @@ class MessageType(Enum):
 
 @dataclass
 class Header:
-    message_type: int
+    message_type: MessageType
     body_length: int
     checksum: int
 
@@ -122,7 +140,7 @@ class Header:
             )
 
         return cls(
-            message_type=message_type,
+            message_type=MessageType(message_type),
             body_length=body_length,
             checksum=checksum
         )
@@ -130,7 +148,7 @@ class Header:
     def encode(self) -> bytes:
         return struct.pack(
             self.struct_fstring(),
-            self.message_type,
+            self.message_type.value,
             self.body_length,
             self.checksum
         )
@@ -210,7 +228,7 @@ class Message:
         ) -> Message:
         return cls(
             header=Header(
-                message_type=message_type.value,
+                message_type=message_type,
                 body_length=body.encode().__len__(),
                 checksum=crc32(body.encode())
             ),
@@ -221,7 +239,7 @@ class Message:
 Handler = Callable[[MessageProtocol], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 
 
-def key_extractor(message: Message) -> Hashable:
+def key_extractor(message: MessageProtocol) -> Hashable:
     """Extract a handler key for a given message."""
     return (message.header.message_type, message.body.uri)
 
@@ -247,3 +265,22 @@ def make_error_response(msg: str) -> Message:
     )
 
     return Message(header, body)
+
+# Setup default loggers for netaio
+default_server_logger = logging.getLogger("netaio.server")
+default_server_logger.setLevel(logging.INFO)
+if not default_server_logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    default_server_logger.addHandler(handler)
+    del handler
+
+default_client_logger = logging.getLogger("netaio.client")
+default_client_logger.setLevel(logging.INFO)
+if not default_client_logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    default_client_logger.addHandler(handler)
+    del handler
