@@ -34,7 +34,7 @@ class TCPServer:
     logger: logging.Logger
 
     def __init__(
-            self, host="127.0.0.1", port=8888,
+            self, host: str = "127.0.0.1", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
