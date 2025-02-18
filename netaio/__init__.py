@@ -15,9 +15,7 @@ from .common import (
     default_client_logger,
 )
 
-# __all__ = ["TCPClient", "TCPServer", "Header", "Body", "Message", "HeaderProtocol", "BodyProtocol", "MessageProtocol", "key_extractor", "make_error_response"]
-
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 
 def version():
     """Return the version of the netaio package."""
