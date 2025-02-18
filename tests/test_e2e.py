@@ -28,12 +28,12 @@ class TestE2E(unittest.TestCase):
                 netaio.MessageType.OK
             )
 
-            @server.on(netaio.key_extractor(client_msg))
+            @server.on((netaio.MessageType.PUBLISH_URI, b'echo'))
             def server_echo(message: netaio.Message):
                 server_log.append(message)
                 return server_msg
 
-            @client.on(netaio.key_extractor(server_msg))
+            @client.on(netaio.MessageType.OK)
             def client_echo(message: netaio.Message):
                 client_log.append(message)
                 return expected_response

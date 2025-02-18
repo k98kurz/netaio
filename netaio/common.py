@@ -47,7 +47,12 @@ class HeaderProtocol(Protocol):
 class BodyProtocol(Protocol):
     @property
     def content(self) -> bytes:
-        """At a minimum, a Body must have a content property."""
+        """At a minimum, a Body must have content and uri properties."""
+        ...
+
+    @property
+    def uri(self) -> bytes:
+        """At a minimum, a Body must have content and uri properties."""
         ...
 
     @classmethod
@@ -94,10 +99,13 @@ class MessageProtocol(Protocol):
 class MessageType(Enum):
     REQUEST_URI = 0
     RESPOND_URI = 1
-    SUBSCRIBE_URI = 2
-    UNSUBSCRIBE_URI = 3
-    PUBLISH_URI = 4
-    NOTIFY_URI = 5
+    CREATE_URI = 2
+    UPDATE_URI = 3
+    DELETE_URI = 4
+    SUBSCRIBE_URI = 5
+    UNSUBSCRIBE_URI = 6
+    PUBLISH_URI = 7
+    NOTIFY_URI = 8
     OK = 10
     ERROR = 20
     AUTH_ERROR = 23
@@ -239,18 +247,24 @@ class Message:
 Handler = Callable[[MessageProtocol], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 
 
-def key_extractor(message: MessageProtocol) -> Hashable:
-    """Extract a handler key for a given message."""
-    return (message.header.message_type, message.body.uri)
+def keys_extractor(message: MessageProtocol) -> list[Hashable]:
+    """Extract handler keys for a given message. Custom implementations
+        should return at least one key, and the more specific keys
+        should be listed first. This is used to determine which handler
+        to call for a given message, and it returns two keys: one that
+        includes both the message type and the body uri, and one that is
+        just the message type.
+    """
+    return [(message.header.message_type, message.body.uri), message.header.message_type]
 
 def make_error_response(msg: str) -> Message:
     """Make an error response message."""
     if "not found" in msg:
-        message_type = MessageType.NOT_FOUND.value
+        message_type = MessageType.NOT_FOUND
     elif "auth" in msg:
-        message_type = MessageType.AUTH_ERROR.value
+        message_type = MessageType.AUTH_ERROR
     else:
-        message_type = MessageType.ERROR.value
+        message_type = MessageType.ERROR
 
     body = Body(
         uri_length=5,

@@ -5,7 +5,7 @@ from .common import (
     HeaderProtocol,
     BodyProtocol,
     MessageProtocol,
-    key_extractor,
+    keys_extractor,
     Handler,
     default_client_logger
 )
@@ -23,7 +23,7 @@ class TCPClient:
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, Handler]
-    extract_key: Callable[[MessageProtocol], Hashable]
+    extract_keys: Callable[[MessageProtocol], list[Hashable]]
     logger: logging.Logger
 
     def __init__(
@@ -32,7 +32,7 @@ class TCPClient:
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             handlers: dict[Hashable, Handler] = {},
-            extract_key: Callable[[MessageProtocol], Hashable] = key_extractor,
+            extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
             logger: logging.Logger = default_client_logger
         ):
         self.host = host
@@ -41,7 +41,7 @@ class TCPClient:
         self.body_class = body_class
         self.message_class = message_class
         self.handlers = handlers
-        self.extract_key = extract_key
+        self.extract_keys = extract_keys
         self.logger = logger
 
     def add_handler(
@@ -93,22 +93,25 @@ class TCPClient:
         body = await self.reader.readexactly(header.body_length)
         body = self.body_class.decode(body)
         msg = self.message_class(header=header, body=body)
-        key = self.extract_key(msg)
+        keys = self.extract_keys(msg)
+        result = None
 
         if not msg.check():
             self.logger.error("Message checksum failed")
             return None
 
         self.logger.info("Message received from server")
-        if key in self.handlers:
-            self.logger.info("Calling handler for key=%s", key)
-            handler = self.handlers[key]
-            result = handler(msg)
-            if isinstance(result, Coroutine):
-                result = await result
+        for key in keys:
+            if key in self.handlers:
+                self.logger.info("Calling handler for key=%s", key)
+                handler = self.handlers[key]
+                result = handler(msg)
+                if isinstance(result, Coroutine):
+                    result = await result
+                break
 
-            if result is not None:
-                return result
+        if result is not None:
+            return result
 
         return msg
 

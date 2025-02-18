@@ -8,7 +8,7 @@ from .common import (
     HeaderProtocol,
     BodyProtocol,
     MessageProtocol,
-    key_extractor,
+    keys_extractor,
     make_error_response,
     Handler,
     default_server_logger,

@@ -5,7 +5,7 @@ from .common import (
     HeaderProtocol,
     BodyProtocol,
     MessageProtocol,
-    key_extractor,
+    keys_extractor,
     make_error_response,
     Handler,
     default_server_logger
@@ -27,7 +27,7 @@ class TCPServer:
     header_class: type[HeaderProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
-    extract_key: Callable[[MessageProtocol], Hashable]
+    extract_keys: Callable[[MessageProtocol], list[Hashable]]
     make_error: Callable[[str], MessageProtocol]
     subscriptions: dict[Hashable, set[asyncio.StreamWriter]]
     clients: set[asyncio.StreamWriter]
@@ -38,7 +38,7 @@ class TCPServer:
             header_class: type[HeaderProtocol] = Header,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
-            key_extractor: Callable[[MessageProtocol], Hashable] = key_extractor,
+            keys_extractor: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
             make_error_response: Callable[[str], MessageProtocol] = make_error_response,
             default_handler: Handler = not_found_handler,
             logger: logging.Logger = default_server_logger
@@ -51,7 +51,7 @@ class TCPServer:
         self.header_class = header_class
         self.body_class = body_class
         self.message_class = message_class
-        self.extract_key = key_extractor
+        self.extract_keys = keys_extractor
         self.make_error = make_error_response
         self.default_handler = default_handler
         self.logger = logger
@@ -126,22 +126,27 @@ class TCPServer:
                     self.logger.info("Invalid message received from %s", writer.get_extra_info("peername"))
                     response = self.make_error("invalid message")
                 else:
-                    key = self.extract_key(message)
-                    self.logger.info("Message received from %s with key=%s", writer.get_extra_info("peername"), key)
+                    keys = self.extract_keys(message)
+                    self.logger.info("Message received from %s with keys=%s", writer.get_extra_info("peername"), keys)
 
-                    if key in self.handlers:
-                        self.logger.info("Calling handler for key=%s", key)
-                        handler = self.handlers[key]
-                        response = handler(message)
-                        if isinstance(response, Coroutine):
-                            response = await response
+                    for key in keys:
+                        if key in self.handlers:
+                            self.logger.info("Calling handler for key=%s", key)
+                            handler = self.handlers[key]
+                            response = handler(message)
+                            if isinstance(response, Coroutine):
+                                response = await response
+                            break
                     else:
-                        self.logger.info("No handler found for key=%s, calling default handler", key)
+                        self.logger.info("No handler found for keys=%s, calling default handler", keys)
                         response = self.default_handler(message)
 
                 if response is not None:
                     await self.send(writer, response.encode())
         except asyncio.IncompleteReadError:
+            self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
+            pass  # Client disconnected
+        except ConnectionResetError:
             self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
             pass  # Client disconnected
         except Exception as e:
