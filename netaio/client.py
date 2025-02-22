@@ -18,6 +18,7 @@ import logging
 
 class TCPClient:
     hosts: dict[tuple[str, int], tuple[asyncio.StreamReader, asyncio.StreamWriter]]
+    default_host: tuple[str, int]
     port: int
     header_class: type[HeaderProtocol]
     body_class: type[BodyProtocol]
@@ -28,7 +29,7 @@ class TCPClient:
     auth_plugin: AuthPluginProtocol
 
     def __init__(
-            self, port: int = 8888,
+            self, host: str = "127.0.0.1", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
@@ -38,6 +39,7 @@ class TCPClient:
             auth_plugin: AuthPluginProtocol = None
         ):
         self.hosts = {}
+        self.default_host = (host, port)
         self.port = port
         self.header_class = header_class
         self.body_class = body_class
@@ -71,18 +73,23 @@ class TCPClient:
             return func
         return decorator
 
-    async def connect(self, host: str = "127.0.0.1", port: int = None):
+    async def connect(self, host: str = None, port: int = None):
         """Connect to a server."""
-        port = port or self.port
+        host = host or self.default_host[0]
+        port = port or self.default_host[1]
         self.logger.info("Connecting to %s:%d", host, port)
         reader, writer = await asyncio.open_connection(host, port)
         self.hosts[(host, port)] = (reader, writer)
 
-    async def send(self, server: tuple[str, int], message: MessageProtocol, set_auth: bool = True):
+    async def send(
+            self, message: MessageProtocol, server: tuple[str, int] = None,
+            set_auth: bool = True
+        ):
         """Send a message to the server. If set_auth is True and an auth
             plugin is set, it will be called to set the auth fields on the
             message.
         """
+        server = server or self.default_host
         if set_auth and self.auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.make on message.body")
             self.auth_plugin.make(message.auth_data, message.body)
@@ -92,7 +99,9 @@ class TCPClient:
         await writer.drain()
         self.logger.debug("Message sent to server")
 
-    async def receive_once(self, server: tuple[str, int]) -> MessageProtocol|None:
+    async def receive_once(
+            self, server: tuple[str, int] = None
+        ) -> MessageProtocol|None:
         """Receive a message from the server. If a handler was
             registered for the message key, the handler will be called
             with the message as an argument, and the result will be
@@ -104,6 +113,7 @@ class TCPClient:
             discarded and None will be returned.
         """
         self.logger.debug("Receiving message from server...")
+        server = server or self.default_host
         reader, writer = self.hosts[server]
         data = await reader.readexactly(self.header_class.header_length())
         header = self.header_class.decode(data)
@@ -150,11 +160,12 @@ class TCPClient:
 
         return msg
 
-    async def receive_loop(self, server: tuple[str, int]):
+    async def receive_loop(self, server: tuple[str, int] = None):
         """Receive messages from the server indefinitely. Use with
             asyncio.create_task() to run concurrently, then use
             task.cancel() to stop.
         """
+        server = server or self.default_host
         while True:
             try:
                 await self.receive_once(server)
@@ -165,8 +176,9 @@ class TCPClient:
                 self.logger.error("Error in receive_loop", exc_info=True)
                 break
 
-    async def close(self, server: tuple[str, int]):
+    async def close(self, server: tuple[str, int] = None):
         """Close the connection to the server."""
+        server = server or self.default_host
         self.logger.info("Closing connection to server...")
         _, writer = self.hosts[server]
         writer.close()
