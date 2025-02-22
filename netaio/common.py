@@ -331,13 +331,7 @@ def make_error_response(msg: str) -> Message:
         content=msg.encode()
     )
 
-    header=Header(
-        message_type=message_type,
-        body_length=len(body.encode()),
-        checksum=crc32(body.encode())
-    )
-
-    return Message(header, body)
+    return Message.prepare(body, message_type)
 
 # Setup default loggers for netaio
 default_server_logger = logging.getLogger("netaio.server")
