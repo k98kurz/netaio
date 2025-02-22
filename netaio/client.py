@@ -83,7 +83,7 @@ class TCPClient:
         if set_auth and self.auth_plugin is not None:
             self.logger.debug("Setting auth fields for message")
             self.auth_plugin.make(message.auth_data, message.body)
-        self.logger.debug("Sending message to server...")
+        self.logger.debug(f"Sending message of type={message.header.message_type.name} to server...")
         self.writer.write(message.encode())
         await self.writer.drain()
         self.logger.debug("Message sent to server")
@@ -99,6 +99,7 @@ class TCPClient:
         self.logger.debug("Receiving message from server...")
         data = await self.reader.readexactly(self.header_class.header_length())
         header = self.header_class.decode(data)
+        self.logger.debug(f"Received message of type={header.message_type.name} from server...")
 
         auth_bytes = await self.reader.readexactly(header.auth_length)
         auth = AuthFields.decode(auth_bytes)
@@ -129,7 +130,7 @@ class TCPClient:
                     if not auth_plugin.check(auth, body):
                         self.logger.error("Message auth failed")
                         return None
-                result = handler(msg)
+                result = handler(msg, self.writer)
                 if isinstance(result, Coroutine):
                     result = await result
                 break

@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Hashable, Protocol, runtime_checkable, Callable, Coroutine, Any
 from zlib import crc32
+import asyncio
 import logging
 import packify
 import struct
@@ -140,6 +141,8 @@ class MessageType(Enum):
     PUBLISH_URI = 7
     NOTIFY_URI = 8
     OK = 10
+    CONFIRM_SUBSCRIBE = 11
+    CONFIRM_UNSUBSCRIBE = 12
     ERROR = 20
     AUTH_ERROR = 23
     NOT_FOUND = 24
@@ -300,7 +303,7 @@ class Message:
         )
 
 
-Handler = Callable[[MessageProtocol], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
+Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 
 
 def keys_extractor(message: MessageProtocol) -> list[Hashable]:

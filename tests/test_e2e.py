@@ -26,24 +26,61 @@ class TestE2E(unittest.TestCase):
                 netaio.Body.prepare(b'hello', uri=b'echo'),
                 netaio.MessageType.PUBLISH_URI
             )
+            client_subscribe_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'subscribe/test'),
+                netaio.MessageType.SUBSCRIBE_URI
+            )
+            client_unsubscribe_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'subscribe/test'),
+                netaio.MessageType.UNSUBSCRIBE_URI
+            )
             server_msg = netaio.Message.prepare(
                 netaio.Body.prepare(b'hello', uri=b'echo'),
                 netaio.MessageType.OK
+            )
+            server_notify_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'subscribe/test'),
+                netaio.MessageType.NOTIFY_URI
             )
             expected_response = netaio.Message.prepare(
                 netaio.Body.prepare(b'DO NOT SEND', uri=b'NONE'),
                 netaio.MessageType.OK
             )
+            expected_subscribe_response = netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'subscribe/test'),
+                netaio.MessageType.CONFIRM_SUBSCRIBE
+            )
+            expected_unsubscribe_response = netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'subscribe/test'),
+                netaio.MessageType.CONFIRM_UNSUBSCRIBE
+            )
 
             @server.on((netaio.MessageType.PUBLISH_URI, b'echo'))
-            def server_echo(message: netaio.Message):
+            def server_echo(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return server_msg
 
+            @server.on(netaio.MessageType.SUBSCRIBE_URI)
+            def server_subscribe(message: netaio.Message, writer: asyncio.StreamWriter):
+                server_log.append(message)
+                server.subscribe(message.body.uri, writer)
+                return expected_subscribe_response
+
+            @server.on(netaio.MessageType.UNSUBSCRIBE_URI)
+            def server_unsubscribe(message: netaio.Message, writer: asyncio.StreamWriter):
+                server_log.append(message)
+                server.unsubscribe(message.body.uri, writer)
+                return expected_unsubscribe_response
+
             @client.on(netaio.MessageType.OK)
-            def client_echo(message: netaio.Message):
+            def client_echo(message: netaio.Message, writer: asyncio.StreamWriter):
                 client_log.append(message)
                 return expected_response
+
+            @client.on(netaio.MessageType.NOTIFY_URI)
+            def client_notify(message: netaio.Message, writer: asyncio.StreamWriter):
+                client_log.append(message)
+                return message
 
             self.assertEqual(len(server_log), 0)
             self.assertEqual(len(client_log), 0)
@@ -58,10 +95,19 @@ class TestE2E(unittest.TestCase):
             await client.send(client_msg)
             response = await client.receive_once()
             self.assertEqual(response, expected_response)
+            await client.send(client_subscribe_msg)
+            response = await client.receive_once()
+            self.assertEqual(response, expected_subscribe_response)
+            await server.notify(b'subscribe/test', server_notify_msg)
+            response = await client.receive_once()
+            self.assertEqual(response, server_notify_msg)
+            await client.send(client_unsubscribe_msg)
+            response = await client.receive_once()
+            self.assertEqual(response, expected_unsubscribe_response)
             await client.close()
 
-            self.assertEqual(len(server_log), 1)
-            self.assertEqual(len(client_log), 1)
+            self.assertEqual(len(server_log), 3)
+            self.assertEqual(len(client_log), 2)
 
             server_task.cancel()
 

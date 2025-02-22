@@ -17,7 +17,7 @@ import asyncio
 import logging
 
 
-def not_found_handler(_: MessageProtocol) -> MessageProtocol | None:
+def not_found_handler(*_) -> MessageProtocol | None:
     return make_error_response("not found")
 
 
@@ -161,13 +161,13 @@ class TCPServer:
                                     await self.send(writer, response.encode())
                                     continue
 
-                            response = handler(message)
+                            response = handler(message, writer)
                             if isinstance(response, Coroutine):
                                 response = await response
                             break
                     else:
                         self.logger.debug("No handler found for keys=%s, calling default handler", keys)
-                        response = self.default_handler(message)
+                        response = self.default_handler(message, writer)
 
                 if response is not None:
                     set_auth_fields = False
@@ -179,7 +179,7 @@ class TCPServer:
                         set_auth_fields = True
                     if set_auth_fields:
                         self.logger.debug("Set auth_fields for response")
-                    await self.send(writer, response.encode())
+                    await self.send(writer, response, use_auth=False)
         except asyncio.IncompleteReadError:
             self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
             pass  # Client disconnected
@@ -206,16 +206,19 @@ class TCPServer:
             await server.serve_forever()
 
     async def send(
-            self, client: asyncio.StreamWriter, data: bytes,
-            collection: set = None
+            self, client: asyncio.StreamWriter, message: MessageProtocol,
+            collection: set = None, use_auth: bool = True
         ):
         """Helper coroutine to send data to a client. On error, it logs
             the exception and removes the client from the given
             collection.
         """
         self.logger.debug("Sending data to %s", client.get_extra_info("peername"))
+        if use_auth and self.auth_plugin is not None:
+            self.logger.debug("Setting auth fields for message")
+            self.auth_plugin.make(message.auth_data, message.body)
         try:
-            client.write(data)
+            client.write(message.encode())
             await client.drain()
         except Exception as e:
             self.logger.error("Error sending to client:", exc_info=True)
@@ -231,8 +234,7 @@ class TCPServer:
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Setting auth fields for broadcast message")
             self.auth_plugin.make(message.auth_data, message.body)
-        data = message.encode()
-        tasks = [self.send(client, data, self.clients) for client in self.clients]
+        tasks = [self.send(client, message, self.clients, False) for client in self.clients]
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def notify(self, key: Hashable, message: MessageProtocol, use_auth: bool = True):
@@ -255,8 +257,7 @@ class TCPServer:
             del self.subscriptions[key]
             return
 
-        data = message.encode()
-        tasks = [self.send(client, data, subscribers) for client in subscribers]
+        tasks = [self.send(client, message, subscribers, False) for client in subscribers]
         await asyncio.gather(*tasks, return_exceptions=True)
         self.logger.debug("Notified %d clients for key=%s", len(subscribers), key)
 
