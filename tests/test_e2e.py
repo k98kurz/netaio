@@ -92,22 +92,23 @@ class TestE2E(unittest.TestCase):
             await asyncio.sleep(0.1)
 
             # connect client
-            await client.connect()
+            server_addr = ("127.0.0.1", self.PORT)
+            await client.connect(server_addr[0])
 
-            await client.send(client_msg)
-            response = await client.receive_once()
+            await client.send(server_addr, client_msg)
+            response = await client.receive_once(server_addr)
             self.assertEqual(response, expected_response)
 
-            await client.send(client_subscribe_msg)
-            response = await client.receive_once()
+            await client.send(server_addr, client_subscribe_msg)
+            response = await client.receive_once(server_addr)
             self.assertEqual(response, expected_subscribe_response)
 
             await server.notify(b'subscribe/test', server_notify_msg)
-            response = await client.receive_once()
+            response = await client.receive_once(server_addr)
             self.assertEqual(response, server_notify_msg)
 
-            await client.send(client_unsubscribe_msg)
-            response = await client.receive_once()
+            await client.send(server_addr, client_unsubscribe_msg)
+            response = await client.receive_once(server_addr)
             self.assertEqual(response, expected_unsubscribe_response)
 
             self.assertEqual(len(server_log), 3)
@@ -115,12 +116,12 @@ class TestE2E(unittest.TestCase):
 
             # test auth failure
             client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
-            await client.send(client_msg)
-            response = await client.receive_once()
+            await client.send(server_addr, client_msg)
+            response = await client.receive_once(server_addr)
             self.assertIsNone(response)
 
             # close client and stop server
-            await client.close()
+            await client.close(server_addr)
             server_task.cancel()
 
             try:
