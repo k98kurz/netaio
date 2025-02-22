@@ -1,5 +1,6 @@
 from .common import (
     Header,
+    AuthFields,
     Body,
     Message,
     HeaderProtocol,
@@ -114,11 +115,15 @@ class TCPServer:
                 header_bytes = await reader.readexactly(header_length)
                 header = self.header_class.decode(header_bytes)
 
+                auth_bytes = await reader.readexactly(header.auth_length)
+                auth = AuthFields.decode(auth_bytes)
+
                 body_bytes = await reader.readexactly(header.body_length)
                 body = self.body_class.decode(body_bytes)
 
                 message = self.message_class(
                     header=header,
+                    auth_data=auth,
                     body=body
                 )
 

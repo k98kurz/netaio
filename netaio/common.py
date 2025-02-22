@@ -3,16 +3,24 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Hashable, Protocol, runtime_checkable, Callable, Coroutine, Any
 from zlib import crc32
-import struct
 import logging
+import packify
+import struct
 
 
 @runtime_checkable
 class HeaderProtocol(Protocol):
     @property
     def body_length(self) -> int:
-        """At a minimum, a Header must have body_length and message_type
-            properties.
+        """At a minimum, a Header must have body_length, auth_length, and
+            message_type properties.
+        """
+        ...
+
+    @property
+    def auth_length(self) -> int:
+        """At a minimum, a Header must have body_length, auth_length, and
+            message_type properties.
         """
         ...
 
@@ -116,6 +124,7 @@ class MessageType(Enum):
 @dataclass
 class Header:
     message_type: MessageType
+    auth_length: int
     body_length: int
     checksum: int
 
@@ -125,7 +134,7 @@ class Header:
 
     @staticmethod
     def struct_fstring() -> str:
-        return '!BII'
+        return '!BHHI'
 
     @classmethod
     def decode(cls, data: bytes) -> Header:
@@ -137,18 +146,19 @@ class Header:
             excess = True
 
         if excess:
-            message_type, body_length, checksum, _ = struct.unpack(
+            message_type, auth_length, body_length, checksum, _ = struct.unpack(
                 fstr,
                 data
             )
         else:
-            message_type, body_length, checksum = struct.unpack(
+            message_type, auth_length, body_length, checksum = struct.unpack(
                 fstr,
                 data
             )
 
         return cls(
             message_type=MessageType(message_type),
+            auth_length=auth_length,
             body_length=body_length,
             checksum=checksum
         )
@@ -157,9 +167,22 @@ class Header:
         return struct.pack(
             self.struct_fstring(),
             self.message_type.value,
+            self.auth_length,
             self.body_length,
             self.checksum
         )
+
+
+@dataclass
+class AuthFields:
+    fields: dict[str, bytes]
+
+    @classmethod
+    def decode(cls, data: bytes) -> AuthFields:
+        return cls(fields=packify.unpack(data))
+
+    def encode(self) -> bytes:
+        return packify.pack(self.fields)
 
 
 @dataclass
@@ -204,6 +227,7 @@ class Body:
 @dataclass
 class Message:
     header: Header
+    auth_data: AuthFields
     body: Body
 
     def check(self) -> bool:
@@ -227,19 +251,26 @@ class Message:
         )
 
     def encode(self) -> bytes:
-        return self.header.encode() + self.body.encode()
+        auth_data = self.auth_data.encode()
+        body = self.body.encode()
+        self.header.auth_length = len(auth_data)
+        self.header.body_length = len(body)
+        return self.header.encode() + auth_data + body
 
     @classmethod
     def prepare(
             cls, body: BodyProtocol,
-            message_type: MessageType = MessageType.REQUEST_URI
+            message_type: MessageType = MessageType.REQUEST_URI,
+            auth_data: AuthFields = AuthFields({})
         ) -> Message:
         return cls(
             header=Header(
                 message_type=message_type,
-                body_length=body.encode().__len__(),
+                auth_length=len(auth_data.encode()),
+                body_length=len(body.encode()),
                 checksum=crc32(body.encode())
             ),
+            auth_data=auth_data,
             body=body
         )
 

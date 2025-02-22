@@ -1,5 +1,6 @@
 from .common import (
     Header,
+    AuthFields,
     Body,
     Message,
     HeaderProtocol,
@@ -90,9 +91,14 @@ class TCPClient:
         self.logger.info("Receiving message from server...")
         data = await self.reader.readexactly(self.header_class.header_length())
         header = self.header_class.decode(data)
-        body = await self.reader.readexactly(header.body_length)
-        body = self.body_class.decode(body)
-        msg = self.message_class(header=header, body=body)
+
+        auth_bytes = await self.reader.readexactly(header.auth_length)
+        auth = AuthFields.decode(auth_bytes)
+
+        body_bytes = await self.reader.readexactly(header.body_length)
+        body = self.body_class.decode(body_bytes)
+
+        msg = self.message_class(header=header, auth_data=auth, body=body)
         keys = self.extract_keys(msg)
         result = None
 
