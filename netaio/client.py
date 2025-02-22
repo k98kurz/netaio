@@ -1,3 +1,4 @@
+from .auth import AuthPluginProtocol
 from .common import (
     Header,
     AuthFields,
@@ -23,9 +24,10 @@ class TCPClient:
     header_class: type[HeaderProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
-    handlers: dict[Hashable, Handler]
+    handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None]]
     extract_keys: Callable[[MessageProtocol], list[Hashable]]
     logger: logging.Logger
+    auth_plugin: AuthPluginProtocol
 
     def __init__(
             self, host: str = "127.0.0.1", port: int = 8888,
@@ -34,7 +36,8 @@ class TCPClient:
             message_class: type[MessageProtocol] = Message,
             handlers: dict[Hashable, Handler] = {},
             extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
-            logger: logging.Logger = default_client_logger
+            logger: logging.Logger = default_client_logger,
+            auth_plugin: AuthPluginProtocol = None
         ):
         self.host = host
         self.port = port
@@ -44,27 +47,29 @@ class TCPClient:
         self.handlers = handlers
         self.extract_keys = extract_keys
         self.logger = logger
+        self.auth_plugin = auth_plugin
 
     def add_handler(
             self, key: Hashable,
-            handler: Handler
+            handler: Handler,
+            auth_plugin: AuthPluginProtocol = None
         ):
         """Register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return
             MessageProtocol, None, or a Coroutine that resolves to
             MessageProtocol | None.
         """
-        self.logger.info("Adding handler for key=%s", key)
-        self.handlers[key] = handler
+        self.logger.debug("Adding handler for key=%s", key)
+        self.handlers[key] = (handler, auth_plugin)
 
-    def on(self, key: Hashable):
+    def on(self, key: Hashable, auth_plugin: AuthPluginProtocol = None):
         """Decorator to register a handler for a specific key. The
             handler must accept a MessageProtocol object as an argument
             and return a MessageProtocol, None, or a Coroutine that
             resolves to a MessageProtocol or None.
         """
         def decorator(func: Handler):
-            self.add_handler(key, func)
+            self.add_handler(key, func, auth_plugin)
             return func
         return decorator
 
@@ -73,12 +78,15 @@ class TCPClient:
         self.logger.info("Connecting to %s:%d", self.host, self.port)
         self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
 
-    async def send(self, message: MessageProtocol):
+    async def send(self, message: MessageProtocol, set_auth: bool = True):
         """Send a message to the server."""
-        self.logger.info("Sending message to server...")
+        if set_auth and self.auth_plugin is not None:
+            self.logger.debug("Setting auth fields for message")
+            self.auth_plugin.make(message.auth_data, message.body)
+        self.logger.debug("Sending message to server...")
         self.writer.write(message.encode())
         await self.writer.drain()
-        self.logger.info("Message sent to server")
+        self.logger.debug("Message sent to server")
 
     async def receive_once(self) -> MessageProtocol:
         """Receive a message from the server. If a handler was
@@ -88,7 +96,7 @@ class TCPClient:
             will be returned. If the message checksum fails, the message
             will be discarded and None will be returned.
         """
-        self.logger.info("Receiving message from server...")
+        self.logger.debug("Receiving message from server...")
         data = await self.reader.readexactly(self.header_class.header_length())
         header = self.header_class.decode(data)
 
@@ -99,18 +107,28 @@ class TCPClient:
         body = self.body_class.decode(body_bytes)
 
         msg = self.message_class(header=header, auth_data=auth, body=body)
-        keys = self.extract_keys(msg)
-        result = None
 
         if not msg.check():
             self.logger.error("Message checksum failed")
             return None
 
-        self.logger.info("Message received from server")
+        if self.auth_plugin is not None:
+            if not self.auth_plugin.check(auth, body):
+                self.logger.error("Message auth failed")
+                return None
+
+        keys = self.extract_keys(msg)
+        result = None
+
+        self.logger.debug("Message received from server")
         for key in keys:
             if key in self.handlers:
-                self.logger.info("Calling handler for key=%s", key)
-                handler = self.handlers[key]
+                self.logger.debug("Calling handler for key=%s", key)
+                handler, auth_plugin = self.handlers[key]
+                if auth_plugin is not None:
+                    if not auth_plugin.check(auth, body):
+                        self.logger.error("Message auth failed")
+                        return None
                 result = handler(msg)
                 if isinstance(result, Coroutine):
                     result = await result
@@ -130,7 +148,7 @@ class TCPClient:
             try:
                 await self.receive_once()
             except asyncio.CancelledError:
-                self.logger.info("Receive loop cancelled")
+                self.logger.debug("Receive loop cancelled")
                 break
             except Exception as e:
                 self.logger.error("Error in receive_loop", exc_info=True)

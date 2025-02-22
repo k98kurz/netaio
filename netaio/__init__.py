@@ -1,11 +1,14 @@
+from .auth import AuthPluginProtocol, HMACAuthPlugin
 from .client import TCPClient
 from .server import TCPServer
 from .common import (
     Header,
+    AuthFields,
     Body,
     Message,
     MessageType,
     HeaderProtocol,
+    AuthFieldsProtocol,
     BodyProtocol,
     MessageProtocol,
     keys_extractor,
