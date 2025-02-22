@@ -52,6 +52,23 @@ class HeaderProtocol(Protocol):
 
 
 @runtime_checkable
+class AuthFieldsProtocol(Protocol):
+    @property
+    def fields(self) -> dict[str, bytes]:
+        """At a minimum, an AuthFields must have fields property."""
+        ...
+
+    @classmethod
+    def decode(cls, data: bytes) -> AuthFieldsProtocol:
+        """Decode the auth fields from the data."""
+        ...
+
+    def encode(self) -> bytes:
+        """Encode the auth fields into a bytes object."""
+        ...
+
+
+@runtime_checkable
 class BodyProtocol(Protocol):
     @property
     def content(self) -> bytes:
@@ -82,12 +99,17 @@ class BodyProtocol(Protocol):
 class MessageProtocol(Protocol):
     @property
     def header(self) -> HeaderProtocol:
-        """A Message must have header and body properties."""
+        """A Message must have a header property."""
+        ...
+
+    @property
+    def auth_data(self) -> AuthFieldsProtocol:
+        """A Message must have an auth_data property."""
         ...
 
     @property
     def body(self) -> BodyProtocol:
-        """A Message must have header and body properties."""
+        """A Message must have a body property."""
         ...
 
     def check(self) -> bool:
@@ -99,7 +121,10 @@ class MessageProtocol(Protocol):
         ...
 
     @classmethod
-    def prepare(cls, body: BodyProtocol) -> MessageProtocol:
+    def prepare(
+            cls, body: BodyProtocol, message_type: MessageType,
+            auth_data: AuthFieldsProtocol = None
+        ) -> MessageProtocol:
         """Prepare a message from a body."""
         ...
 
