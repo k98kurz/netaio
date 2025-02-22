@@ -38,6 +38,19 @@ class TCPClient:
             logger: logging.Logger = default_client_logger,
             auth_plugin: AuthPluginProtocol = None
         ):
+        """Initialize the TCPClient.
+
+        Args:
+            host: The default host IPv4 address.
+            port: The default port to connect to.
+            header_class: The header class to use.
+            body_class: The body class to use.
+            message_class: The message class to use.
+            handlers: A dictionary of handlers for specific message keys.
+            extract_keys: A function that extracts the keys from a message.
+            logger: The logger to use.
+            auth_plugin: The auth plugin to use.
+        """
         self.hosts = {}
         self.default_host = (host, port)
         self.port = port
@@ -57,7 +70,9 @@ class TCPClient:
         """Register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return
             MessageProtocol, None, or a Coroutine that resolves to
-            MessageProtocol | None.
+            MessageProtocol | None. If an auth plugin is provided, it
+            will be used to check the message in addition to any auth
+            plugin that is set on the client.
         """
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin)
@@ -66,7 +81,9 @@ class TCPClient:
         """Decorator to register a handler for a specific key. The
             handler must accept a MessageProtocol object as an argument
             and return a MessageProtocol, None, or a Coroutine that
-            resolves to a MessageProtocol or None.
+            resolves to a MessageProtocol or None. If an auth plugin is
+            provided, it will be used to check the message in addition
+            to any auth plugin that is set on the client.
         """
         def decorator(func: Handler):
             self.add_handler(key, func, auth_plugin)

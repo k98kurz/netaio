@@ -1,13 +1,13 @@
 # netaio
 
 This is designed to be a simple and easy to use asyncio-based TCP client and
-server implementation inspired by fastapi but for non-HTTP use cases.
+server library inspired by fastapi but for non-HTTP use cases.
 
 ## Status
 
 This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 
-- [ ] Add authorization plugin
+- [x] Add authorization plugin
 - [ ] Add encryption plugin
 - [ ] Add optional authorization plugin using tapescript
 - [ ] Add optional encryption plugin using simple symmetric stream cipher
@@ -25,16 +25,26 @@ For more documentation, see the
 ### Server
 
 ```python
-from netaio import TCPServer, Body, Message, MessageType
+from netaio import TCPServer, Body, Message, MessageType, HMACAuthPlugin
 import asyncio
 
 
-server = TCPServer("0.0.0.0", 8888)
+server = TCPServer(port=8888, auth_plugin=HMACAuthPlugin(config={"secret": "test"}))
 
 @server.on((MessageType.REQUEST_URI, b'something'))
-async def something(msg: Message):
+async def something(msg: Message, writer: asyncio.StreamWriter):
     body = Body.prepare(b'This is it.', uri=b'something')
     return Message.prepare(body, MessageType.RESPOND_URI)
+
+@server.on(MessageType.SUBSCRIBE_URI)
+async def subscribe(msg: Message, writer: asyncio.StreamWriter):
+    server.subscribe(msg.body.uri, writer)
+    return Message.prepare(Body.prepare(b'', uri=msg.body.uri), MessageType.CONFIRM_SUBSCRIBE)
+
+@server.on(MessageType.UNSUBSCRIBE_URI)
+async def unsubscribe(msg: Message, writer: asyncio.StreamWriter):
+    server.unsubscribe(msg.body.uri, writer)
+    return Message.prepare(Body.prepare(b'', uri=msg.body.uri), MessageType.CONFIRM_UNSUBSCRIBE)
 
 asyncio.run(server.start())
 ```
@@ -42,15 +52,15 @@ asyncio.run(server.start())
 ### Client
 
 ```python
-from netaio import TCPClient, Body, Message, MessageType
+from netaio import TCPClient, Body, Message, MessageType, HMACAuthPlugin
 import asyncio
 
 
-client = TCPClient("127.0.0.1", 8888)
+client = TCPClient("127.0.0.1", 8888, auth_plugin=HMACAuthPlugin(config={"secret": "test"}))
 received_resources = {}
 
 @client.on(MessageType.RESPOND_URI)
-def echo(msg: Message):
+def echo(msg: Message, writer: asyncio.StreamWriter):
     received_resources[msg.body.uri] = msg.body.content
 
 async def run_client():
@@ -64,6 +74,25 @@ asyncio.run(run_client())
 
 print(received_resources)
 ```
+
+### Authentication/Authorization
+
+The server and client support an optional authentication/authorization plugin.
+Each plugin is instantiated with a dict of configuration parameters, and it must
+implement the `AuthPluginProtocol` (i.e. have `make`, `check`, and `error`
+methods). Once the plugin has been instantiated, it can be passed to the
+`TCPServer` and `TCPClient` constructors or set on the client or server
+instances themselves. An auth plugin can also be set on a per-handler basis by
+passing the plugin as a second argument to the `on` method. Currently, if an
+auth plugin is set both on the instance and per-handler, both will be checked
+before the handler function is called, and both will be applied to the response
+body; the per-handler plugin will be able to overwrite any auth fields set by
+the instance plugin.
+
+Currently, netaio includes an `HMACAuthPlugin` that can be used by the server
+and client to authenticate and authorize requests. This uses a shared secret to
+generate and check HMACs over message bodies.
+
 
 ## License
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "netaio"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="k98kurz", email="k98kurz@gmail.com" },
 ]
@@ -18,6 +18,9 @@ classifiers = [
   "Operating System :: OS Independent",
   "Topic :: Internet",
   "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+  "packify >= 0.2.3",
 ]
 
 [project.urls]

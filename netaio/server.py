@@ -37,7 +37,7 @@ class TCPServer:
     auth_plugin: AuthPluginProtocol
 
     def __init__(
-            self, host: str = "127.0.0.1", port: int = 8888,
+            self, host: str = "0.0.0.0", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
@@ -47,6 +47,21 @@ class TCPServer:
             logger: logging.Logger = default_server_logger,
             auth_plugin: AuthPluginProtocol = None
         ):
+        """Initialize the TCPServer.
+
+        Args:
+            host: The host to listen on.
+            port: The port to listen on.
+            header_class: The header class to use.
+            body_class: The body class to use.
+            message_class: The message class to use.
+            keys_extractor: A function that extracts the keys from a message.
+            make_error_response: A function that makes an error response.
+            default_handler: The default handler to use for messages that
+                do not match any registered handler keys.
+            logger: The logger to use.
+            auth_plugin: The auth plugin to use.
+        """
         self.host = host
         self.port = port
         self.handlers = {}
@@ -69,7 +84,9 @@ class TCPServer:
         """Register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
             MessageProtocol, None, or a Coroutine that resolves to
-            MessageProtocol | None.
+            MessageProtocol | None. If an auth plugin is provided, it
+            will be used to check the message in addition to any auth
+            plugin that is set on the server.
         """
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin)
@@ -78,7 +95,9 @@ class TCPServer:
         """Decorator to register a handler for a specific key. The
             handler must accept a MessageProtocol object as an argument
             and return a MessageProtocol, None, or a Coroutine that
-            resolves to a MessageProtocol or None.
+            resolves to a MessageProtocol or None. If an auth plugin is
+            provided, it will be used to check the message in addition
+            to any auth plugin that is set on the server.
         """
         def decorator(func: Handler):
             self.add_handler(key, func, auth_plugin)
@@ -197,6 +216,7 @@ class TCPServer:
             await writer.wait_closed()
 
     async def start(self):
+        """Start the server."""
         server = await asyncio.start_server(self.handle_client, self.host, self.port)
         async with server:
             self.logger.info(f"Server started on {self.host}:{self.port}")
@@ -206,11 +226,11 @@ class TCPServer:
             self, client: asyncio.StreamWriter, message: MessageProtocol,
             collection: set = None, use_auth: bool = True
         ):
-        """Helper coroutine to send data to a client. On error, it logs
-            the exception and removes the client from the given
+        """Helper coroutine to send a message to a client. On error, it
+            logs the exception and removes the client from the given
             collection.
         """
-        self.logger.debug("Sending data to %s", client.get_extra_info("peername"))
+        self.logger.debug("Sending message to %s", client.get_extra_info("peername"))
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on message.body")
             self.auth_plugin.make(message.auth_data, message.body)

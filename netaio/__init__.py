@@ -18,7 +18,7 @@ from .common import (
     default_client_logger,
 )
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 def version():
     """Return the version of the netaio package."""

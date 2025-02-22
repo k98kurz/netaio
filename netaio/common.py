@@ -11,6 +11,7 @@ import struct
 
 @runtime_checkable
 class HeaderProtocol(Protocol):
+    """Shows what a Header class should have and do."""
     @property
     def body_length(self) -> int:
         """At a minimum, a Header must have body_length, auth_length, and
@@ -54,6 +55,7 @@ class HeaderProtocol(Protocol):
 
 @runtime_checkable
 class AuthFieldsProtocol(Protocol):
+    """Shows what an AuthFields class should have and do."""
     @property
     def fields(self) -> dict[str, bytes]:
         """At a minimum, an AuthFields must have fields property."""
@@ -71,6 +73,7 @@ class AuthFieldsProtocol(Protocol):
 
 @runtime_checkable
 class BodyProtocol(Protocol):
+    """Shows what a Body class should have and do."""
     @property
     def content(self) -> bytes:
         """At a minimum, a Body must have content and uri properties."""
@@ -98,6 +101,7 @@ class BodyProtocol(Protocol):
 
 @runtime_checkable
 class MessageProtocol(Protocol):
+    """Shows what a Message class should have and do."""
     @property
     def header(self) -> HeaderProtocol:
         """A Message must have a header property."""
@@ -131,6 +135,7 @@ class MessageProtocol(Protocol):
 
 
 class MessageType(Enum):
+    """Some default message types."""
     REQUEST_URI = 0
     RESPOND_URI = 1
     CREATE_URI = 2
@@ -151,6 +156,7 @@ class MessageType(Enum):
 
 @dataclass
 class Header:
+    """Default header class."""
     message_type: MessageType
     auth_length: int
     body_length: int
@@ -158,10 +164,12 @@ class Header:
 
     @staticmethod
     def header_length() -> int:
+        """Return the byte length of the header."""
         return 9
 
     @staticmethod
     def struct_fstring() -> str:
+        """Return the struct format string for decoding the header."""
         return '!BHHI'
 
     @classmethod
@@ -192,6 +200,7 @@ class Header:
         )
 
     def encode(self) -> bytes:
+        """Encode the header into bytes."""
         return struct.pack(
             self.struct_fstring(),
             self.message_type.value,
@@ -203,24 +212,29 @@ class Header:
 
 @dataclass
 class AuthFields:
+    """Default auth fields class."""
     fields: dict[str, bytes]
 
     @classmethod
     def decode(cls, data: bytes) -> AuthFields:
+        """Decode the auth fields from bytes."""
         return cls(fields=packify.unpack(data))
 
     def encode(self) -> bytes:
+        """Encode the auth fields into bytes."""
         return packify.pack(self.fields)
 
 
 @dataclass
 class Body:
+    """Default body class."""
     uri_length: int
     uri: bytes
     content: bytes
 
     @classmethod
     def decode(cls, data: bytes) -> Body:
+        """Decode the body from bytes."""
         uri_length, data = struct.unpack(
             f'!I{len(data)-4}s',
             data
@@ -236,6 +250,7 @@ class Body:
         )
 
     def encode(self) -> bytes:
+        """Encode the body into bytes."""
         return struct.pack(
             f'!I{len(self.uri)}s{len(self.content)}s',
             self.uri_length,
@@ -245,6 +260,7 @@ class Body:
 
     @classmethod
     def prepare(cls, content: bytes, uri: bytes = b'1', *args, **kwargs) -> Body:
+        """Prepare a body from content and optional arguments."""
         return cls(
             uri_length=len(uri),
             uri=uri,
@@ -254,6 +270,7 @@ class Body:
 
 @dataclass
 class Message:
+    """Default message class."""
     header: Header
     auth_data: AuthFields
     body: Body
@@ -279,6 +296,7 @@ class Message:
         )
 
     def encode(self) -> bytes:
+        """Encode the message into bytes."""
         auth_data = self.auth_data.encode()
         body = self.body.encode()
         self.header.auth_length = len(auth_data)
@@ -291,6 +309,7 @@ class Message:
             message_type: MessageType = MessageType.REQUEST_URI,
             auth_data: AuthFields = AuthFields({})
         ) -> Message:
+        """Prepare a message from a body and optional arguments."""
         return cls(
             header=Header(
                 message_type=message_type,

@@ -1,7 +1,6 @@
 from .common import (
     BodyProtocol,
     AuthFieldsProtocol,
-    AuthFields,
     MessageProtocol,
     make_error_response
 )
@@ -13,6 +12,7 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class AuthPluginProtocol(Protocol):
+    """Shows what an auth plugin should do."""
     def __init__(self, config: dict):
         """Initialize the auth plugin with a config."""
         ...
@@ -59,7 +59,11 @@ class HMACAuthPlugin:
         })
 
     def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
-        """Check if the auth fields are valid for the given body."""
+        """Check if the auth fields are valid for the given body.
+            Performs an hmac check on the nonce, ts, and body. Returns
+            False if any of the fields are missing or if the hmac check
+            fails.
+        """
         ts = auth_fields.fields.get("ts", 0)
         nonce = auth_fields.fields.get("nonce", None)
         mac = auth_fields.fields.get("hmac", None)
@@ -72,5 +76,5 @@ class HMACAuthPlugin:
         )
 
     def error(self) -> MessageProtocol:
-        """Make an auth error message."""
+        """Make an error message that says "HMAC auth failed"."""
         return make_error_response("HMAC auth failed")
