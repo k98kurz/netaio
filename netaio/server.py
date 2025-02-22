@@ -89,7 +89,7 @@ class TCPServer:
         """Subscribe a client to a specific key. The key must be a
             Hashable object.
         """
-        self.logger.info("Subscribing client to key=%s", key)
+        self.logger.debug("Subscribing client to key=%s", key)
         if key not in self.subscriptions:
             self.subscriptions[key] = set()
         self.subscriptions[key].add(writer)
@@ -99,7 +99,7 @@ class TCPServer:
             are left, the key will be removed from the subscriptions
             dictionary.
         """
-        self.logger.info("Unsubscribing client from key=%s", key)
+        self.logger.debug("Unsubscribing client from key=%s", key)
         if key in self.subscriptions:
             self.subscriptions[key].remove(writer)
             if not self.subscriptions[key]:
@@ -134,33 +134,33 @@ class TCPServer:
                 )
 
                 if not message.check():
-                    self.logger.info("Invalid message received from %s", writer.get_extra_info("peername"))
+                    self.logger.debug("Invalid message received from %s", writer.get_extra_info("peername"))
                     response = self.make_error("invalid message")
                 else:
                     if self.auth_plugin is not None:
                         if not self.auth_plugin.check(auth, body):
-                            self.logger.info("Invalid auth fields received from %s", writer.get_extra_info("peername"))
+                            self.logger.debug("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                             response = self.auth_plugin.error()
-                            await self.send(writer, response.encode())
+                            await self.send(writer, response)
                             continue
                         else:
-                            self.logger.debug("Valid auth fields received from %s", writer.get_extra_info("peername"))
+                            self.logger.debug("Valid auth_fields received from %s", writer.get_extra_info("peername"))
 
                     keys = self.extract_keys(message)
-                    self.logger.info("Message received from %s with keys=%s", writer.get_extra_info("peername"), keys)
+                    self.logger.debug("Message received from %s with keys=%s", writer.get_extra_info("peername"), keys)
 
                     for key in keys:
                         if key in self.handlers:
-                            self.logger.info("Calling handler for key=%s", key)
                             handler, auth_plugin = self.handlers[key]
 
                             if auth_plugin is not None:
                                 if not auth_plugin.check(auth, body):
-                                    self.logger.info("Invalid auth fields received from %s", writer.get_extra_info("peername"))
+                                    self.logger.debug("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                                     response = auth_plugin.error()
-                                    await self.send(writer, response.encode())
+                                    await self.send(writer, response)
                                     continue
 
+                            self.logger.debug("Calling handler for key=%s", key)
                             response = handler(message, writer)
                             if isinstance(response, Coroutine):
                                 response = await response
@@ -170,15 +170,12 @@ class TCPServer:
                         response = self.default_handler(message, writer)
 
                 if response is not None:
-                    set_auth_fields = False
                     if self.auth_plugin is not None:
+                        self.logger.debug("Calling self.auth_plugin.make on response.body")
                         self.auth_plugin.make(response.auth_data, response.body)
-                        set_auth_fields = True
                     if auth_plugin is not None:
+                        self.logger.debug("Calling auth_plugin.make on response.body (handler)")
                         auth_plugin.make(response.auth_data, response.body)
-                        set_auth_fields = True
-                    if set_auth_fields:
-                        self.logger.debug("Set auth_fields for response")
                     await self.send(writer, response, use_auth=False)
         except asyncio.IncompleteReadError:
             self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
@@ -215,7 +212,7 @@ class TCPServer:
         """
         self.logger.debug("Sending data to %s", client.get_extra_info("peername"))
         if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Setting auth fields for message")
+            self.logger.debug("Calling self.auth_plugin.make on message.body")
             self.auth_plugin.make(message.auth_data, message.body)
         try:
             client.write(message.encode())
@@ -232,7 +229,7 @@ class TCPServer:
         """
         self.logger.debug("Broadcasting message to all clients")
         if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Setting auth fields for broadcast message")
+            self.logger.debug("Calling self.auth_plugin.make on message.body (broadcast)")
             self.auth_plugin.make(message.auth_data, message.body)
         tasks = [self.send(client, message, self.clients, False) for client in self.clients]
         await asyncio.gather(*tasks, return_exceptions=True)
@@ -248,7 +245,7 @@ class TCPServer:
         self.logger.debug("Notifying %d clients for key=%s", len(self.subscriptions[key]), key)
 
         if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Setting auth fields for notify message")
+            self.logger.debug("Calling self.auth_plugin.make on message.body (notify)")
             self.auth_plugin.make(message.auth_data, message.body)
 
         subscribers = self.subscriptions.get(key, set())

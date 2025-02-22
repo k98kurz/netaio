@@ -81,9 +81,9 @@ class TCPClient:
     async def send(self, message: MessageProtocol, set_auth: bool = True):
         """Send a message to the server."""
         if set_auth and self.auth_plugin is not None:
-            self.logger.debug("Setting auth fields for message")
+            self.logger.debug("Calling auth_plugin.make on message.body")
             self.auth_plugin.make(message.auth_data, message.body)
-        self.logger.debug(f"Sending message of type={message.header.message_type.name} to server...")
+        self.logger.debug(f"Sending message of type={message.header.message_type} to server...")
         self.writer.write(message.encode())
         await self.writer.drain()
         self.logger.debug("Message sent to server")
@@ -99,7 +99,7 @@ class TCPClient:
         self.logger.debug("Receiving message from server...")
         data = await self.reader.readexactly(self.header_class.header_length())
         header = self.header_class.decode(data)
-        self.logger.debug(f"Received message of type={header.message_type.name} from server...")
+        self.logger.debug(f"Received message of type={header.message_type} from server...")
 
         auth_bytes = await self.reader.readexactly(header.auth_length)
         auth = AuthFields.decode(auth_bytes)
@@ -124,12 +124,14 @@ class TCPClient:
         self.logger.debug("Message received from server")
         for key in keys:
             if key in self.handlers:
-                self.logger.debug("Calling handler for key=%s", key)
                 handler, auth_plugin = self.handlers[key]
+
                 if auth_plugin is not None:
                     if not auth_plugin.check(auth, body):
                         self.logger.error("Message auth failed")
                         return None
+
+                self.logger.debug("Calling handler for key=%s", key)
                 result = handler(msg, self.writer)
                 if isinstance(result, Coroutine):
                     result = await result
