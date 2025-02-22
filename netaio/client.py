@@ -17,10 +17,8 @@ import logging
 
 
 class TCPClient:
-    host: str
+    hosts: dict[tuple[str, int], tuple[asyncio.StreamReader, asyncio.StreamWriter]]
     port: int
-    reader: asyncio.StreamReader
-    writer: asyncio.StreamWriter
     header_class: type[HeaderProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
@@ -30,7 +28,7 @@ class TCPClient:
     auth_plugin: AuthPluginProtocol
 
     def __init__(
-            self, host: str = "127.0.0.1", port: int = 8888,
+            self, port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
@@ -39,7 +37,7 @@ class TCPClient:
             logger: logging.Logger = default_client_logger,
             auth_plugin: AuthPluginProtocol = None
         ):
-        self.host = host
+        self.hosts = {}
         self.port = port
         self.header_class = header_class
         self.body_class = body_class
@@ -73,49 +71,59 @@ class TCPClient:
             return func
         return decorator
 
-    async def connect(self):
-        """Connect to the server."""
-        self.logger.info("Connecting to %s:%d", self.host, self.port)
-        self.reader, self.writer = await asyncio.open_connection(self.host, self.port)
+    async def connect(self, host: str = "127.0.0.1", port: int = None):
+        """Connect to a server."""
+        port = port or self.port
+        self.logger.info("Connecting to %s:%d", host, port)
+        reader, writer = await asyncio.open_connection(host, port)
+        self.hosts[(host, port)] = (reader, writer)
 
-    async def send(self, message: MessageProtocol, set_auth: bool = True):
-        """Send a message to the server."""
+    async def send(self, server: tuple[str, int], message: MessageProtocol, set_auth: bool = True):
+        """Send a message to the server. If set_auth is True and an auth
+            plugin is set, it will be called to set the auth fields on the
+            message.
+        """
         if set_auth and self.auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.make on message.body")
             self.auth_plugin.make(message.auth_data, message.body)
         self.logger.debug(f"Sending message of type={message.header.message_type} to server...")
-        self.writer.write(message.encode())
-        await self.writer.drain()
+        _, writer = self.hosts[server]
+        writer.write(message.encode())
+        await writer.drain()
         self.logger.debug("Message sent to server")
 
-    async def receive_once(self) -> MessageProtocol:
+    async def receive_once(self, server: tuple[str, int]) -> MessageProtocol|None:
         """Receive a message from the server. If a handler was
             registered for the message key, the handler will be called
             with the message as an argument, and the result will be
             returned if it is not None; otherwise, the received message
             will be returned. If the message checksum fails, the message
-            will be discarded and None will be returned.
+            will be discarded and None will be returned. If an auth
+            plugin is set, it will be checked before the message handler
+            is called, and if the check fails, the message will be
+            discarded and None will be returned.
         """
         self.logger.debug("Receiving message from server...")
-        data = await self.reader.readexactly(self.header_class.header_length())
+        reader, writer = self.hosts[server]
+        data = await reader.readexactly(self.header_class.header_length())
         header = self.header_class.decode(data)
-        self.logger.debug(f"Received message of type={header.message_type} from server...")
+        self.logger.debug(f"Received message of type={header.message_type} from server")
 
-        auth_bytes = await self.reader.readexactly(header.auth_length)
+        auth_bytes = await reader.readexactly(header.auth_length)
         auth = AuthFields.decode(auth_bytes)
 
-        body_bytes = await self.reader.readexactly(header.body_length)
+        body_bytes = await reader.readexactly(header.body_length)
         body = self.body_class.decode(body_bytes)
 
         msg = self.message_class(header=header, auth_data=auth, body=body)
 
         if not msg.check():
-            self.logger.error("Message checksum failed")
+            self.logger.warning("Message checksum failed")
             return None
 
         if self.auth_plugin is not None:
             if not self.auth_plugin.check(auth, body):
-                self.logger.error("Message auth failed")
+                self.logger.warning("Message auth failed")
                 return None
 
         keys = self.extract_keys(msg)
@@ -128,11 +136,11 @@ class TCPClient:
 
                 if auth_plugin is not None:
                     if not auth_plugin.check(auth, body):
-                        self.logger.error("Message auth failed")
+                        self.logger.warning("Message auth failed")
                         return None
 
                 self.logger.debug("Calling handler for key=%s", key)
-                result = handler(msg, self.writer)
+                result = handler(msg, writer)
                 if isinstance(result, Coroutine):
                     result = await result
                 break
@@ -142,26 +150,27 @@ class TCPClient:
 
         return msg
 
-    async def receive_loop(self):
+    async def receive_loop(self, server: tuple[str, int]):
         """Receive messages from the server indefinitely. Use with
             asyncio.create_task() to run concurrently, then use
             task.cancel() to stop.
         """
         while True:
             try:
-                await self.receive_once()
+                await self.receive_once(server)
             except asyncio.CancelledError:
-                self.logger.debug("Receive loop cancelled")
+                self.logger.info("Receive loop cancelled")
                 break
             except Exception as e:
                 self.logger.error("Error in receive_loop", exc_info=True)
                 break
 
-    async def close(self):
+    async def close(self, server: tuple[str, int]):
         """Close the connection to the server."""
         self.logger.info("Closing connection to server...")
-        self.writer.close()
-        await self.writer.wait_closed()
+        _, writer = self.hosts[server]
+        writer.close()
+        await writer.wait_closed()
         self.logger.info("Connection to server closed")
 
     def set_logger(self, logger: logging.Logger):
