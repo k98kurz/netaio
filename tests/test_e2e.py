@@ -91,24 +91,36 @@ class TestE2E(unittest.TestCase):
             # Wait briefly to allow the server time to bind and listen.
             await asyncio.sleep(0.1)
 
+            # connect client
             await client.connect()
+
             await client.send(client_msg)
             response = await client.receive_once()
             self.assertEqual(response, expected_response)
+
             await client.send(client_subscribe_msg)
             response = await client.receive_once()
             self.assertEqual(response, expected_subscribe_response)
+
             await server.notify(b'subscribe/test', server_notify_msg)
             response = await client.receive_once()
             self.assertEqual(response, server_notify_msg)
+
             await client.send(client_unsubscribe_msg)
             response = await client.receive_once()
             self.assertEqual(response, expected_unsubscribe_response)
-            await client.close()
 
             self.assertEqual(len(server_log), 3)
             self.assertEqual(len(client_log), 2)
 
+            # test auth failure
+            client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
+            await client.send(client_msg)
+            response = await client.receive_once()
+            self.assertIsNone(response)
+
+            # close client and stop server
+            await client.close()
             server_task.cancel()
 
             try:
