@@ -139,7 +139,7 @@ class TCPServer:
                 else:
                     if self.auth_plugin is not None:
                         if not self.auth_plugin.check(auth, body):
-                            self.logger.debug("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
+                            self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                             response = self.auth_plugin.error()
                             await self.send(writer, response)
                             continue
@@ -155,7 +155,7 @@ class TCPServer:
 
                             if auth_plugin is not None:
                                 if not auth_plugin.check(auth, body):
-                                    self.logger.debug("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
+                                    self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                                     response = auth_plugin.error()
                                     await self.send(writer, response)
                                     continue
@@ -166,7 +166,7 @@ class TCPServer:
                                 response = await response
                             break
                     else:
-                        self.logger.debug("No handler found for keys=%s, calling default handler", keys)
+                        self.logger.warning("No handler found for keys=%s, calling default handler", keys)
                         response = self.default_handler(message, writer)
 
                 if response is not None:
