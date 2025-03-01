@@ -29,7 +29,7 @@ class EncryptionPluginProtocol(Protocol):
 class Sha256StreamEncryptionPlugin:
     """SHA-256 stream encryption plugin."""
     key: bytes
-    auth_field: str
+    iv_field: str
     encrypt_uri: bool
 
     def __init__(self, config: dict):
@@ -37,11 +37,11 @@ class Sha256StreamEncryptionPlugin:
         key = config['key']
         key = sha256(key.encode() if isinstance(key, str) else key).digest()
         self.key = key
-        self.auth_field = config.get('auth_field', 'iv')
+        self.iv_field = config.get('iv_field', 'iv')
         self.encrypt_uri = config.get('encrypt_uri', True)
 
     def encrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Encrypt the message body, setting the self.auth_field in the
+        """Encrypt the message body, setting the self.iv_field in the
             auth_data. This will overwrite any existing value in that
             auth_data field.
         """
@@ -59,16 +59,16 @@ class Sha256StreamEncryptionPlugin:
 
         message_type = message.header.message_type
         auth_data = message.auth_data.fields.copy()
-        auth_data[self.auth_field] = iv
+        auth_data[self.iv_field] = iv
         auth_data = message.auth_data.__class__(auth_data)
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, auth_data)
 
     def decrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Decrypt the message body, reading the self.auth_field from
+        """Decrypt the message body, reading the self.iv_field from
             the auth_data. Returns a new message with the decrypted body.
         """
-        iv = message.auth_data.fields[self.auth_field]
+        iv = message.auth_data.fields[self.iv_field]
 
         if self.encrypt_uri:
             ciphertext = message.body.uri + message.body.content

@@ -86,23 +86,26 @@ class TestPlugins(unittest.TestCase):
         body = netaio.Body.prepare(b'eschew republic, establish empire', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         before = message.body.encode()
-        auth_plugin1 = netaio.HMACAuthPlugin({"secret": "test"})
-        cipher_plugin1 = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
-        auth_plugin2 = netaio.HMACAuthPlugin({
+        auth_plugin_outer = netaio.HMACAuthPlugin({"secret": "test"})
+        cipher_plugin_outer = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
+        auth_plugin_inner = netaio.HMACAuthPlugin({
             "secret": "test2",
-            "auth_field": "hmac2"
+            "hmac_field": "hmac2",
         })
-        cipher_plugin2 = netaio.Sha256StreamEncryptionPlugin({
+        cipher_plugin_inner = netaio.Sha256StreamEncryptionPlugin({
             "key": "test2",
-            "auth_field": "iv2",
+            "iv_field": "iv2",
             "encrypt_uri": False
         })
 
-        # encrypt and authenticate
-        message = cipher_plugin2.encrypt(message)
-        auth_plugin2.make(message.auth_data, message.body)
-        message = cipher_plugin1.encrypt(message)
-        auth_plugin1.make(message.auth_data, message.body)
+        # inner encryption
+        message = cipher_plugin_inner.encrypt(message)
+        # inner auth
+        auth_plugin_inner.make(message.auth_data, message.body)
+        # outer encryption
+        message = cipher_plugin_outer.encrypt(message)
+        # outer auth
+        auth_plugin_outer.make(message.auth_data, message.body)
         after = message.body.encode()
         assert before != after
         assert message.auth_data.fields['hmac'] is not None
@@ -110,12 +113,15 @@ class TestPlugins(unittest.TestCase):
         assert message.auth_data.fields['hmac2'] is not None
         assert message.auth_data.fields['iv2'] is not None
 
-        # decrypt and authenticate
-        assert auth_plugin1.check(message.auth_data, message.body)
-        message = cipher_plugin1.decrypt(message)
+        # outer auth
+        assert auth_plugin_outer.check(message.auth_data, message.body)
+        # outer encryption
+        message = cipher_plugin_outer.decrypt(message)
         assert message is not None
-        assert auth_plugin2.check(message.auth_data, message.body)
-        message = cipher_plugin2.decrypt(message)
+        # inner auth
+        assert auth_plugin_inner.check(message.auth_data, message.body)
+        # inner encryption
+        message = cipher_plugin_inner.decrypt(message)
         assert message is not None
         assert message.body.encode() == before
 
