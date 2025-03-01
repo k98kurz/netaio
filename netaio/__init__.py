@@ -1,5 +1,5 @@
 from .auth import AuthPluginProtocol, HMACAuthPlugin
-from .encryption import EncryptionPluginProtocol, Sha256StreamEncryptionPlugin
+from .cipher import CipherPluginProtocol, Sha256StreamCipherPlugin
 from .client import TCPClient
 from .server import TCPServer
 from .common import (

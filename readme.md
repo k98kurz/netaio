@@ -8,9 +8,9 @@ server library inspired by fastapi but for non-HTTP use cases.
 This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 
 - [x] Add authorization plugin
-- [x] Add encryption plugin
+- [x] Add cipher plugin
 - [x] Add optional authorization plugin using HMAC
-- [x] Add optional encryption plugin using simple symmetric stream cipher
+- [x] Add optional cipher plugin using simple symmetric stream cipher
 - [ ] Add optional authorization plugin using tapescript
 - [ ] UDP node with multicast peer discovery
 - [ ] More thorough test suite
@@ -114,18 +114,18 @@ async def put_uri(msg: Message, writer: asyncio.StreamWriter):
 ```
 </details>
 
-### Encryption
+### Cipher (encryption/decryption)
 
-The server and client support an optional encryption plugin. Each plugin is
+The server and client support an optional cipher plugin. Each plugin is
 instantiated with a dict of configuration parameters, and it must implement the
-`EncryptionPluginProtocol` (i.e. have `encrypt` and `decrypt` methods). Once the
+`CipherPluginProtocol` (i.e. have `encrypt` and `decrypt` methods). Once the
 plugin has been instantiated, it can be passed to the `TCPServer` and
 `TCPClient` constructors or set on the client or server instances themselves.
-An encrypt plugin can also be set on a per-handler basis by passing the plugin
-as a third argument to the `on` method. If an encrypt plugin is set both on the
+a cipher plugin can also be set on a per-handler basis by passing the plugin
+as a third argument to the `on` method. If a cipher plugin is set both on the
 instance and per-handler, both will be applied to the message.
 
-Currently, netaio includes a `Sha256StreamEncryptionPlugin` that can be used by
+Currently, netaio includes a `Sha256StreamCipherPlugin` that can be used by
 the server and client to encrypt and decrypt messages using a simple symmetric
 stream cipher. This uses a shared secret key and per-message IVs.
 
@@ -133,14 +133,14 @@ stream cipher. This uses a shared secret key and per-message IVs.
 <summary>Example</summary>
 
 ```python
-from netaio import TCPServer, TCPClient, Sha256StreamEncryptionPlugin, MessageType, Body, Message
+from netaio import TCPServer, TCPClient, Sha256StreamCipherPlugin, MessageType, Body, Message
 
-outer_encrypt_plugin = Sha256StreamEncryptionPlugin(config={"key": "test"})
-inner_encrypt_plugin = Sha256StreamEncryptionPlugin(config={"key": "tset", "iv_field": "iv2"})
-server = TCPServer(port=8888, encrypt_plugin=outer_encrypt_plugin)
-client = TCPClient(host="127.0.0.1", port=8888, encrypt_plugin=outer_encrypt_plugin)
+outer_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "test"})
+inner_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "tset", "iv_field": "iv2"})
+server = TCPServer(port=8888, cipher_plugin=outer_cipher_plugin)
+client = TCPClient(host="127.0.0.1", port=8888, cipher_plugin=outer_cipher_plugin)
 
-@server.on(MessageType.REQUEST_URI, inner_encrypt_plugin)
+@server.on(MessageType.REQUEST_URI, inner_cipher_plugin)
 async def request_uri(msg: Message, writer: asyncio.StreamWriter):
     body = Body.prepare(b'Super secret data.', uri=msg.body.uri)
     return Message.prepare(body, MessageType.RESPOND_URI)
@@ -153,17 +153,17 @@ The encapsulation model for plugin interactions with messages is as follows:
 
 #### Send
 
-1. Per-handler/injected `encrypt_plugin.encrypt`
+1. Per-handler/injected `cipher_plugin.encrypt`
 2. Per-handler/injected `auth_plugin.make`
-3. Instance `encrypt_plugin.encrypt`
+3. Instance `cipher_plugin.encrypt`
 4. Instance `auth_plugin.make`
 
 #### Receive
 
 1. Instance `auth_plugin.check`
-2. Instance `encrypt_plugin.decrypt`
+2. Instance `cipher_plugin.decrypt`
 3. Per-handler/injected `auth_plugin.check`
-4. Per-handler/injected `encrypt_plugin.decrypt`
+4. Per-handler/injected `cipher_plugin.decrypt`
 
 
 ## Testing

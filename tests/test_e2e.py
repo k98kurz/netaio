@@ -18,10 +18,10 @@ class TestE2E(unittest.TestCase):
             server_log = []
             client_log = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
-            cipher_plugin = netaio.Sha256StreamEncryptionPlugin(config={"key": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
-            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=cipher_plugin)
-            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=cipher_plugin)
+            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
 
             client_msg = netaio.Message.prepare(
                 netaio.Body.prepare(b'hello', uri=b'echo'),
@@ -136,7 +136,7 @@ class TestE2E(unittest.TestCase):
             response = await client.receive_once()
             assert response is None
             await client.send(client_msg)
-            response = await client.receive_once(use_auth=False, use_encryption=False)
+            response = await client.receive_once(use_auth=False, use_cipher=False)
             assert response is not None
             assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
 
@@ -165,17 +165,17 @@ class TestE2EWithoutDefaultPlugins(unittest.TestCase):
         async def run_test():
             server_log = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
-            encrypt_plugin = netaio.Sha256StreamEncryptionPlugin(config={"key": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
             server = netaio.TCPServer(port=self.PORT)
-            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
+            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
 
             @server.on(netaio.MessageType.REQUEST_URI)
             def server_request(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
 
-            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
+            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
             def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
@@ -201,8 +201,8 @@ class TestE2EWithoutDefaultPlugins(unittest.TestCase):
             await client.connect()
 
             # send to unprotected route
-            await client.send(echo_msg, use_auth=False, use_encryption=False)
-            response = await client.receive_once(use_auth=False, use_encryption=False)
+            await client.send(echo_msg, use_auth=False, use_cipher=False)
+            response = await client.receive_once(use_auth=False, use_cipher=False)
             assert response is not None
             assert response.encode() == echo_msg.encode(), \
                 (response.encode().hex(), echo_msg.encode().hex())
@@ -243,26 +243,26 @@ class TestE2ETwoLayersOfPlugins(unittest.TestCase):
         async def run_test():
             server_log = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
-            encrypt_plugin = netaio.Sha256StreamEncryptionPlugin(config={"key": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
             auth_plugin2 = netaio.HMACAuthPlugin(config={
                 "secret": "test2",
                 "hmac_field": "hmac2",
             })
-            encrypt_plugin2 = netaio.Sha256StreamEncryptionPlugin(config={
+            cipher_plugin2 = netaio.Sha256StreamCipherPlugin(config={
                 "key": "test2",
                 "iv_field": "iv2",
                 "encrypt_uri": False
             })
 
-            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
-            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
+            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
 
             @server.on(netaio.MessageType.REQUEST_URI)
             def server_request(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
 
-            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin2, encrypt_plugin=encrypt_plugin2)
+            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
             def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
@@ -299,8 +299,8 @@ class TestE2ETwoLayersOfPlugins(unittest.TestCase):
                 (response.header.message_type, echo_msg.header.message_type)
 
             # send to twice-protected route
-            await client.send(publish_msg, auth_plugin=auth_plugin2, encrypt_plugin=encrypt_plugin2)
-            response = await client.receive_once(auth_plugin=auth_plugin2, encrypt_plugin=encrypt_plugin2)
+            await client.send(publish_msg, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            response = await client.receive_once(auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
             assert response is not None
             assert response.body.content == publish_msg.body.content, \
                 (response.body.content, publish_msg.body.content)

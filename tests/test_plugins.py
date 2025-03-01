@@ -20,11 +20,11 @@ class TestPlugins(unittest.TestCase):
         message.body.content = b'hello world, caesar is alive'
         assert not auth_plugin.check(message.auth_data, message.body)
 
-    def test_sha256_stream_encryption_plugin(self):
+    def test_sha256_stream_cipher_plugin(self):
         # default
         body = netaio.Body.prepare(b'brutus is plotting something sus', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
-        cipher_plugin = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
+        cipher_plugin = netaio.Sha256StreamCipherPlugin({"key": "test"})
         before = message.body.encode()
         assert 'iv' not in message.auth_data.fields
         message = cipher_plugin.encrypt(message)
@@ -35,8 +35,8 @@ class TestPlugins(unittest.TestCase):
         assert msg is not None
         assert msg.body.encode() == before
 
-        # without uri encryption
-        cipher_plugin = netaio.Sha256StreamEncryptionPlugin({
+        # without uri cipher
+        cipher_plugin = netaio.Sha256StreamCipherPlugin({
             "key": "test",
             "encrypt_uri": False
         })
@@ -51,13 +51,13 @@ class TestPlugins(unittest.TestCase):
         assert msg is not None
         assert msg.body.encode() == before
 
-    def test_hmac_auth_plugin_with_encryption(self):
+    def test_hmac_auth_plugin_with_cipher(self):
         # setup
         body = netaio.Body.prepare(b'brutus attacks, pls send backup', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         before = message.body.encode()
         auth_plugin = netaio.HMACAuthPlugin({"secret": "test"})
-        cipher_plugin = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
+        cipher_plugin = netaio.Sha256StreamCipherPlugin({"key": "test"})
 
         # encrypt and authenticate
         msg = cipher_plugin.encrypt(message)
@@ -87,22 +87,22 @@ class TestPlugins(unittest.TestCase):
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         before = message.body.encode()
         auth_plugin_outer = netaio.HMACAuthPlugin({"secret": "test"})
-        cipher_plugin_outer = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
+        cipher_plugin_outer = netaio.Sha256StreamCipherPlugin({"key": "test"})
         auth_plugin_inner = netaio.HMACAuthPlugin({
             "secret": "test2",
             "hmac_field": "hmac2",
         })
-        cipher_plugin_inner = netaio.Sha256StreamEncryptionPlugin({
+        cipher_plugin_inner = netaio.Sha256StreamCipherPlugin({
             "key": "test2",
             "iv_field": "iv2",
             "encrypt_uri": False
         })
 
-        # inner encryption
+        # inner cipher
         message = cipher_plugin_inner.encrypt(message)
         # inner auth
         auth_plugin_inner.make(message.auth_data, message.body)
-        # outer encryption
+        # outer cipher
         message = cipher_plugin_outer.encrypt(message)
         # outer auth
         auth_plugin_outer.make(message.auth_data, message.body)
@@ -115,12 +115,12 @@ class TestPlugins(unittest.TestCase):
 
         # outer auth
         assert auth_plugin_outer.check(message.auth_data, message.body)
-        # outer encryption
+        # outer cipher
         message = cipher_plugin_outer.decrypt(message)
         assert message is not None
         # inner auth
         assert auth_plugin_inner.check(message.auth_data, message.body)
-        # inner encryption
+        # inner cipher
         message = cipher_plugin_inner.decrypt(message)
         assert message is not None
         assert message.body.encode() == before

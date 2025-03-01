@@ -1,7 +1,7 @@
 ## 0.0.3
 
-- Added encryption plugin system
-- Added Sha256StreamEncryptionPlugin
+- Added cipher plugin system
+- Added Sha256StreamCipherPlugin
 - Servers and clients can handle two layers of plugins: an outer layer set on
   the instance itself and an inner layer set on a per-handler basis (or injected
   into relevant methods).
