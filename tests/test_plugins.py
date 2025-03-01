@@ -26,13 +26,14 @@ class TestPlugins(unittest.TestCase):
         cipher_plugin = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
         before = message.body.encode()
         assert 'iv' not in message.auth_data.fields
-        cipher_plugin.encrypt(message)
+        message = cipher_plugin.encrypt(message)
         assert 'iv' in message.auth_data.fields
         after = message.body.encode()
         assert before != after
-        error = cipher_plugin.decrypt(message)
-        assert error is None, error
-        assert message.body.encode() == before
+        msg_or_err = cipher_plugin.decrypt(message)
+        assert msg_or_err is not None
+        assert not isinstance(msg_or_err, BaseException), msg_or_err
+        assert msg_or_err.body.encode() == before
 
     def test_hmac_auth_plugin_with_encryption(self):
         # setup
@@ -43,25 +44,27 @@ class TestPlugins(unittest.TestCase):
         cipher_plugin = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
 
         # encrypt and authenticate
-        cipher_plugin.encrypt(message)
-        auth_plugin.make(message.auth_data, message.body)
-        after = message.body.encode()
+        msg = cipher_plugin.encrypt(message)
+        auth_plugin.make(msg.auth_data, msg.body)
+        after = msg.body.encode()
         assert before != after
-        assert message.auth_data.fields['hmac'] is not None
-        assert message.auth_data.fields['iv'] is not None
+        assert msg.auth_data.fields['hmac'] is not None
+        assert msg.auth_data.fields['iv'] is not None
         # authenticate and decrypt
-        auth_plugin.check(message.auth_data, message.body)
-        error = cipher_plugin.decrypt(message)
-        assert error is None, error
-        assert message.body.encode() == before
+        auth_plugin.check(msg.auth_data, msg.body)
+        msg_or_err = cipher_plugin.decrypt(msg)
+        assert msg_or_err is not None
+        assert not isinstance(msg_or_err, BaseException), msg_or_err
+        assert msg_or_err.body.encode() == before
 
         # tamper with the message, then re-encrypt but don't re-authenticate
-        message.body.content = b'everything is fine'
-        before = message.body.encode()
-        cipher_plugin.encrypt(message)
-        assert message.auth_data.fields['hmac'] is not None
+        msg_or_err.body.content = b'everything is fine'
+        before = msg_or_err.body.encode()
+        msg_or_err = cipher_plugin.encrypt(msg_or_err)
+        assert msg_or_err.auth_data.fields['hmac'] is not None
+        assert msg_or_err.body.encode() != before
         # auth plugin catches the tampering
-        assert not auth_plugin.check(message.auth_data, message.body)
+        assert not auth_plugin.check(msg_or_err.auth_data, msg_or_err.body)
 
 
 if __name__ == "__main__":
