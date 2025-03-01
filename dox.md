@@ -27,18 +27,27 @@ HMAC auth plugin.
 #### Annotations
 
 - secret: <class 'bytes'>
+- nonce_field: <class 'str'>
+- ts_field: <class 'str'>
+- hmac_field: <class 'str'>
 
 #### Methods
 
 ##### `__init__(config: dict):`
 
 Initialize the HMAC auth plugin with a config. The config must contain
-{"secret": <str|bytes>}.
+{"secret": <str|bytes>}. It can contain {"hmac_field": <str>} to specify the
+auth field name for the hmac; the default is "hmac". It can contain
+{"nonce_field": <str>} to specify the auth field name for the nonce; the default
+is "nonce". It can contain {"ts_field": <str>} to specify the auth field name
+for the timestamp; the default is "ts".
 
 ##### `make(auth_fields: AuthFieldsProtocol, body: BodyProtocol):`
 
-If the nonce and ts fields are not present, generate them. Then, create an hmac
-of the nonce, ts, and body and store it in the hmac field.
+If the nonce and ts fields are not set, generate them. If the nonce is not the
+IV_SIZE, generate a new one. Then, create an hmac of the nonce, ts, and body and
+store it in the auth_data field specified by the "hmac_field" config option; the
+default is "hmac".
 
 ##### `check(auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:`
 
@@ -49,6 +58,53 @@ the hmac check fails.
 ##### `error() -> MessageProtocol:`
 
 Make an error message that says "HMAC auth failed".
+
+### `EncryptionPluginProtocol(Protocol)`
+
+Shows what an encryption plugin should do.
+
+#### Methods
+
+##### `encrypt(message: MessageProtocol) -> MessageProtocol:`
+
+Encrypt the message body, setting values in the header or auth_data as
+necessary. Returns a new message with the encrypted body and updated auth_data.
+
+##### `decrypt(message: MessageProtocol) -> MessageProtocol:`
+
+Decrypt the message body, reading values from the auth_data as necessary.
+Returns a new message with the decrypted body. May raise an exception if the
+decryption fails.
+
+### `Sha256StreamEncryptionPlugin`
+
+SHA-256 stream encryption plugin.
+
+#### Annotations
+
+- key: <class 'bytes'>
+- iv_field: <class 'str'>
+- encrypt_uri: <class 'bool'>
+
+#### Methods
+
+##### `__init__(config: dict):`
+
+Initialize the encryption plugin with a config. The config must contain {"key":
+<str|bytes>}. It can contain {"iv_field": <str>} to specify the auth field name
+for the iv; the default is "iv". It can contain {"encrypt_uri": <bool>} to
+specify whether to encrypt the uri; the default is True.
+
+##### `encrypt(message: MessageProtocol) -> MessageProtocol:`
+
+Encrypt the message body, setting the self.iv_field in the auth_data. This will
+overwrite any existing value in that auth_data field. If the self.encrypt_uri is
+True, the uri will be encrypted as well as the content.
+
+##### `decrypt(message: MessageProtocol) -> MessageProtocol:`
+
+Decrypt the message body, reading the self.iv_field from the auth_data. Returns
+a new message with the decrypted body.
 
 ### `TCPClient`
 
@@ -65,49 +121,60 @@ asyncio.streams.StreamWriter]]
 tuple[typing.Callable[[netaio.common.MessageProtocol,
 asyncio.streams.StreamWriter], typing.Union[netaio.common.MessageProtocol,
 NoneType, typing.Coroutine[typing.Any, typing.Any, netaio.common.MessageProtocol
-| None]]], netaio.auth.AuthPluginProtocol | None]]
+| None]]], netaio.auth.AuthPluginProtocol | None,
+netaio.encryption.EncryptionPluginProtocol | None]]
 - extract_keys: typing.Callable[[netaio.common.MessageProtocol],
 list[typing.Hashable]]
 - logger: <class 'logging.Logger'>
 - auth_plugin: <class 'netaio.auth.AuthPluginProtocol'>
+- encrypt_plugin: <class 'netaio.encryption.EncryptionPluginProtocol'>
 
 #### Methods
 
-##### `__init__(host: str = '127.0.0.1', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, handlers: dict = {}, extract_keys: Callable = <function keys_extractor at 0x743d6f4268c0>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None):`
+##### `__init__(host: str = '127.0.0.1', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, handlers: dict = {}, extract_keys: Callable = <function keys_extractor at 0x7f29e26de7a0>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None, encrypt_plugin: EncryptionPluginProtocol = None):`
 
 Initialize the TCPClient. Args: host: The default host IPv4 address. port: The
 default port to connect to. header_class: The header class to use. body_class:
 The body class to use. message_class: The message class to use. handlers: A
 dictionary of handlers for specific message keys. extract_keys: A function that
 extracts the keys from a message. logger: The logger to use. auth_plugin: The
-auth plugin to use.
+auth plugin to use. encrypt_plugin: The encryption plugin to use.
 
-##### `add_handler(key: Hashable, handler: Callable, auth_plugin: AuthPluginProtocol = None):`
+##### `add_handler(key: Hashable, handler: Callable, auth_plugin: AuthPluginProtocol = None, encrypt_plugin: EncryptionPluginProtocol = None):`
 
 Register a handler for a specific key. The handler must accept a MessageProtocol
 object as an argument and return MessageProtocol, None, or a Coroutine that
 resolves to MessageProtocol | None. If an auth plugin is provided, it will be
 used to check the message in addition to any auth plugin that is set on the
-client.
+client. If an encrypt plugin is provided, it will be used to decrypt the message
+in addition to any encryption plugin that is set on the client.
 
-##### `on(key: Hashable, auth_plugin: AuthPluginProtocol = None):`
+##### `on(key: Hashable, auth_plugin: AuthPluginProtocol = None, encrypt_plugin: EncryptionPluginProtocol = None):`
 
 Decorator to register a handler for a specific key. The handler must accept a
 MessageProtocol object as an argument and return a MessageProtocol, None, or a
 Coroutine that resolves to a MessageProtocol or None. If an auth plugin is
 provided, it will be used to check the message in addition to any auth plugin
-that is set on the client.
+that is set on the client. If an encrypt plugin is provided, it will be used to
+decrypt the message in addition to any encryption plugin that is set on the
+client.
 
 ##### `async connect(host: str = None, port: int = None):`
 
 Connect to a server.
 
-##### `async send(message: MessageProtocol, server: tuple = None, set_auth: bool = True):`
+##### `async send(message: MessageProtocol, server: tuple = None, use_auth: bool = True, use_encryption: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, encrypt_plugin: netaio.encryption.EncryptionPluginProtocol | None = None):`
 
-Send a message to the server. If set_auth is True and an auth plugin is set, it
-will be called to set the auth fields on the message.
+Send a message to the server. If use_auth is True and an auth plugin is set, it
+will be called to set the auth fields on the message. If an auth plugin is
+provided, it will be used to authorize the message in addition to any auth
+plugin that is set on the client. If an encrypt plugin is provided, it will be
+used to encrypt the message in addition to any encryption plugin that is set on
+the client. If use_auth is False, the auth plugin set on the client will not be
+used. If use_encryption is False, the encryption plugin set on the client will
+not be used.
 
-##### `async receive_once(server: tuple = None) -> netaio.common.MessageProtocol | None:`
+##### `async receive_once(server: tuple = None, use_auth: bool = True, use_encryption: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, encrypt_plugin: netaio.encryption.EncryptionPluginProtocol | None = None) -> netaio.common.MessageProtocol | None:`
 
 Receive a message from the server. If a handler was registered for the message
 key, the handler will be called with the message as an argument, and the result
@@ -115,12 +182,23 @@ will be returned if it is not None; otherwise, the received message will be
 returned. If the message checksum fails, the message will be discarded and None
 will be returned. If an auth plugin is set, it will be checked before the
 message handler is called, and if the check fails, the message will be discarded
-and None will be returned.
+and None will be returned. If use_auth is False, the auth plugin set on the
+client will not be used. If use_encryption is False, the encryption plugin set
+on the client will not be used. If an auth plugin is provided, it will be used
+to check the message in addition to any auth plugin that is set on the client.
+If an encrypt plugin is provided, it will be used to decrypt the message in
+addition to any encryption plugin that is set on the client.
 
-##### `async receive_loop(server: tuple = None):`
+##### `async receive_loop(server: tuple = None, use_auth: bool = True, use_encryption: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, encrypt_plugin: netaio.encryption.EncryptionPluginProtocol | None = None):`
 
 Receive messages from the server indefinitely. Use with asyncio.create_task() to
-run concurrently, then use task.cancel() to stop.
+run concurrently, then use task.cancel() to stop. If use_auth is False, the auth
+plugin set on the client will not be used. If use_encryption is False, the
+encryption plugin set on the client will not be used. If an auth plugin is
+provided, it will be used to check the message in addition to any auth plugin
+that is set on the client. If an encrypt plugin is provided, it will be used to
+decrypt the message in addition to any encryption plugin that is set on the
+client.
 
 ##### `async close(server: tuple = None):`
 
@@ -140,7 +218,8 @@ Replace the current logger.
 tuple[typing.Callable[[netaio.common.MessageProtocol,
 asyncio.streams.StreamWriter], typing.Union[netaio.common.MessageProtocol,
 NoneType, typing.Coroutine[typing.Any, typing.Any, netaio.common.MessageProtocol
-| None]]], netaio.auth.AuthPluginProtocol | None]]
+| None]]], netaio.auth.AuthPluginProtocol | None,
+netaio.encryption.EncryptionPluginProtocol | None]]
 - default_handler: typing.Callable[[netaio.common.MessageProtocol,
 asyncio.streams.StreamWriter], typing.Union[netaio.common.MessageProtocol,
 NoneType, typing.Coroutine[typing.Any, typing.Any, netaio.common.MessageProtocol
@@ -155,10 +234,11 @@ list[typing.Hashable]]
 - clients: set[asyncio.streams.StreamWriter]
 - logger: <class 'logging.Logger'>
 - auth_plugin: <class 'netaio.auth.AuthPluginProtocol'>
+- encrypt_plugin: <class 'netaio.encryption.EncryptionPluginProtocol'>
 
 #### Methods
 
-##### `__init__(host: str = '0.0.0.0', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x743d6f4268c0>, make_error_response: Callable = <function make_error_response at 0x743d6f1a63b0>, default_handler: Callable = <function not_found_handler at 0x743d6f1a7250>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None):`
+##### `__init__(host: str = '0.0.0.0', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x7f29e26de7a0>, make_error_response: Callable = <function make_error_response at 0x7f29e1f8e200>, default_handler: Callable = <function not_found_handler at 0x7f29e1f8f910>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None, encrypt_plugin: EncryptionPluginProtocol = None):`
 
 Initialize the TCPServer. Args: host: The host to listen on. port: The port to
 listen on. header_class: The header class to use. body_class: The body class to
@@ -166,23 +246,28 @@ use. message_class: The message class to use. keys_extractor: A function that
 extracts the keys from a message. make_error_response: A function that makes an
 error response. default_handler: The default handler to use for messages that do
 not match any registered handler keys. logger: The logger to use. auth_plugin:
-The auth plugin to use.
+The auth plugin to use. encrypt_plugin: The encrypt plugin to use.
 
-##### `add_handler(key: Hashable, handler: Callable, auth_plugin: AuthPluginProtocol = None):`
+##### `add_handler(key: Hashable, handler: Callable, auth_plugin: AuthPluginProtocol = None, encrypt_plugin: EncryptionPluginProtocol = None):`
 
 Register a handler for a specific key. The handler must accept a MessageProtocol
 object as an argument and return a MessageProtocol, None, or a Coroutine that
 resolves to MessageProtocol | None. If an auth plugin is provided, it will be
 used to check the message in addition to any auth plugin that is set on the
-server.
+server. If an encrypt plugin is provided, it will be used to decrypt the message
+in addition to any encryption plugin that is set on the server. These plugins
+will also be used for preparing any response message sent by the handler.
 
-##### `on(key: Hashable, auth_plugin: AuthPluginProtocol = None):`
+##### `on(key: Hashable, auth_plugin: AuthPluginProtocol = None, encrypt_plugin: EncryptionPluginProtocol = None):`
 
 Decorator to register a handler for a specific key. The handler must accept a
 MessageProtocol object as an argument and return a MessageProtocol, None, or a
 Coroutine that resolves to a MessageProtocol or None. If an auth plugin is
 provided, it will be used to check the message in addition to any auth plugin
-that is set on the server.
+that is set on the server. If an encrypt plugin is provided, it will be used to
+decrypt the message in addition to any encryption plugin that is set on the
+server. These plugins will also be used for preparing any response message sent
+by the handler.
 
 ##### `subscribe(key: Hashable, writer: StreamWriter):`
 
@@ -193,29 +278,48 @@ Subscribe a client to a specific key. The key must be a Hashable object.
 Unsubscribe a client from a specific key. If no subscribers are left, the key
 will be removed from the subscriptions dictionary.
 
-##### `async handle_client(reader: StreamReader, writer: StreamWriter):`
+##### `async handle_client(reader: StreamReader, writer: StreamWriter, use_auth: bool = True, use_encryption: bool = True):`
 
 Handle a client connection. When a client connects, it is added to the clients
 set. The client is then read from until the connection is lost, and the proper
-handlers are called if they are defined and the message is valid.
+handlers are called if they are defined and the message is valid. If use_auth is
+False, the auth plugin set on the server will not be used. If use_encryption is
+False, the encryption plugin set on the server will not be used.
 
-##### `async start():`
+##### `async start(use_auth: bool = True, use_encryption: bool = True):`
 
 Start the server.
 
-##### `async send(client: StreamWriter, message: MessageProtocol, collection: set = None, use_auth: bool = True):`
+##### `async send(client: StreamWriter, message: MessageProtocol, collection: set = None, use_auth: bool = True, use_encryption: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, encrypt_plugin: netaio.encryption.EncryptionPluginProtocol | None = None):`
 
 Helper coroutine to send a message to a client. On error, it logs the exception
-and removes the client from the given collection.
+and removes the client from the given collection. If an auth plugin is provided,
+it will be used to authorize the message in addition to any auth plugin that is
+set on the server. If an encrypt plugin is provided, it will be used to encrypt
+the message in addition to any encryption plugin that is set on the server. If
+use_auth is False, the auth plugin set on the server will not be used. If
+use_encryption is False, the encryption plugin set on the server will not be
+used.
 
-##### `async broadcast(message: MessageProtocol, use_auth: bool = True):`
+##### `async broadcast(message: MessageProtocol, use_auth: bool = True, use_encryption: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, encrypt_plugin: netaio.encryption.EncryptionPluginProtocol | None = None):`
 
-Send the message to all connected clients concurrently using asyncio.gather.
+Send the message to all connected clients concurrently using asyncio.gather. If
+an auth plugin is provided, it will be used to authorize the message in addition
+to any auth plugin that is set on the server. If an encrypt plugin is provided,
+it will be used to encrypt the message in addition to any encryption plugin that
+is set on the server. If use_auth is False, the auth plugin set on the server
+will not be used. If use_encryption is False, the encryption plugin set on the
+server will not be used.
 
-##### `async notify(key: Hashable, message: MessageProtocol, use_auth: bool = True):`
+##### `async notify(key: Hashable, message: MessageProtocol, use_auth: bool = True, use_encryption: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, encrypt_plugin: netaio.encryption.EncryptionPluginProtocol | None = None):`
 
 Send the message to all subscribed clients for the given key concurrently using
-asyncio.gather.
+asyncio.gather. If an auth plugin is provided, it will be used to authorize the
+message in addition to any auth plugin that is set on the server. If an encrypt
+plugin is provided, it will be used to encrypt the message in addition to any
+encryption plugin that is set on the server. If use_auth is False, the auth
+plugin set on the server will not be used. If use_encryption is False, the
+encryption plugin set on the server will not be used.
 
 ##### `set_logger(logger: Logger):`
 
@@ -262,7 +366,7 @@ Default auth fields class.
 
 #### Methods
 
-##### `__init__(fields: dict[str, bytes]):`
+##### `__init__(fields: dict[str, bytes] = <factory>):`
 
 ##### `@classmethod decode(data: bytes) -> AuthFields:`
 
@@ -325,13 +429,16 @@ match.
 
 Encode the message into bytes.
 
-##### `@classmethod prepare(body: BodyProtocol, message_type: MessageType = MessageType.REQUEST_URI, auth_data: AuthFields = AuthFields(fields={})) -> Message:`
+##### `@classmethod prepare(body: BodyProtocol, message_type: MessageType = MessageType.REQUEST_URI, auth_data: AuthFields = None) -> Message:`
 
 Prepare a message from a body and optional arguments.
 
 ### `MessageType(Enum)`
 
-Some default message types.
+Some default message types: REQUEST_URI, RESPOND_URI, CREATE_URI, UPDATE_URI,
+DELETE_URI, SUBSCRIBE_URI, UNSUBSCRIBE_URI, PUBLISH_URI, NOTIFY_URI, OK,
+CONFIRM_SUBSCRIBE, CONFIRM_UNSUBSCRIBE, ERROR, AUTH_ERROR, NOT_FOUND,
+DISCONNECT.
 
 ### `HeaderProtocol(Protocol)`
 
@@ -401,7 +508,7 @@ Decode the body from the data.
 
 Encode the body into a bytes object.
 
-##### `@classmethod prepare(content: bytes) -> BodyProtocol:`
+##### `@classmethod prepare(content: bytes, uri: bytes = b'1') -> BodyProtocol:`
 
 Prepare a body from content and optional arguments.
 

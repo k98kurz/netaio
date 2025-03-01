@@ -135,7 +135,11 @@ class MessageProtocol(Protocol):
 
 
 class MessageType(Enum):
-    """Some default message types."""
+    """Some default message types: REQUEST_URI, RESPOND_URI, CREATE_URI,
+        UPDATE_URI, DELETE_URI, SUBSCRIBE_URI, UNSUBSCRIBE_URI,
+        PUBLISH_URI, NOTIFY_URI, OK, CONFIRM_SUBSCRIBE,
+        CONFIRM_UNSUBSCRIBE, ERROR, AUTH_ERROR, NOT_FOUND, DISCONNECT.
+    """
     REQUEST_URI = 0
     RESPOND_URI = 1
     CREATE_URI = 2
