@@ -78,7 +78,9 @@ class TCPClient:
             MessageProtocol, None, or a Coroutine that resolves to
             MessageProtocol | None. If an auth plugin is provided, it
             will be used to check the message in addition to any auth
-            plugin that is set on the client.
+            plugin that is set on the client. If an encrypt plugin is
+            provided, it will be used to decrypt the message in addition
+            to any encryption plugin that is set on the client.
         """
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin, encrypt_plugin)
@@ -93,7 +95,10 @@ class TCPClient:
             and return a MessageProtocol, None, or a Coroutine that
             resolves to a MessageProtocol or None. If an auth plugin is
             provided, it will be used to check the message in addition
-            to any auth plugin that is set on the client.
+            to any auth plugin that is set on the client. If an encrypt
+            plugin is provided, it will be used to decrypt the message
+            in addition to any encryption plugin that is set on the
+            client.
         """
         def decorator(func: Handler):
             self.add_handler(key, func, auth_plugin, encrypt_plugin)
@@ -115,8 +120,15 @@ class TCPClient:
             encrypt_plugin: EncryptionPluginProtocol|None = None
         ):
         """Send a message to the server. If use_auth is True and an auth
-            plugin is set, it will be called to set the auth fields on the
-            message.
+            plugin is set, it will be called to set the auth fields on
+            the message. If an auth plugin is provided, it will be used
+            to authorize the message in addition to any auth plugin that
+            is set on the client. If an encrypt plugin is provided, it
+            will be used to encrypt the message in addition to any
+            encryption plugin that is set on the client. If use_auth is
+            False, the auth plugin set on the client will not be used.
+            If use_encryption is False, the encryption plugin set on the
+            client will not be used.
         """
         server = server or self.default_host
 
@@ -160,7 +172,14 @@ class TCPClient:
             will be discarded and None will be returned. If an auth
             plugin is set, it will be checked before the message handler
             is called, and if the check fails, the message will be
-            discarded and None will be returned.
+            discarded and None will be returned. If use_auth is False,
+            the auth plugin set on the client will not be used. If
+            use_encryption is False, the encryption plugin set on the
+            client will not be used. If an auth plugin is provided, it
+            will be used to check the message in addition to any auth
+            plugin that is set on the client. If an encrypt plugin is
+            provided, it will be used to decrypt the message in addition
+            to any encryption plugin that is set on the client.
         """
         self.logger.debug("Receiving message from server...")
         server = server or self.default_host
@@ -240,7 +259,14 @@ class TCPClient:
         ):
         """Receive messages from the server indefinitely. Use with
             asyncio.create_task() to run concurrently, then use
-            task.cancel() to stop.
+            task.cancel() to stop. If use_auth is False, the auth plugin
+            set on the client will not be used. If use_encryption is
+            False, the encryption plugin set on the client will not be
+            used. If an auth plugin is provided, it will be used to
+            check the message in addition to any auth plugin that is set
+            on the client. If an encrypt plugin is provided, it will be
+            used to decrypt the message in addition to any encryption
+            plugin that is set on the client.
         """
         server = server or self.default_host
         while True:

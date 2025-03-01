@@ -33,17 +33,22 @@ class Sha256StreamEncryptionPlugin:
     encrypt_uri: bool
 
     def __init__(self, config: dict):
-        """Initialize the encryption plugin with a config."""
+        """Initialize the encryption plugin with a config. The config
+            must contain {"key": <str|bytes>}. It can contain {"iv_field":
+            <str>} to specify the auth field name for the iv; the
+            default is "iv". It can contain {"encrypt_uri": <bool>} to
+            specify whether to encrypt the uri; the default is True.
+        """
         key = config['key']
-        key = sha256(key.encode() if isinstance(key, str) else key).digest()
-        self.key = key
+        self.key = sha256(key.encode() if isinstance(key, str) else key).digest()
         self.iv_field = config.get('iv_field', 'iv')
         self.encrypt_uri = config.get('encrypt_uri', True)
 
     def encrypt(self, message: MessageProtocol) -> MessageProtocol:
         """Encrypt the message body, setting the self.iv_field in the
             auth_data. This will overwrite any existing value in that
-            auth_data field.
+            auth_data field. If the self.encrypt_uri is True, the uri
+            will be encrypted as well as the content.
         """
         plaintext = b''
         if self.encrypt_uri:

@@ -40,8 +40,12 @@ class HMACAuthPlugin:
     def __init__(self, config: dict):
         """Initialize the HMAC auth plugin with a config. The config
             must contain {"secret": <str|bytes>}. It can contain
-            {"hmac_field": <str>} to specify the hmac_field name to
-            store the hmac in; the default is "hmac".
+            {"hmac_field": <str>} to specify the auth field name for the
+            hmac; the default is "hmac". It can contain {"nonce_field":
+            <str>} to specify the auth field name for the nonce; the
+            default is "nonce". It can contain {"ts_field": <str>} to
+            specify the auth field name for the timestamp; the default is
+            "ts".
         """
         secret = config["secret"]
         if isinstance(secret, str):
@@ -52,10 +56,11 @@ class HMACAuthPlugin:
         self.ts_field = config.get("ts_field", "ts")
 
     def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
-        """If the nonce and ts fields are not present, generate them.
-            Then, create an hmac of the nonce, ts, and body and store it
-            in the hmac_field specified by the "hmac_field" config
-            option; the default is "hmac".
+        """If the nonce and ts fields are not set, generate them. If the
+            nonce is not the IV_SIZE, generate a new one. Then, create
+            an hmac of the nonce, ts, and body and store it in the
+            auth_data field specified by the "hmac_field" config option;
+            the default is "hmac".
         """
         nonce = auth_fields.fields.get(self.nonce_field, b'')
         if len(nonce) != IV_SIZE:

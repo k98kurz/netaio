@@ -91,7 +91,11 @@ class TCPServer:
             MessageProtocol, None, or a Coroutine that resolves to
             MessageProtocol | None. If an auth plugin is provided, it
             will be used to check the message in addition to any auth
-            plugin that is set on the server.
+            plugin that is set on the server. If an encrypt plugin is
+            provided, it will be used to decrypt the message in addition
+            to any encryption plugin that is set on the server. These
+            plugins will also be used for preparing any response
+            message sent by the handler.
         """
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin, encrypt_plugin)
@@ -106,7 +110,11 @@ class TCPServer:
             and return a MessageProtocol, None, or a Coroutine that
             resolves to a MessageProtocol or None. If an auth plugin is
             provided, it will be used to check the message in addition
-            to any auth plugin that is set on the server.
+            to any auth plugin that is set on the server. If an encrypt
+            plugin is provided, it will be used to decrypt the message in
+            addition to any encryption plugin that is set on the server.
+            These plugins will also be used for preparing any response
+            message sent by the handler.
         """
         def decorator(func: Handler):
             self.add_handler(key, func, auth_plugin, encrypt_plugin)
@@ -140,7 +148,10 @@ class TCPServer:
         """Handle a client connection. When a client connects, it is
             added to the clients set. The client is then read from until
             the connection is lost, and the proper handlers are called
-            if they are defined and the message is valid.
+            if they are defined and the message is valid. If use_auth is
+            False, the auth plugin set on the server will not be used.
+            If use_encryption is False, the encryption plugin set on the
+            server will not be used.
         """
         self.logger.info("Client connected from %s", writer.get_extra_info("peername"))
         self.clients.add(writer)
@@ -273,7 +284,14 @@ class TCPServer:
         ):
         """Helper coroutine to send a message to a client. On error, it
             logs the exception and removes the client from the given
-            collection.
+            collection. If an auth plugin is provided, it will be used
+            to authorize the message in addition to any auth plugin that
+            is set on the server. If an encrypt plugin is provided, it
+            will be used to encrypt the message in addition to any
+            encryption plugin that is set on the server. If use_auth is
+            False, the auth plugin set on the server will not be used.
+            If use_encryption is False, the encryption plugin set on the
+            server will not be used.
         """
         # inner encryption
         if encrypt_plugin is not None:
@@ -311,7 +329,14 @@ class TCPServer:
             encrypt_plugin: EncryptionPluginProtocol|None = None
         ):
         """Send the message to all connected clients concurrently using
-            asyncio.gather.
+            asyncio.gather. If an auth plugin is provided, it will be
+            used to authorize the message in addition to any auth plugin
+            that is set on the server. If an encrypt plugin is provided,
+            it will be used to encrypt the message in addition to any
+            encryption plugin that is set on the server. If use_auth is
+            False, the auth plugin set on the server will not be used. If
+            use_encryption is False, the encryption plugin set on the
+            server will not be used.
         """
         self.logger.debug("Broadcasting message to all clients")
 
@@ -344,7 +369,14 @@ class TCPServer:
             encrypt_plugin: EncryptionPluginProtocol|None = None
         ):
         """Send the message to all subscribed clients for the given key
-            concurrently using asyncio.gather.
+            concurrently using asyncio.gather. If an auth plugin is
+            provided, it will be used to authorize the message in
+            addition to any auth plugin that is set on the server. If an
+            encrypt plugin is provided, it will be used to encrypt the
+            message in addition to any encryption plugin that is set on
+            the server. If use_auth is False, the auth plugin set on the
+            server will not be used. If use_encryption is False, the
+            encryption plugin set on the server will not be used.
         """
         if key not in self.subscriptions:
             self.logger.debug("No subscribers found for key=%s, skipping notification", key)
