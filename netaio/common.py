@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Hashable, Protocol, runtime_checkable, Callable, Coroutine, Any
 from zlib import crc32
@@ -94,7 +94,7 @@ class BodyProtocol(Protocol):
         ...
 
     @classmethod
-    def prepare(cls, content: bytes, *args, **kwargs) -> BodyProtocol:
+    def prepare(cls, content: bytes, uri: bytes = b'1', *args, **kwargs) -> BodyProtocol:
         """Prepare a body from content and optional arguments."""
         ...
 
@@ -213,7 +213,7 @@ class Header:
 @dataclass
 class AuthFields:
     """Default auth fields class."""
-    fields: dict[str, bytes]
+    fields: dict[str, bytes] = field(default_factory=dict)
 
     @classmethod
     def decode(cls, data: bytes) -> AuthFields:
@@ -307,9 +307,10 @@ class Message:
     def prepare(
             cls, body: BodyProtocol,
             message_type: MessageType = MessageType.REQUEST_URI,
-            auth_data: AuthFields = AuthFields({})
+            auth_data: AuthFields = None
         ) -> Message:
         """Prepare a message from a body and optional arguments."""
+        auth_data = AuthFields() if auth_data is None else auth_data
         return cls(
             header=Header(
                 message_type=message_type,
