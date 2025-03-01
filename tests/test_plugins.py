@@ -81,6 +81,44 @@ class TestPlugins(unittest.TestCase):
         # auth plugin catches the tampering
         assert not auth_plugin.check(msg.auth_data, msg.body)
 
+    def test_two_layers_of_plugins(self):
+        # setup
+        body = netaio.Body.prepare(b'eschew republic, establish empire', b'123')
+        message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
+        before = message.body.encode()
+        auth_plugin1 = netaio.HMACAuthPlugin({"secret": "test"})
+        cipher_plugin1 = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
+        auth_plugin2 = netaio.HMACAuthPlugin({
+            "secret": "test2",
+            "auth_field": "hmac2"
+        })
+        cipher_plugin2 = netaio.Sha256StreamEncryptionPlugin({
+            "key": "test2",
+            "auth_field": "iv2",
+            "encrypt_uri": False
+        })
+
+        # encrypt and authenticate
+        message = cipher_plugin2.encrypt(message)
+        auth_plugin2.make(message.auth_data, message.body)
+        message = cipher_plugin1.encrypt(message)
+        auth_plugin1.make(message.auth_data, message.body)
+        after = message.body.encode()
+        assert before != after
+        assert message.auth_data.fields['hmac'] is not None
+        assert message.auth_data.fields['iv'] is not None
+        assert message.auth_data.fields['hmac2'] is not None
+        assert message.auth_data.fields['iv2'] is not None
+
+        # decrypt and authenticate
+        assert auth_plugin1.check(message.auth_data, message.body)
+        message = cipher_plugin1.decrypt(message)
+        assert message is not None
+        assert auth_plugin2.check(message.auth_data, message.body)
+        message = cipher_plugin2.decrypt(message)
+        assert message is not None
+        assert message.body.encode() == before
+
 
 if __name__ == "__main__":
     unittest.main()

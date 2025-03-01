@@ -29,6 +29,7 @@ class EncryptionPluginProtocol(Protocol):
 class Sha256StreamEncryptionPlugin:
     """SHA-256 stream encryption plugin."""
     key: bytes
+    auth_field: str
     encrypt_uri: bool
 
     def __init__(self, config: dict):
@@ -36,21 +37,19 @@ class Sha256StreamEncryptionPlugin:
         key = config['key']
         key = sha256(key.encode() if isinstance(key, str) else key).digest()
         self.key = key
+        self.auth_field = config.get('auth_field', 'iv')
         self.encrypt_uri = config.get('encrypt_uri', True)
 
     def encrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Encrypt the message body, setting the iv in the auth_data if
-            it is not already set.
+        """Encrypt the message body, setting the self.auth_field in the
+            auth_data. This will overwrite any existing value in that
+            auth_data field.
         """
-        iv = None
-        if message.auth_data.fields.get('iv'):
-            iv = message.auth_data.fields['iv']
-
         plaintext = b''
         if self.encrypt_uri:
             plaintext += message.body.uri
         plaintext += message.body.content
-        iv, ciphertext = encrypt(self.key, plaintext, iv)
+        iv, ciphertext = encrypt(self.key, plaintext)
         if self.encrypt_uri:
             uri = ciphertext[:len(message.body.uri)]
             content = ciphertext[len(message.body.uri):]
@@ -60,19 +59,16 @@ class Sha256StreamEncryptionPlugin:
 
         message_type = message.header.message_type
         auth_data = message.auth_data.fields.copy()
-        auth_data['iv'] = iv
+        auth_data[self.auth_field] = iv
         auth_data = message.auth_data.__class__(auth_data)
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, auth_data)
 
     def decrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Decrypt the message body, reading values from the header or
-            auth_data as necessary. Returns a new message with the
-            decrypted body.
+        """Decrypt the message body, reading the self.auth_field from
+            the auth_data. Returns a new message with the decrypted body.
         """
-        iv = None
-        if message.auth_data.fields.get('iv'):
-            iv = message.auth_data.fields['iv']
+        iv = message.auth_data.fields[self.auth_field]
 
         if self.encrypt_uri:
             ciphertext = message.body.uri + message.body.content

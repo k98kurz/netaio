@@ -33,20 +33,25 @@ class AuthPluginProtocol(Protocol):
 class HMACAuthPlugin:
     """HMAC auth plugin."""
     secret: bytes
+    auth_field: str
 
     def __init__(self, config: dict):
         """Initialize the HMAC auth plugin with a config. The config
-            must contain {"secret": <str|bytes>}.
+            must contain {"secret": <str|bytes>}. It can contain
+            {"auth_field": <str>} to specify the auth_field name to
+            store the hmac in; the default is "hmac".
         """
         secret = config["secret"]
         if isinstance(secret, str):
             secret = secret.encode()
         self.secret = sha256(secret).digest()
+        self.auth_field = config.get("auth_field", "hmac")
 
     def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
         """If the nonce and ts fields are not present, generate them.
             Then, create an hmac of the nonce, ts, and body and store it
-            in the hmac field.
+            in the auth_field specified by the "auth_field" config
+            option; the default is "hmac".
         """
         nonce = auth_fields.fields.get("nonce", b'')
         if len(nonce) != IV_SIZE:
@@ -55,7 +60,7 @@ class HMACAuthPlugin:
         auth_fields.fields.update({
             "nonce": nonce,
             "ts": ts,
-            "hmac": hmac(self.secret, nonce + ts.to_bytes(4, "big") + body.encode())
+            self.auth_field: hmac(self.secret, nonce + ts.to_bytes(4, "big") + body.encode())
         })
 
     def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
@@ -66,7 +71,7 @@ class HMACAuthPlugin:
         """
         ts = auth_fields.fields.get("ts", 0)
         nonce = auth_fields.fields.get("nonce", None)
-        mac = auth_fields.fields.get("hmac", None)
+        mac = auth_fields.fields.get(self.auth_field, None)
         if ts == 0 or nonce is None or mac is None:
             return False
         return check_hmac(
