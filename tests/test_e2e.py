@@ -10,8 +10,8 @@ class TestE2E(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        netaio.default_server_logger.setLevel(logging.DEBUG)
-        netaio.default_client_logger.setLevel(logging.DEBUG)
+        netaio.default_server_logger.setLevel(logging.INFO)
+        netaio.default_client_logger.setLevel(logging.INFO)
 
     def test_e2e(self):
         async def run_test():
@@ -83,8 +83,8 @@ class TestE2E(unittest.TestCase):
                 client_log.append(message)
                 return message
 
-            self.assertEqual(len(server_log), 0)
-            self.assertEqual(len(client_log), 0)
+            assert len(server_log) == 0
+            assert len(client_log) == 0
 
             # Start the server as a background task.
             server_task = asyncio.create_task(server.start())
@@ -134,7 +134,11 @@ class TestE2E(unittest.TestCase):
             client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
             await client.send(client_msg)
             response = await client.receive_once()
-            self.assertIsNone(response)
+            assert response is None
+            await client.send(client_msg)
+            response = await client.receive_once(use_auth=False, use_encryption=False)
+            assert response is not None
+            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
 
             # close client and stop server
             await client.close()
@@ -145,6 +149,178 @@ class TestE2E(unittest.TestCase):
             except asyncio.CancelledError:
                 pass
 
+        print()
+        asyncio.run(run_test())
+
+
+class TestE2EWithoutDefaultPlugins(unittest.TestCase):
+    PORT = randint(10000, 65535)
+
+    @classmethod
+    def setUpClass(cls):
+        netaio.default_server_logger.setLevel(logging.INFO)
+        netaio.default_client_logger.setLevel(logging.INFO)
+
+    def test_e2e_without_default_plugins(self):
+        async def run_test():
+            server_log = []
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            encrypt_plugin = netaio.Sha256StreamEncryptionPlugin(config={"key": "test"})
+
+            server = netaio.TCPServer(port=self.PORT)
+            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
+
+            @server.on(netaio.MessageType.REQUEST_URI)
+            def server_request(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                return message
+
+            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
+            def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                return message
+
+            echo_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'echo'),
+                netaio.MessageType.REQUEST_URI
+            )
+            publish_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'publish'),
+                netaio.MessageType.PUBLISH_URI
+            )
+
+            assert len(server_log) == 0
+
+            # Start the server as a background task.
+            server_task = asyncio.create_task(server.start())
+
+            # Wait briefly to allow the server time to bind and listen.
+            await asyncio.sleep(0.1)
+
+            # connect client
+            await client.connect()
+
+            # send to unprotected route
+            await client.send(echo_msg, use_auth=False, use_encryption=False)
+            response = await client.receive_once(use_auth=False, use_encryption=False)
+            assert response is not None
+            assert response.encode() == echo_msg.encode(), \
+                (response.encode().hex(), echo_msg.encode().hex())
+
+            # send to protected route
+            await client.send(publish_msg)
+            response = await client.receive_once()
+            assert response is not None
+            assert response.body.content == publish_msg.body.content, \
+                (response.body.content, publish_msg.body.content)
+            assert response.body.uri == publish_msg.body.uri, \
+                (response.body.uri, publish_msg.body.uri)
+            assert response.header.message_type == publish_msg.header.message_type, \
+                (response.header.message_type, publish_msg.header.message_type)
+
+            # close client and stop server
+            await client.close()
+            server_task.cancel()
+
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+        print()
+        asyncio.run(run_test())
+
+
+class TestE2ETwoLayersOfPlugins(unittest.TestCase):
+    PORT = randint(10000, 65535)
+
+    @classmethod
+    def setUpClass(cls):
+        netaio.default_server_logger.setLevel(logging.INFO)
+        netaio.default_client_logger.setLevel(logging.INFO)
+
+    def test_e2e_two_layers_of_plugins(self):
+        async def run_test():
+            server_log = []
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            encrypt_plugin = netaio.Sha256StreamEncryptionPlugin(config={"key": "test"})
+            auth_plugin2 = netaio.HMACAuthPlugin(config={
+                "secret": "test2",
+                "hmac_field": "hmac2",
+            })
+            encrypt_plugin2 = netaio.Sha256StreamEncryptionPlugin(config={
+                "key": "test2",
+                "iv_field": "iv2",
+                "encrypt_uri": False
+            })
+
+            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
+            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=encrypt_plugin)
+
+            @server.on(netaio.MessageType.REQUEST_URI)
+            def server_request(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                return message
+
+            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin2, encrypt_plugin=encrypt_plugin2)
+            def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                return message
+
+            echo_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'echo'),
+                netaio.MessageType.REQUEST_URI
+            )
+            publish_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'publish'),
+                netaio.MessageType.PUBLISH_URI
+            )
+
+            assert len(server_log) == 0
+
+            # Start the server as a background task.
+            server_task = asyncio.create_task(server.start())
+
+            # Wait briefly to allow the server time to bind and listen.
+            await asyncio.sleep(0.1)
+
+            # connect client
+            await client.connect()
+
+            # send to once-protected route
+            await client.send(echo_msg)
+            response = await client.receive_once()
+            assert response is not None
+            assert response.body.content == echo_msg.body.content, \
+                (response.body.content, echo_msg.body.content)
+            assert response.body.uri == echo_msg.body.uri, \
+                (response.body.uri, echo_msg.body.uri)
+            assert response.header.message_type == echo_msg.header.message_type, \
+                (response.header.message_type, echo_msg.header.message_type)
+
+            # send to twice-protected route
+            await client.send(publish_msg, auth_plugin=auth_plugin2, encrypt_plugin=encrypt_plugin2)
+            response = await client.receive_once(auth_plugin=auth_plugin2, encrypt_plugin=encrypt_plugin2)
+            assert response is not None
+            assert response.body.content == publish_msg.body.content, \
+                (response.body.content, publish_msg.body.content)
+            assert response.body.uri == publish_msg.body.uri, \
+                (response.body.uri, publish_msg.body.uri)
+            assert response.header.message_type == publish_msg.header.message_type, \
+                (response.header.message_type, publish_msg.header.message_type)
+
+            assert len(server_log) == 2, len(server_log)
+
+            # close client and stop server
+            await client.close()
+            server_task.cancel()
+
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+        print()
         asyncio.run(run_test())
 
 
