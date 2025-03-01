@@ -8,9 +8,11 @@ server library inspired by fastapi but for non-HTTP use cases.
 This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 
 - [x] Add authorization plugin
-- [ ] Add encryption plugin
+- [x] Add encryption plugin
+- [x] Add optional authorization plugin using HMAC
+- [x] Add optional encryption plugin using simple symmetric stream cipher
 - [ ] Add optional authorization plugin using tapescript
-- [ ] Add optional encryption plugin using simple symmetric stream cipher
+- [ ] UDP node with multicast peer discovery
 - [ ] More thorough test suite
 - [ ] Better usage examples/documentation
 
@@ -94,14 +96,84 @@ Currently, netaio includes an `HMACAuthPlugin` that can be used by the server
 and client to authenticate and authorize requests. This uses a shared secret to
 generate and check HMACs over message bodies.
 
+<details>
+<summary>Example</summary>
+
+```python
+from netaio import TCPServer, TCPClient, HMACAuthPlugin, MessageType, Body, Message
+
+outer_auth_plugin = HMACAuthPlugin(config={"secret": "test"})
+inner_auth_plugin = HMACAuthPlugin(config={"secret": "tset", "hmac_field": "camh"})
+server = TCPServer(port=8888, auth_plugin=outer_auth_plugin)
+client = TCPClient(host="127.0.0.1", port=8888, auth_plugin=outer_auth_plugin)
+
+@server.on(MessageType.CREATE_URI, inner_auth_plugin)
+async def put_uri(msg: Message, writer: asyncio.StreamWriter):
+    body = Body.prepare(b'Resource saved.', uri=msg.body.uri)
+    return Message.prepare(body, MessageType.OK)
+```
+</details>
+
+### Encryption
+
+The server and client support an optional encryption plugin. Each plugin is
+instantiated with a dict of configuration parameters, and it must implement the
+`EncryptionPluginProtocol` (i.e. have `encrypt` and `decrypt` methods). Once the
+plugin has been instantiated, it can be passed to the `TCPServer` and
+`TCPClient` constructors or set on the client or server instances themselves.
+An encrypt plugin can also be set on a per-handler basis by passing the plugin
+as a third argument to the `on` method. If an encrypt plugin is set both on the
+instance and per-handler, both will be applied to the message.
+
+Currently, netaio includes a `Sha256StreamEncryptionPlugin` that can be used by
+the server and client to encrypt and decrypt messages using a simple symmetric
+stream cipher. This uses a shared secret key and per-message IVs.
+
+<details>
+<summary>Example</summary>
+
+```python
+from netaio import TCPServer, TCPClient, Sha256StreamEncryptionPlugin, MessageType, Body, Message
+
+outer_encrypt_plugin = Sha256StreamEncryptionPlugin(config={"key": "test"})
+inner_encrypt_plugin = Sha256StreamEncryptionPlugin(config={"key": "tset", "iv_field": "iv2"})
+server = TCPServer(port=8888, encrypt_plugin=outer_encrypt_plugin)
+client = TCPClient(host="127.0.0.1", port=8888, encrypt_plugin=outer_encrypt_plugin)
+
+@server.on(MessageType.REQUEST_URI, inner_encrypt_plugin)
+async def request_uri(msg: Message, writer: asyncio.StreamWriter):
+    body = Body.prepare(b'Super secret data.', uri=msg.body.uri)
+    return Message.prepare(body, MessageType.RESPOND_URI)
+```
+</details>
+
+### Encapsulation
+
+The encapsulation model for plugin interactions with messages is as follows:
+
+#### Send
+
+1. Per-handler/injected `encrypt_plugin.encrypt`
+2. Per-handler/injected `auth_plugin.make`
+3. Instance `encrypt_plugin.encrypt`
+4. Instance `auth_plugin.make`
+
+#### Receive
+
+1. Instance `auth_plugin.check`
+2. Instance `encrypt_plugin.decrypt`
+3. Per-handler/injected `auth_plugin.check`
+4. Per-handler/injected `encrypt_plugin.decrypt`
+
+
 ## Testing
 
 To test, clone the repo and run `python -m unittest discover -s tests`.
 
-Currently, there is one e2e test that starts a server and client, then sends
-messages from the client to the server and receives responses. The
-HMACAuthPlugin is used for the test, and an authentication failure case is also
-tested.
+Currently, there are 4 unit tests and 3 e2e tests. The unit tests cover the
+bundled plugins. The e2e tests start a server and client, then send messages from
+the client to the server and receive responses. The bundled plugins are used for
+the e2e tests, and an authentication failure case is also tested.
 
 ## License
 

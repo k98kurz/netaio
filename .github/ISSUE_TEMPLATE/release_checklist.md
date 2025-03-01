@@ -19,5 +19,6 @@ Once all other issues are complete, prepare to release the next version.
 - [ ] Update changelog.md
 - [ ] Review and finalize documentation
 - [ ] Ensure version strings are set to `'M.m.p'`
+- [ ] Close milestone on GitHub
 - [ ] Push tag and make release on GitHub
 - [ ] Update PyPI
