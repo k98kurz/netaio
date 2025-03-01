@@ -21,6 +21,7 @@ class TestPlugins(unittest.TestCase):
         assert not auth_plugin.check(message.auth_data, message.body)
 
     def test_sha256_stream_encryption_plugin(self):
+        # default
         body = netaio.Body.prepare(b'brutus is plotting something sus', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         cipher_plugin = netaio.Sha256StreamEncryptionPlugin({"key": "test"})
@@ -30,6 +31,23 @@ class TestPlugins(unittest.TestCase):
         assert 'iv' in message.auth_data.fields
         after = message.body.encode()
         assert before != after
+        msg_or_err = cipher_plugin.decrypt(message)
+        assert msg_or_err is not None
+        assert not isinstance(msg_or_err, BaseException), msg_or_err
+        assert msg_or_err.body.encode() == before
+
+        # without uri encryption
+        cipher_plugin = netaio.Sha256StreamEncryptionPlugin({
+            "key": "test",
+            "encrypt_uri": False
+        })
+        before = message.body.encode()
+        before_uri = message.body.uri
+        message = cipher_plugin.encrypt(message)
+        assert 'iv' in message.auth_data.fields
+        after = message.body.encode()
+        assert before != after
+        assert message.body.uri == before_uri
         msg_or_err = cipher_plugin.decrypt(message)
         assert msg_or_err is not None
         assert not isinstance(msg_or_err, BaseException), msg_or_err

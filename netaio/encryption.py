@@ -29,12 +29,14 @@ class EncryptionPluginProtocol(Protocol):
 class Sha256StreamEncryptionPlugin:
     """SHA-256 stream encryption plugin."""
     key: bytes
+    encrypt_uri: bool
 
     def __init__(self, config: dict):
         """Initialize the encryption plugin with a config."""
         key = config['key']
         key = sha256(key.encode() if isinstance(key, str) else key).digest()
         self.key = key
+        self.encrypt_uri = config.get('encrypt_uri', True)
 
     def encrypt(self, message: MessageProtocol) -> MessageProtocol:
         """Encrypt the message body, setting the iv in the auth_data if
@@ -43,11 +45,20 @@ class Sha256StreamEncryptionPlugin:
         iv = None
         if message.auth_data.fields.get('iv'):
             iv = message.auth_data.fields['iv']
-        plaintext = message.body.uri + message.body.content
+
+        plaintext = b''
+        if self.encrypt_uri:
+            plaintext += message.body.uri
+        plaintext += message.body.content
         iv, ciphertext = encrypt(self.key, plaintext, iv)
-        uri = ciphertext[:len(message.body.uri)]
+        if self.encrypt_uri:
+            uri = ciphertext[:len(message.body.uri)]
+            content = ciphertext[len(message.body.uri):]
+        else:
+            uri = message.body.uri
+            content = ciphertext
+
         message_type = message.header.message_type
-        content = ciphertext[len(message.body.uri):]
         auth_data = message.auth_data.fields.copy()
         auth_data['iv'] = iv
         auth_data = message.auth_data.__class__(auth_data)
@@ -62,10 +73,18 @@ class Sha256StreamEncryptionPlugin:
         iv = None
         if message.auth_data.fields.get('iv'):
             iv = message.auth_data.fields['iv']
-        ciphertext = message.body.uri + message.body.content
+
+        if self.encrypt_uri:
+            ciphertext = message.body.uri + message.body.content
+        else:
+            ciphertext = message.body.content
         content = decrypt(self.key, iv, ciphertext)
-        uri = content[:len(message.body.uri)]
-        content = content[len(message.body.uri):]
+        if self.encrypt_uri:
+            uri = content[:len(message.body.uri)]
+            content = content[len(message.body.uri):]
+        else:
+            uri = message.body.uri
+
         message_type = message.header.message_type
         auth_data = message.auth_data.fields.copy()
         auth_data = message.auth_data.__class__(auth_data)
