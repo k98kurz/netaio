@@ -37,7 +37,7 @@ from netaio import ...
 - Platform/device: [e.g. desktop or specific phone model]
 - OS: [e.g. Ubuntu]
 - Python Version: [e.g. 3.10]
-- Netaio Version [e.g. 0.0.1]
+- Netaio Version: [e.g. 0.0.1]
 
 ### Additional context
 
