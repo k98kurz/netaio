@@ -12,6 +12,7 @@ from .common import (
     Handler,
     default_server_logger
 )
+from .encryption import EncryptionPluginProtocol
 from typing import Callable, Coroutine, Hashable
 import asyncio
 import logging
@@ -35,7 +36,7 @@ class TCPServer:
     clients: set[asyncio.StreamWriter]
     logger: logging.Logger
     auth_plugin: AuthPluginProtocol
-
+    encrypt_plugin: EncryptionPluginProtocol
     def __init__(
             self, host: str = "0.0.0.0", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
@@ -45,7 +46,8 @@ class TCPServer:
             make_error_response: Callable[[str], MessageProtocol] = make_error_response,
             default_handler: Handler = not_found_handler,
             logger: logging.Logger = default_server_logger,
-            auth_plugin: AuthPluginProtocol = None
+            auth_plugin: AuthPluginProtocol = None,
+            encrypt_plugin: EncryptionPluginProtocol = None
         ):
         """Initialize the TCPServer.
 
@@ -61,6 +63,7 @@ class TCPServer:
                 do not match any registered handler keys.
             logger: The logger to use.
             auth_plugin: The auth plugin to use.
+            encrypt_plugin: The encrypt plugin to use.
         """
         self.host = host
         self.port = port
@@ -75,6 +78,7 @@ class TCPServer:
         self.default_handler = default_handler
         self.logger = logger
         self.auth_plugin = auth_plugin
+        self.encrypt_plugin = encrypt_plugin
 
     def add_handler(
             self, key: Hashable,
@@ -124,7 +128,10 @@ class TCPServer:
             if not self.subscriptions[key]:
                 del self.subscriptions[key]
 
-    async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    async def handle_client(
+            self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+            use_auth: bool = True, use_encryption: bool = True
+        ):
         """Handle a client connection. When a client connects, it is
             added to the clients set. The client is then read from until
             the connection is lost, and the proper handlers are called
@@ -156,14 +163,18 @@ class TCPServer:
                     self.logger.debug("Invalid message received from %s", writer.get_extra_info("peername"))
                     response = self.make_error("invalid message")
                 else:
-                    if self.auth_plugin is not None:
+                    if use_auth and self.auth_plugin is not None:
                         if not self.auth_plugin.check(auth, body):
                             self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                             response = self.auth_plugin.error()
-                            await self.send(writer, response)
+                            await self.send(writer, response, use_auth=False, use_encryption=False)
                             continue
                         else:
                             self.logger.debug("Valid auth_fields received from %s", writer.get_extra_info("peername"))
+
+                    if use_encryption and self.encrypt_plugin is not None:
+                        self.logger.debug("Calling encrypt_plugin.decrypt on message")
+                        message = self.encrypt_plugin.decrypt(message)
 
                     keys = self.extract_keys(message)
                     self.logger.debug("Message received from %s with keys=%s", writer.get_extra_info("peername"), keys)
@@ -176,7 +187,7 @@ class TCPServer:
                                 if not auth_plugin.check(auth, body):
                                     self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                                     response = auth_plugin.error()
-                                    await self.send(writer, response)
+                                    await self.send(writer, response, use_auth=False, use_encryption=False)
                                     continue
 
                             self.logger.debug("Calling handler for key=%s", key)
@@ -189,13 +200,19 @@ class TCPServer:
                         response = self.default_handler(message, writer)
 
                 if response is not None:
-                    if self.auth_plugin is not None:
+                    if use_encryption and self.encrypt_plugin is not None:
+                        self.logger.debug("Calling encrypt_plugin.encrypt on response")
+                        response = self.encrypt_plugin.encrypt(response)
+
+                    if use_auth and self.auth_plugin is not None:
                         self.logger.debug("Calling self.auth_plugin.make on response.body")
                         self.auth_plugin.make(response.auth_data, response.body)
-                    if auth_plugin is not None:
+
+                    if use_auth and auth_plugin is not None:
                         self.logger.debug("Calling auth_plugin.make on response.body (handler)")
                         auth_plugin.make(response.auth_data, response.body)
-                    await self.send(writer, response, use_auth=False)
+
+                    await self.send(writer, response, use_auth=False, use_encryption=False)
         except asyncio.IncompleteReadError:
             self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
             pass  # Client disconnected
@@ -215,26 +232,32 @@ class TCPServer:
             writer.close()
             await writer.wait_closed()
 
-    async def start(self):
+    async def start(self, use_auth: bool = True, use_encryption: bool = True):
         """Start the server."""
-        server = await asyncio.start_server(self.handle_client, self.host, self.port)
+        server = await asyncio.start_server(
+            lambda r, w: self.handle_client(r, w, use_auth, use_encryption),
+            self.host, self.port
+        )
         async with server:
             self.logger.info(f"Server started on {self.host}:{self.port}")
             await server.serve_forever()
 
     async def send(
             self, client: asyncio.StreamWriter, message: MessageProtocol,
-            collection: set = None, use_auth: bool = True
+            collection: set = None, use_auth: bool = True, use_encryption: bool = True
         ):
         """Helper coroutine to send a message to a client. On error, it
             logs the exception and removes the client from the given
             collection.
         """
-        self.logger.debug("Sending message to %s", client.get_extra_info("peername"))
+        if use_encryption and self.encrypt_plugin is not None:
+            self.logger.debug("Calling encrypt_plugin.encrypt on message")
+            message = self.encrypt_plugin.encrypt(message)
         if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling self.auth_plugin.make on message.body")
+            self.logger.debug("Calling self.auth_plugin.make on auth_data and body")
             self.auth_plugin.make(message.auth_data, message.body)
         try:
+            self.logger.debug("Sending message to %s", client.get_extra_info("peername"))
             client.write(message.encode())
             await client.drain()
         except Exception as e:
@@ -254,7 +277,10 @@ class TCPServer:
         tasks = [self.send(client, message, self.clients, False) for client in self.clients]
         await asyncio.gather(*tasks, return_exceptions=True)
 
-    async def notify(self, key: Hashable, message: MessageProtocol, use_auth: bool = True):
+    async def notify(
+            self, key: Hashable, message: MessageProtocol, use_auth: bool = True,
+            use_encryption: bool = True
+        ):
         """Send the message to all subscribed clients for the given key
             concurrently using asyncio.gather.
         """
@@ -263,6 +289,10 @@ class TCPServer:
             return
 
         self.logger.debug("Notifying %d clients for key=%s", len(self.subscriptions[key]), key)
+
+        if use_encryption and self.encrypt_plugin is not None:
+            self.logger.debug("Calling encrypt_plugin.encrypt on message")
+            message = self.encrypt_plugin.encrypt(message)
 
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on message.body (notify)")
@@ -274,7 +304,7 @@ class TCPServer:
             del self.subscriptions[key]
             return
 
-        tasks = [self.send(client, message, subscribers, False) for client in subscribers]
+        tasks = [self.send(client, message, subscribers, False, False) for client in subscribers]
         await asyncio.gather(*tasks, return_exceptions=True)
         self.logger.debug("Notified %d clients for key=%s", len(subscribers), key)
 

@@ -11,6 +11,7 @@ from .common import (
     Handler,
     default_client_logger
 )
+from .encryption import EncryptionPluginProtocol
 from typing import Callable, Coroutine, Hashable
 import asyncio
 import logging
@@ -27,6 +28,7 @@ class TCPClient:
     extract_keys: Callable[[MessageProtocol], list[Hashable]]
     logger: logging.Logger
     auth_plugin: AuthPluginProtocol
+    encrypt_plugin: EncryptionPluginProtocol
 
     def __init__(
             self, host: str = "127.0.0.1", port: int = 8888,
@@ -36,7 +38,8 @@ class TCPClient:
             handlers: dict[Hashable, Handler] = {},
             extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
             logger: logging.Logger = default_client_logger,
-            auth_plugin: AuthPluginProtocol = None
+            auth_plugin: AuthPluginProtocol = None,
+            encrypt_plugin: EncryptionPluginProtocol = None
         ):
         """Initialize the TCPClient.
 
@@ -50,6 +53,7 @@ class TCPClient:
             extract_keys: A function that extracts the keys from a message.
             logger: The logger to use.
             auth_plugin: The auth plugin to use.
+            encrypt_plugin: The encryption plugin to use.
         """
         self.hosts = {}
         self.default_host = (host, port)
@@ -61,6 +65,7 @@ class TCPClient:
         self.extract_keys = extract_keys
         self.logger = logger
         self.auth_plugin = auth_plugin
+        self.encrypt_plugin = encrypt_plugin
 
     def add_handler(
             self, key: Hashable,
@@ -100,16 +105,22 @@ class TCPClient:
 
     async def send(
             self, message: MessageProtocol, server: tuple[str, int] = None,
-            set_auth: bool = True
+            use_auth: bool = True, use_encryption: bool = True
         ):
-        """Send a message to the server. If set_auth is True and an auth
+        """Send a message to the server. If use_auth is True and an auth
             plugin is set, it will be called to set the auth fields on the
             message.
         """
         server = server or self.default_host
-        if set_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling auth_plugin.make on message.body")
+
+        if use_encryption and self.encrypt_plugin is not None:
+            self.logger.debug("Calling encrypt_plugin.encrypt on message")
+            message = self.encrypt_plugin.encrypt(message)
+
+        if use_auth and self.auth_plugin is not None:
+            self.logger.debug("Calling auth_plugin.make on auth_data and body")
             self.auth_plugin.make(message.auth_data, message.body)
+
         self.logger.debug(f"Sending message of type={message.header.message_type} to server...")
         _, writer = self.hosts[server]
         writer.write(message.encode())
@@ -117,7 +128,8 @@ class TCPClient:
         self.logger.debug("Message sent to server")
 
     async def receive_once(
-            self, server: tuple[str, int] = None
+            self, server: tuple[str, int] = None, use_auth: bool = True,
+            use_encryption: bool = True
         ) -> MessageProtocol|None:
         """Receive a message from the server. If a handler was
             registered for the message key, the handler will be called
@@ -148,10 +160,14 @@ class TCPClient:
             self.logger.warning("Message checksum failed")
             return None
 
-        if self.auth_plugin is not None:
+        if use_auth and self.auth_plugin is not None:
             if not self.auth_plugin.check(auth, body):
                 self.logger.warning("Message auth failed")
                 return None
+
+        if use_encryption and self.encrypt_plugin is not None:
+            self.logger.debug("Calling encrypt_plugin.decrypt on message")
+            msg = self.encrypt_plugin.decrypt(msg)
 
         keys = self.extract_keys(msg)
         result = None
@@ -177,7 +193,10 @@ class TCPClient:
 
         return msg
 
-    async def receive_loop(self, server: tuple[str, int] = None):
+    async def receive_loop(
+            self, server: tuple[str, int] = None, use_auth: bool = True,
+            use_encryption: bool = True
+        ):
         """Receive messages from the server indefinitely. Use with
             asyncio.create_task() to run concurrently, then use
             task.cancel() to stop.
@@ -185,7 +204,7 @@ class TCPClient:
         server = server or self.default_host
         while True:
             try:
-                await self.receive_once(server)
+                await self.receive_once(server, use_auth, use_encryption)
             except asyncio.CancelledError:
                 self.logger.info("Receive loop cancelled")
                 break

@@ -18,9 +18,10 @@ class TestE2E(unittest.TestCase):
             server_log = []
             client_log = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            cipher_plugin = netaio.Sha256StreamEncryptionPlugin(config={"key": "test"})
 
-            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin)
-            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin)
+            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=cipher_plugin)
+            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, encrypt_plugin=cipher_plugin)
 
             client_msg = netaio.Message.prepare(
                 netaio.Body.prepare(b'hello', uri=b'echo'),
@@ -96,22 +97,38 @@ class TestE2E(unittest.TestCase):
 
             await client.send(client_msg)
             response = await client.receive_once()
-            self.assertEqual(response, expected_response)
+            assert response.encode() == expected_response.encode(), \
+                (response.encode().hex(), expected_response.encode().hex())
 
             await client.send(client_subscribe_msg)
             response = await client.receive_once()
-            self.assertEqual(response, expected_subscribe_response)
+            assert response.header.message_type == expected_subscribe_response.header.message_type, \
+                (response.header.message_type, expected_subscribe_response.header.message_type)
+            assert response.body.uri == expected_subscribe_response.body.uri, \
+                (response.body.uri, expected_subscribe_response.body.uri)
+            assert response.body.content == expected_subscribe_response.body.content, \
+                (response.body.content, expected_subscribe_response.body.content)
 
             await server.notify(b'subscribe/test', server_notify_msg)
-            response = await client.receive_once()
-            self.assertEqual(response, server_notify_msg)
+            response = await client.receive_once(use_auth=False)
+            assert response.header.message_type == server_notify_msg.header.message_type, \
+                (response.header.message_type, server_notify_msg.header.message_type)
+            assert response.body.uri == server_notify_msg.body.uri, \
+                (response.body.uri, server_notify_msg.body.uri)
+            assert response.body.content == server_notify_msg.body.content, \
+                (response.body.content, server_notify_msg.body.content)
 
             await client.send(client_unsubscribe_msg)
             response = await client.receive_once()
-            self.assertEqual(response, expected_unsubscribe_response)
+            assert response.header.message_type == expected_unsubscribe_response.header.message_type, \
+                (response.header.message_type, expected_unsubscribe_response.header.message_type)
+            assert response.body.uri == expected_unsubscribe_response.body.uri, \
+                (response.body.uri, expected_unsubscribe_response.body.uri)
+            assert response.body.content == expected_unsubscribe_response.body.content, \
+                (response.body.content, expected_unsubscribe_response.body.content)
 
-            self.assertEqual(len(server_log), 3)
-            self.assertEqual(len(client_log), 2)
+            assert len(server_log) == 3, len(server_log)
+            assert len(client_log) == 2, len(client_log)
 
             # test auth failure
             client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
