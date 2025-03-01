@@ -25,7 +25,7 @@ def not_found_handler(*_) -> MessageProtocol | None:
 class TCPServer:
     host: str
     port: int
-    handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None]]
+    handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, EncryptionPluginProtocol|None]]
     default_handler: Handler
     header_class: type[HeaderProtocol]
     body_class: type[BodyProtocol]
@@ -83,7 +83,8 @@ class TCPServer:
     def add_handler(
             self, key: Hashable,
             handler: Handler,
-            auth_plugin: AuthPluginProtocol = None
+            auth_plugin: AuthPluginProtocol = None,
+            encrypt_plugin: EncryptionPluginProtocol = None
         ):
         """Register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
@@ -93,9 +94,13 @@ class TCPServer:
             plugin that is set on the server.
         """
         self.logger.debug("Adding handler for key=%s", key)
-        self.handlers[key] = (handler, auth_plugin)
+        self.handlers[key] = (handler, auth_plugin, encrypt_plugin)
 
-    def on(self, key: Hashable, auth_plugin: AuthPluginProtocol = None):
+    def on(
+            self, key: Hashable,
+            auth_plugin: AuthPluginProtocol = None,
+            encrypt_plugin: EncryptionPluginProtocol = None
+        ):
         """Decorator to register a handler for a specific key. The
             handler must accept a MessageProtocol object as an argument
             and return a MessageProtocol, None, or a Coroutine that
@@ -104,7 +109,7 @@ class TCPServer:
             to any auth plugin that is set on the server.
         """
         def decorator(func: Handler):
-            self.add_handler(key, func, auth_plugin)
+            self.add_handler(key, func, auth_plugin, encrypt_plugin)
             return func
         return decorator
 
@@ -144,6 +149,7 @@ class TCPServer:
         try:
             while True:
                 auth_plugin = None
+                encrypt_plugin = None
                 header_bytes = await reader.readexactly(header_length)
                 header = self.header_class.decode(header_bytes)
 
@@ -163,8 +169,10 @@ class TCPServer:
                     self.logger.debug("Invalid message received from %s", writer.get_extra_info("peername"))
                     response = self.make_error("invalid message")
                 else:
+                    # outer auth
                     if use_auth and self.auth_plugin is not None:
-                        if not self.auth_plugin.check(auth, body):
+                        self.logger.debug("Calling self.auth_plugin.check on auth and body")
+                        if not self.auth_plugin.check(message.auth_data, message.body):
                             self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                             response = self.auth_plugin.error()
                             await self.send(writer, response, use_auth=False, use_encryption=False)
@@ -172,8 +180,9 @@ class TCPServer:
                         else:
                             self.logger.debug("Valid auth_fields received from %s", writer.get_extra_info("peername"))
 
+                    # outer encryption
                     if use_encryption and self.encrypt_plugin is not None:
-                        self.logger.debug("Calling encrypt_plugin.decrypt on message")
+                        self.logger.debug("Calling self.encrypt_plugin.decrypt on message")
                         message = self.encrypt_plugin.decrypt(message)
 
                     keys = self.extract_keys(message)
@@ -181,14 +190,20 @@ class TCPServer:
 
                     for key in keys:
                         if key in self.handlers:
-                            handler, auth_plugin = self.handlers[key]
+                            handler, auth_plugin, encrypt_plugin = self.handlers[key]
 
+                            # inner auth
                             if auth_plugin is not None:
-                                if not auth_plugin.check(auth, body):
+                                self.logger.debug("Calling auth_plugin.check on auth and body")
+                                if not auth_plugin.check(message.auth_data, message.body):
                                     self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
                                     response = auth_plugin.error()
-                                    await self.send(writer, response, use_auth=False, use_encryption=False)
-                                    continue
+                                    break
+
+                            # inner encryption
+                            if encrypt_plugin is not None:
+                                self.logger.debug("Calling encrypt_plugin.decrypt on message")
+                                message = encrypt_plugin.decrypt(message)
 
                             self.logger.debug("Calling handler for key=%s", key)
                             response = handler(message, writer)
@@ -200,17 +215,25 @@ class TCPServer:
                         response = self.default_handler(message, writer)
 
                 if response is not None:
+                    # inner encryption
+                    if encrypt_plugin is not None:
+                        self.logger.debug("Calling encrypt_plugin.encrypt on response")
+                        response = encrypt_plugin.encrypt(response)
+
+                    # inner auth
+                    if auth_plugin is not None:
+                        self.logger.debug("Calling auth_plugin.make on response.body (handler)")
+                        auth_plugin.make(response.auth_data, response.body)
+
+                    # outer encryption
                     if use_encryption and self.encrypt_plugin is not None:
                         self.logger.debug("Calling encrypt_plugin.encrypt on response")
                         response = self.encrypt_plugin.encrypt(response)
 
+                    # outer auth
                     if use_auth and self.auth_plugin is not None:
                         self.logger.debug("Calling self.auth_plugin.make on response.body")
                         self.auth_plugin.make(response.auth_data, response.body)
-
-                    if use_auth and auth_plugin is not None:
-                        self.logger.debug("Calling auth_plugin.make on response.body (handler)")
-                        auth_plugin.make(response.auth_data, response.body)
 
                     await self.send(writer, response, use_auth=False, use_encryption=False)
         except asyncio.IncompleteReadError:
@@ -244,18 +267,34 @@ class TCPServer:
 
     async def send(
             self, client: asyncio.StreamWriter, message: MessageProtocol,
-            collection: set = None, use_auth: bool = True, use_encryption: bool = True
+            collection: set = None, use_auth: bool = True,
+            use_encryption: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            encrypt_plugin: EncryptionPluginProtocol|None = None
         ):
         """Helper coroutine to send a message to a client. On error, it
             logs the exception and removes the client from the given
             collection.
         """
-        if use_encryption and self.encrypt_plugin is not None:
+        # inner encryption
+        if encrypt_plugin is not None:
             self.logger.debug("Calling encrypt_plugin.encrypt on message")
+            message = encrypt_plugin.encrypt(message)
+
+        # inner auth
+        if auth_plugin is not None:
+            self.logger.debug("Calling auth_plugin.make on auth_data and body")
+            auth_plugin.make(message.auth_data, message.body)
+
+        # outer encryption
+        if use_encryption and self.encrypt_plugin is not None:
+            self.logger.debug("Calling self.encrypt_plugin.encrypt on message")
             message = self.encrypt_plugin.encrypt(message)
+
+        # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on auth_data and body")
             self.auth_plugin.make(message.auth_data, message.body)
+
         try:
             self.logger.debug("Sending message to %s", client.get_extra_info("peername"))
             client.write(message.encode())
@@ -266,20 +305,43 @@ class TCPServer:
                 self.logger.info("Removing client %s from collection", client.get_extra_info("peername"))
                 collection.discard(client)
 
-    async def broadcast(self, message: MessageProtocol, use_auth: bool = True):
+    async def broadcast(
+            self, message: MessageProtocol, use_auth: bool = True,
+            use_encryption: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            encrypt_plugin: EncryptionPluginProtocol|None = None
+        ):
         """Send the message to all connected clients concurrently using
             asyncio.gather.
         """
         self.logger.debug("Broadcasting message to all clients")
+
+        # inner encryption
+        if use_encryption and encrypt_plugin is not None:
+            self.logger.debug("Calling encrypt_plugin.encrypt on message")
+            message = encrypt_plugin.encrypt(message)
+
+        # inner auth
+        if use_auth and auth_plugin is not None:
+            self.logger.debug("Calling auth_plugin.make on message.body (broadcast)")
+            auth_plugin.make(message.auth_data, message.body)
+
+        # outer encryption
+        if use_encryption and self.encrypt_plugin is not None:
+            self.logger.debug("Calling encrypt_plugin.encrypt on message")
+            message = self.encrypt_plugin.encrypt(message)
+
+        # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on message.body (broadcast)")
             self.auth_plugin.make(message.auth_data, message.body)
-        tasks = [self.send(client, message, self.clients, False) for client in self.clients]
+
+        tasks = [self.send(client, message, self.clients, False, False) for client in self.clients]
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def notify(
             self, key: Hashable, message: MessageProtocol, use_auth: bool = True,
-            use_encryption: bool = True
+            use_encryption: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            encrypt_plugin: EncryptionPluginProtocol|None = None
         ):
         """Send the message to all subscribed clients for the given key
             concurrently using asyncio.gather.
@@ -290,10 +352,22 @@ class TCPServer:
 
         self.logger.debug("Notifying %d clients for key=%s", len(self.subscriptions[key]), key)
 
+        # inner encryption
+        if use_encryption and encrypt_plugin is not None:
+            self.logger.debug("Calling encrypt_plugin.encrypt on message")
+            message = encrypt_plugin.encrypt(message)
+
+        # inner auth
+        if use_auth and auth_plugin is not None:
+            self.logger.debug("Calling auth_plugin.make on message.body (notify)")
+            auth_plugin.make(message.auth_data, message.body)
+
+        # outer encryption
         if use_encryption and self.encrypt_plugin is not None:
             self.logger.debug("Calling encrypt_plugin.encrypt on message")
             message = self.encrypt_plugin.encrypt(message)
 
+        # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on message.body (notify)")
             self.auth_plugin.make(message.auth_data, message.body)
