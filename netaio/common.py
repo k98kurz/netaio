@@ -14,22 +14,29 @@ class HeaderProtocol(Protocol):
     """Shows what a Header class should have and do."""
     @property
     def body_length(self) -> int:
-        """At a minimum, a Header must have body_length, auth_length, and
-            message_type properties.
+        """At a minimum, a Header must have body_length, auth_length,
+            message_type, and checksum properties.
         """
         ...
 
     @property
     def auth_length(self) -> int:
-        """At a minimum, a Header must have body_length, auth_length, and
-            message_type properties.
+        """At a minimum, a Header must have body_length, auth_length,
+            message_type, and checksum properties.
         """
         ...
 
     @property
     def message_type(self) -> MessageType:
-        """At a minimum, a Header must have body_length and message_type
-            properties.
+        """At a minimum, a Header must have body_length, auth_length,
+            message_type, and checksum properties.
+        """
+        ...
+
+    @property
+    def checksum(self) -> int:
+        """At a minimum, a Header must have body_length, auth_length,
+            message_type, and checksum properties.
         """
         ...
 
@@ -149,6 +156,7 @@ class MessageType(Enum):
     UNSUBSCRIBE_URI = 6
     PUBLISH_URI = 7
     NOTIFY_URI = 8
+    ADVERTISE_PEER = 9
     OK = 10
     CONFIRM_SUBSCRIBE = 11
     CONFIRM_UNSUBSCRIBE = 12
@@ -328,6 +336,7 @@ class Message:
 
 
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
+UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None]
 
 
 def keys_extractor(message: MessageProtocol) -> list[Hashable]:
@@ -374,4 +383,13 @@ if not default_client_logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     default_client_logger.addHandler(handler)
+    del handler
+
+default_node_logger = logging.getLogger("netaio.node")
+default_node_logger.setLevel(logging.INFO)
+if not default_node_logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    default_node_logger.addHandler(handler)
     del handler
