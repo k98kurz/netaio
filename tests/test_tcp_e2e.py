@@ -5,7 +5,7 @@ import unittest
 import logging
 
 
-class TestE2E(unittest.TestCase):
+class TestTCPE2E(unittest.TestCase):
     PORT = randint(10000, 65535)
 
     @classmethod
