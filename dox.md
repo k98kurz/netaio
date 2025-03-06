@@ -330,7 +330,7 @@ set on the server will not be used.
 
 Replace the current logger.
 
-### `UDPNode(DatagramProtocol)`
+### `UDPNode`
 
 UDP node class.
 
@@ -723,4 +723,3 @@ Return the version of the netaio package.
 - `default_server_logger`: Logger
 - `default_client_logger`: Logger
 - `default_node_logger`: Logger
-

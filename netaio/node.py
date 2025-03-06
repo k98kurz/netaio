@@ -14,7 +14,6 @@ from .common import (
     UDPHandler,
     default_node_logger,
 )
-from dataclasses import dataclass, field
 from typing import Callable, Hashable, Any
 import asyncio
 import socket
@@ -25,7 +24,7 @@ def not_found_handler(*_) -> MessageProtocol | None:
     return make_error_response("not found")
 
 
-class UDPNode(asyncio.DatagramProtocol):
+class UDPNode:
     """UDP node class."""
     peers: set[Peer]
     port: int
