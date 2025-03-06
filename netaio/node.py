@@ -29,6 +29,7 @@ class UDPNode(asyncio.DatagramProtocol):
     """UDP node class."""
     peers: set[Peer]
     port: int
+    interface: str
     multicast_group: str
     header_class: type[HeaderProtocol]
     body_class: type[BodyProtocol]
@@ -45,8 +46,9 @@ class UDPNode(asyncio.DatagramProtocol):
 
     def __init__(
         self,
-        multicast_group: str = '224.0.0.1',
         port: int = 8888,
+        interface: str = '0.0.0.0',
+        multicast_group: str = '224.0.0.1',
         header_class: type[HeaderProtocol] = Header,
         body_class: type[BodyProtocol] = Body,
         message_class: type[MessageProtocol] = Message,
@@ -57,22 +59,28 @@ class UDPNode(asyncio.DatagramProtocol):
         auth_plugin: AuthPluginProtocol = None,
         cipher_plugin: CipherPluginProtocol = None,
     ):
-        """Initialize the UDPNode. `multicast_group` is the multicast
-            group to join. `port` is the port to listen on.
+        """Initialize the UDPNode.
+            `port` is the port to listen on.
+            `interface` is the interface to listen on.
+            `multicast_group` is the multicast group to join.
             `header_class`, `body_class`, and `message_class` will be
-            used for sending and parsing messages. `default_handler` is
-            the default handler to use for messages that do not match any
-            registered handler keys. `extract_keys` is a function that
-            extracts the keys from a message. `make_error_response` is a
-            function that makes an error response. If `auth_plugin` is
-            provided, it will be used to check the set the auth_fields
-            of every sent message and check authenticity/authorization
-            of all received messages. If `cipher_plugin` is provided, it
-            will be used to encrypt and decrypt all messages.
+            used for sending and parsing messages.
+            `default_handler` is the default handler to use for messages
+            that do not match any registered handler keys.
+            `extract_keys` is a function that extracts the keys from a
+            message.
+            `make_error_response` is a function that makes an error
+            response.
+            If `auth_plugin` is provided, it will be used to check the
+            set the auth_fields of every sent message and check
+            authenticity/authorization of all received messages.
+            If `cipher_plugin` is provided, it will be used to encrypt
+            and decrypt all messages.
         """
         self.peers = set()
-        self.multicast_group = multicast_group
         self.port = port
+        self.interface = interface
+        self.multicast_group = multicast_group
         self.header_class = header_class
         self.body_class = body_class
         self.message_class = message_class
@@ -94,7 +102,7 @@ class UDPNode(asyncio.DatagramProtocol):
             group.
         """
         sock: socket.socket = transport.get_extra_info("socket")
-        mreq = socket.inet_aton(self.multicast_group) + socket.inet_aton("0.0.0.0")
+        mreq = socket.inet_aton(self.multicast_group) + socket.inet_aton(self.interface)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
         self.logger.info(f"UDPNode joined multicast group {self.multicast_group} on port {self.port}")
 
@@ -275,7 +283,7 @@ class UDPNode(asyncio.DatagramProtocol):
         loop = asyncio.get_running_loop()
         self.transport, protocol = await loop.create_datagram_endpoint(
             lambda: self,
-            local_addr=('0.0.0.0', self.port),
+            local_addr=(self.interface, self.port),
             family=socket.AF_INET
         )
         self.logger.info(f"UDPNode started on port {self.port}")
