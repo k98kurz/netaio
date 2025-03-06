@@ -153,7 +153,7 @@ class TestTCPE2E(unittest.TestCase):
         asyncio.run(run_test())
 
 
-class TestE2EWithoutDefaultPlugins(unittest.TestCase):
+class TestTCPE2EWithoutDefaultPlugins(unittest.TestCase):
     PORT = randint(10000, 65535)
 
     @classmethod
@@ -230,8 +230,77 @@ class TestE2EWithoutDefaultPlugins(unittest.TestCase):
         print()
         asyncio.run(run_test())
 
+    def test_e2e_without_default_plugins_method_2(self):
+        async def run_test():
+            server_log = []
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
-class TestE2ETwoLayersOfPlugins(unittest.TestCase):
+            server = netaio.TCPServer(port=self.PORT)
+            client = netaio.TCPClient(port=self.PORT)
+
+            @server.on(netaio.MessageType.REQUEST_URI)
+            def server_request(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                return message
+
+            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                return message
+
+            echo_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'echo'),
+                netaio.MessageType.REQUEST_URI
+            )
+            publish_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'publish'),
+                netaio.MessageType.PUBLISH_URI
+            )
+
+            assert len(server_log) == 0
+
+            # Start the server as a background task.
+            server_task = asyncio.create_task(server.start())
+
+            # Wait briefly to allow the server time to bind and listen.
+            await asyncio.sleep(0.1)
+
+            # connect client
+            await client.connect()
+
+            # send to unprotected route
+            await client.send(echo_msg)
+            response = await client.receive_once()
+            assert response is not None
+            assert response.encode() == echo_msg.encode(), \
+                (response.encode().hex(), echo_msg.encode().hex())
+
+            # send to protected route
+            await client.send(publish_msg, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            response = await client.receive_once(auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            assert response is not None
+            assert response.body.content == publish_msg.body.content, \
+                (response.body.content, publish_msg.body.content)
+            assert response.body.uri == publish_msg.body.uri, \
+                (response.body.uri, publish_msg.body.uri)
+            assert response.header.message_type == publish_msg.header.message_type, \
+                (response.header.message_type, publish_msg.header.message_type)
+
+            # close client and stop server
+            await client.close()
+            server_task.cancel()
+
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+        print()
+        asyncio.run(run_test())
+
+
+class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
     PORT = randint(10000, 65535)
 
     @classmethod

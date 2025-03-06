@@ -229,7 +229,7 @@ class TCPServer:
                 if response is not None:
                     # inner cipher
                     if cipher_plugin is not None:
-                        self.logger.debug("Calling cipher_plugin.encrypt on response")
+                        self.logger.debug("Calling cipher_plugin.encrypt on response (handler)")
                         response = cipher_plugin.encrypt(response)
 
                     # inner auth

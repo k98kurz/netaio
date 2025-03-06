@@ -35,7 +35,6 @@ class TCPClient:
             header_class: type[HeaderProtocol] = Header,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
-            handlers: dict[Hashable, Handler] = {},
             extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
             logger: logging.Logger = default_client_logger,
             auth_plugin: AuthPluginProtocol = None,
@@ -61,7 +60,7 @@ class TCPClient:
         self.header_class = header_class
         self.body_class = body_class
         self.message_class = message_class
-        self.handlers = handlers
+        self.handlers = {}
         self.extract_keys = extract_keys
         self.logger = logger
         self.auth_plugin = auth_plugin
