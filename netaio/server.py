@@ -37,6 +37,7 @@ class TCPServer:
     logger: logging.Logger
     auth_plugin: AuthPluginProtocol
     cipher_plugin: CipherPluginProtocol
+
     def __init__(
             self, host: str = "0.0.0.0", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
@@ -371,7 +372,7 @@ class TCPServer:
         """Send the message to all subscribed clients for the given key
             concurrently using asyncio.gather. If an auth plugin is
             provided, it will be used to authorize the message in
-            addition to any auth plugin that is set on the server. If an
+            addition to any auth plugin that is set on the server. If a
             cipher plugin is provided, it will be used to encrypt the
             message in addition to any cipher plugin that is set on
             the server. If use_auth is False, the auth plugin set on the
