@@ -8,7 +8,7 @@ version = "0.0.4"
 authors = [
   { name="k98kurz", email="k98kurz@gmail.com" },
 ]
-description = "Simple asyncio TCP client and server library inspired by fastapi"
+description = "Simple asyncio TCP client and server and UDP node library inspired by fastapi"
 readme = "readme.md"
 requires-python = ">=3.10"
 classifiers = [
