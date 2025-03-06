@@ -18,6 +18,7 @@ import logging
 
 
 class TCPClient:
+    """TCP client class."""
     hosts: dict[tuple[str, int], tuple[asyncio.StreamReader, asyncio.StreamWriter]]
     default_host: tuple[str, int]
     port: int

@@ -23,6 +23,7 @@ def not_found_handler(*_) -> MessageProtocol | None:
 
 
 class TCPServer:
+    """TCP server class."""
     host: str
     port: int
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]

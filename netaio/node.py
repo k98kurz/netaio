@@ -26,6 +26,7 @@ def not_found_handler(*_) -> MessageProtocol | None:
 
 @dataclass
 class Peer:
+    """Peer class for storing peer information."""
     addr: tuple[str, int]
     peer_id: bytes|None = field(default=None)
     peer_data: bytes|None = field(default=None)
@@ -35,6 +36,7 @@ class Peer:
 
 
 class UDPNode(asyncio.DatagramProtocol):
+    """UDP node class."""
     peers: set[Peer]
     port: int
     multicast_group: str
@@ -65,6 +67,21 @@ class UDPNode(asyncio.DatagramProtocol):
         auth_plugin: AuthPluginProtocol = None,
         cipher_plugin: CipherPluginProtocol = None,
     ):
+        """Initialize the UDPNode.
+
+        Args:
+            multicast_group: The multicast group to join.
+            port: The port to listen on.
+            header_class: The header class to use.
+            body_class: The body class to use.
+            message_class: The message class to use.
+            default_handler: The default handler to use.
+            extract_keys: The function to extract the keys from the message.
+            make_error_response: The function to make an error response.
+            logger: The logger to use.
+            auth_plugin: The auth plugin to use.
+            cipher_plugin: The cipher plugin to use.
+        """
         self.peers = set()
         self.multicast_group = multicast_group
         self.port = port
@@ -191,7 +208,16 @@ class UDPNode(asyncio.DatagramProtocol):
         auth_plugin: AuthPluginProtocol = None,
         cipher_plugin: CipherPluginProtocol = None
     ):
-        """Register a handler for a specific key."""
+        """Register a handler for a specific key. The handler must
+            accept a MessageProtocol object as an argument and return a
+            MessageProtocol or None. If an auth plugin is provided, it
+            will be used to check the message in addition to any auth
+            plugin that is set on the node. If a cipher plugin is
+            provided, it will be used to decrypt the message in addition
+            to any cipher plugin that is set on the node. These
+            plugins will also be used for preparing any response
+            message sent by the handler.
+        """
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
 
@@ -201,7 +227,16 @@ class UDPNode(asyncio.DatagramProtocol):
         auth_plugin: AuthPluginProtocol = None,
         cipher_plugin: CipherPluginProtocol = None
     ):
-        """Decorator to register a handler for a specific key."""
+        """Decorator to register a handler for a specific key. The handler must
+            accept a MessageProtocol object as an argument and return a
+            MessageProtocol or None. If an auth plugin is provided, it
+            will be used to check the message in addition to any auth
+            plugin that is set on the node. If a cipher plugin is
+            provided, it will be used to decrypt the message in addition
+            to any cipher plugin that is set on the node. These
+            plugins will also be used for preparing any response
+            message sent by the handler.
+        """
         def decorator(func: Callable[[Any, Any], Any]):
             self.add_handler(key, func, auth_plugin, cipher_plugin)
             return func
@@ -243,7 +278,15 @@ class UDPNode(asyncio.DatagramProtocol):
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
-        """Send a message to a given address (unicast or multicast)."""
+        """Send a message to a given address (unicast or multicast).
+            If an auth plugin is provided, it will be used to authorize
+            the message in addition to any auth plugin that is set on
+            the node. If a cipher plugin is provided, it will be used to
+            encrypt the message in addition to any cipher plugin that is
+            set on the node. If use_auth is False, the auth plugin set
+            on the node will not be used. If use_cipher is False, the
+            cipher plugin set on the node will not be used.
+        """
         # inner cipher
         if cipher_plugin is not None:
             self.logger.debug("Calling cipher_plugin.encrypt on message")
