@@ -82,11 +82,13 @@ class TestUDPE2E(unittest.TestCase):
 
             @server.on(netaio.MessageType.ADVERTISE_PEER)
             def server_advertise_echo(message: netaio.Message, _: tuple[str, int]):
+                print("server received ADVERTISE_PEER")
                 server_log.append(message)
                 return message
 
             @client.on(netaio.MessageType.ADVERTISE_PEER)
             def client_advertise(message: netaio.Message, _: tuple[str, int]):
+                print("client received ADVERTISE_PEER")
                 client_log.append(message)
 
             @server.on(netaio.MessageType.SUBSCRIBE_URI)

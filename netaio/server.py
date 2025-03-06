@@ -51,21 +51,19 @@ class TCPServer:
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
-        """Initialize the TCPServer.
-
-        Args:
-            host: The host to listen on.
-            port: The port to listen on.
-            header_class: The header class to use.
-            body_class: The body class to use.
-            message_class: The message class to use.
-            keys_extractor: A function that extracts the keys from a message.
-            make_error_response: A function that makes an error response.
-            default_handler: The default handler to use for messages that
-                do not match any registered handler keys.
-            logger: The logger to use.
-            auth_plugin: The auth plugin to use.
-            cipher_plugin: The cipher plugin to use.
+        """Initialize the TCPServer. `host` is the host to listen on.
+            `port` is the port to listen on. `header_class`,
+            `body_class`, and `message_class` will be used for parsing
+            received messages and sending responses. `keys_extractor`
+            is a function that extracts the keys from a message.
+            `make_error_response` is a function that makes an error
+            response. `default_handler` is the default handler to use
+            for messages that do not match any registered handler keys.
+            If `auth_plugin` is provided, it will be used to check the
+            authenticity/authorization of all received messages and set
+            the auth_fields of every sent message. If `cipher_plugin`
+            is provided, it will be used to encrypt and decrypt all
+            messages.
         """
         self.host = host
         self.port = port

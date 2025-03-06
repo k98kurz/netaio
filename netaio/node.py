@@ -57,20 +57,18 @@ class UDPNode(asyncio.DatagramProtocol):
         auth_plugin: AuthPluginProtocol = None,
         cipher_plugin: CipherPluginProtocol = None,
     ):
-        """Initialize the UDPNode.
-
-        Args:
-            multicast_group: The multicast group to join.
-            port: The port to listen on.
-            header_class: The header class to use.
-            body_class: The body class to use.
-            message_class: The message class to use.
-            default_handler: The default handler to use.
-            extract_keys: The function to extract the keys from the message.
-            make_error_response: The function to make an error response.
-            logger: The logger to use.
-            auth_plugin: The auth plugin to use.
-            cipher_plugin: The cipher plugin to use.
+        """Initialize the UDPNode. `multicast_group` is the multicast
+            group to join. `port` is the port to listen on.
+            `header_class`, `body_class`, and `message_class` will be
+            used for sending and parsing messages. `default_handler` is
+            the default handler to use for messages that do not match any
+            registered handler keys. `extract_keys` is a function that
+            extracts the keys from a message. `make_error_response` is a
+            function that makes an error response. If `auth_plugin` is
+            provided, it will be used to check the set the auth_fields
+            of every sent message and check authenticity/authorization
+            of all received messages. If `cipher_plugin` is provided, it
+            will be used to encrypt and decrypt all messages.
         """
         self.peers = set()
         self.multicast_group = multicast_group
@@ -89,12 +87,23 @@ class UDPNode(asyncio.DatagramProtocol):
         self.subscriptions = {}
 
     def connection_made(self, transport: asyncio.DatagramTransport):
+        """Called when a connection is made. The argument is the
+            transport representing the pipe connection. When the
+            connection is closed, connection_lost() is called. This is
+            called when the UDPNode successfully joins the multicast
+            group.
+        """
         sock: socket.socket = transport.get_extra_info("socket")
         mreq = socket.inet_aton(self.multicast_group) + socket.inet_aton("0.0.0.0")
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
         self.logger.info(f"UDPNode joined multicast group {self.multicast_group} on port {self.port}")
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]):
+        """Called when a datagram is received. The arguments are the
+            data received and the address of the sender. This method
+            will parse the message and call the appropriate handler,
+            calling plugins as necessary.
+        """
         self.logger.debug(f"Received datagram from {addr}")
         cipher_plugin, auth_plugin = None, None
 
@@ -186,9 +195,16 @@ class UDPNode(asyncio.DatagramProtocol):
             self.send(response, addr, use_auth=False, use_cipher=False)
 
     def error_received(self, exc: Exception):
+        """Called when a send or receive operation raises an OSError.
+            (Other than BlockingIOError or InterruptedError.)
+        """
         self.logger.error(f"Error received: {exc}")
 
     def connection_lost(self, _: Exception):
+        """Called when the connection is lost or closed. The argument is
+            an exception object or None (the latter meaning a regular
+            EOF is received or the connection was aborted or closed).
+        """
         self.logger.info("Connection closed")
 
     def add_handler(
@@ -253,7 +269,9 @@ class UDPNode(asyncio.DatagramProtocol):
                 del self.subscriptions[key]
 
     async def start(self):
-        """Start the UDPNode."""
+        """Start the UDPNode. When a datagram is received, the
+            datagram_received method is called.
+        """
         loop = asyncio.get_running_loop()
         self.transport, protocol = await loop.create_datagram_endpoint(
             lambda: self,

@@ -41,19 +41,16 @@ class TCPClient:
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
-        """Initialize the TCPClient.
-
-        Args:
-            host: The default host IPv4 address.
-            port: The default port to connect to.
-            header_class: The header class to use.
-            body_class: The body class to use.
-            message_class: The message class to use.
-            handlers: A dictionary of handlers for specific message keys.
-            extract_keys: A function that extracts the keys from a message.
-            logger: The logger to use.
-            auth_plugin: The auth plugin to use.
-            cipher_plugin: The cipher plugin to use.
+        """Initialize the TCPClient. `host` is the default host IPv4
+            address. `port` is the default port to connect to.
+            `header_class`, `body_class`, and `message_class` will be
+            used for sending messages and parsing responses.
+            `extract_keys` is a function that extracts the keys from a
+            message. If `auth_plugin` is provided, it will be used to
+            check the authenticity/authorization of all received
+            messages and set the auth_fields of every sent message. If
+            `cipher_plugin` is provided, it will be used to encrypt and
+            decrypt all messages.
         """
         self.hosts = {}
         self.default_host = (host, port)
