@@ -108,6 +108,8 @@ a new message with the decrypted body.
 
 ### `TCPClient`
 
+TCP client class.
+
 #### Annotations
 
 - hosts: dict[tuple[str, int], tuple[asyncio.streams.StreamReader,
@@ -131,14 +133,15 @@ list[typing.Hashable]]
 
 #### Methods
 
-##### `__init__(host: str = '127.0.0.1', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, handlers: dict = {}, extract_keys: Callable = <function keys_extractor at 0x6ffe1bcde7a0>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
+##### `__init__(host: str = '127.0.0.1', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, extract_keys: Callable = <function keys_extractor at 0x7ec1d9222680>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
 
-Initialize the TCPClient. Args: host: The default host IPv4 address. port: The
-default port to connect to. header_class: The header class to use. body_class:
-The body class to use. message_class: The message class to use. handlers: A
-dictionary of handlers for specific message keys. extract_keys: A function that
-extracts the keys from a message. logger: The logger to use. auth_plugin: The
-auth plugin to use. cipher_plugin: The cipher plugin to use.
+Initialize the TCPClient. `host` is the default host IPv4 address. `port` is the
+default port to connect to. `header_class`, `body_class`, and `message_class`
+will be used for sending messages and parsing responses. `extract_keys` is a
+function that extracts the keys from a message. If `auth_plugin` is provided, it
+will be used to check the authenticity/authorization of all received messages
+and set the auth_fields of every sent message. If `cipher_plugin` is provided,
+it will be used to encrypt and decrypt all messages.
 
 ##### `add_handler(key: Hashable, handler: Callable, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
 
@@ -208,6 +211,8 @@ Replace the current logger.
 
 ### `TCPServer`
 
+TCP server class.
+
 #### Annotations
 
 - host: <class 'str'>
@@ -236,15 +241,18 @@ list[typing.Hashable]]
 
 #### Methods
 
-##### `__init__(host: str = '0.0.0.0', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x6ffe1bcde7a0>, make_error_response: Callable = <function make_error_response at 0x6ffe1b58e200>, default_handler: Callable = <function not_found_handler at 0x6ffe1b58f910>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
+##### `__init__(host: str = '0.0.0.0', port: int = 8888, header_class: type = Header, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x7ec1d9222680>, make_error_response: Callable = <function make_error_response at 0x7ec1d8b82440>, default_handler: Callable = <function not_found_handler at 0x7ec1d8b83be0>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
 
-Initialize the TCPServer. Args: host: The host to listen on. port: The port to
-listen on. header_class: The header class to use. body_class: The body class to
-use. message_class: The message class to use. keys_extractor: A function that
-extracts the keys from a message. make_error_response: A function that makes an
-error response. default_handler: The default handler to use for messages that do
-not match any registered handler keys. logger: The logger to use. auth_plugin:
-The auth plugin to use. cipher_plugin: The cipher plugin to use.
+Initialize the TCPServer. `host` is the host to listen on. `port` is the port to
+listen on. `header_class`, `body_class`, and `message_class` will be used for
+parsing received messages and sending responses. `keys_extractor` is a function
+that extracts the keys from a message. `make_error_response` is a function that
+makes an error response. `default_handler` is the default handler to use for
+messages that do not match any registered handler keys. If `auth_plugin` is
+provided, it will be used to check the authenticity/authorization of all
+received messages and set the auth_fields of every sent message. If
+`cipher_plugin` is provided, it will be used to encrypt and decrypt all
+messages.
 
 ##### `add_handler(key: Hashable, handler: Callable, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
 
@@ -312,7 +320,7 @@ used.
 
 Send the message to all subscribed clients for the given key concurrently using
 asyncio.gather. If an auth plugin is provided, it will be used to authorize the
-message in addition to any auth plugin that is set on the server. If an cipher
+message in addition to any auth plugin that is set on the server. If a cipher
 plugin is provided, it will be used to encrypt the message in addition to any
 cipher plugin that is set on the server. If use_auth is False, the auth plugin
 set on the server will not be used. If use_cipher is False, the cipher plugin
@@ -321,6 +329,147 @@ set on the server will not be used.
 ##### `set_logger(logger: Logger):`
 
 Replace the current logger.
+
+### `UDPNode(DatagramProtocol)`
+
+UDP node class.
+
+#### Annotations
+
+- peers: set[netaio.common.Peer]
+- port: <class 'int'>
+- interface: <class 'str'>
+- multicast_group: <class 'str'>
+- header_class: type[netaio.common.HeaderProtocol]
+- body_class: type[netaio.common.BodyProtocol]
+- message_class: type[netaio.common.MessageProtocol]
+- handlers: dict[typing.Hashable,
+tuple[typing.Callable[[netaio.common.MessageProtocol, tuple[str, int]],
+netaio.common.MessageProtocol | None], netaio.auth.AuthPluginProtocol | None,
+netaio.cipher.CipherPluginProtocol | None]]
+- default_handler: typing.Callable[[netaio.common.MessageProtocol, tuple[str,
+int]], netaio.common.MessageProtocol | None]
+- extract_keys: typing.Callable[[netaio.common.MessageProtocol],
+list[typing.Hashable]]
+- make_error: typing.Callable[[str], netaio.common.MessageProtocol]
+- subscriptions: dict[typing.Hashable, set[tuple[str, int]]]
+- logger: <class 'logging.Logger'>
+- transport: <class 'asyncio.transports.DatagramTransport'>
+- auth_plugin: <class 'netaio.auth.AuthPluginProtocol'>
+- cipher_plugin: <class 'netaio.cipher.CipherPluginProtocol'>
+
+#### Methods
+
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', header_class: type = Header, body_class: type = Body, message_class: type = Message, default_handler: Callable = <function not_found_handler at 0x7ec1d8bb0790>, extract_keys: Callable = <function keys_extractor at 0x7ec1d9222680>, make_error_response: Callable = <function make_error_response at 0x7ec1d8b82440>, logger: Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
+
+Initialize the UDPNode. `port` is the port to listen on. `interface` is the
+interface to listen on. `multicast_group` is the multicast group to join.
+`header_class`, `body_class`, and `message_class` will be used for sending and
+parsing messages. `default_handler` is the default handler to use for messages
+that do not match any registered handler keys. `extract_keys` is a function that
+extracts the keys from a message. `make_error_response` is a function that makes
+an error response. If `auth_plugin` is provided, it will be used to check the
+set the auth_fields of every sent message and check authenticity/authorization
+of all received messages. If `cipher_plugin` is provided, it will be used to
+encrypt and decrypt all messages.
+
+##### `connection_made(transport: DatagramTransport):`
+
+Called when a connection is made. The argument is the transport representing the
+pipe connection. When the connection is closed, connection_lost() is called.
+This is called when the UDPNode successfully joins the multicast group.
+
+##### `datagram_received(data: bytes, addr: tuple):`
+
+Called when a datagram is received. The arguments are the data received and the
+address of the sender. This method will parse the message and call the
+appropriate handler, calling plugins as necessary.
+
+##### `error_received(exc: Exception):`
+
+Called when a send or receive operation raises an OSError. (Other than
+BlockingIOError or InterruptedError.)
+
+##### `connection_lost(_: Exception):`
+
+Called when the connection is lost or closed. The argument is an exception
+object or None (the latter meaning a regular EOF is received or the connection
+was aborted or closed).
+
+##### `add_handler(key: Hashable, handler: Callable, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
+
+Register a handler for a specific key. The handler must accept a MessageProtocol
+object as an argument and return a MessageProtocol or None. If an auth plugin is
+provided, it will be used to check the message in addition to any auth plugin
+that is set on the node. If a cipher plugin is provided, it will be used to
+decrypt the message in addition to any cipher plugin that is set on the node.
+These plugins will also be used for preparing any response message sent by the
+handler.
+
+##### `on(key: Hashable, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None):`
+
+Decorator to register a handler for a specific key. The handler must accept a
+MessageProtocol object as an argument and return a MessageProtocol or None. If
+an auth plugin is provided, it will be used to check the message in addition to
+any auth plugin that is set on the node. If a cipher plugin is provided, it will
+be used to decrypt the message in addition to any cipher plugin that is set on
+the node. These plugins will also be used for preparing any response message
+sent by the handler.
+
+##### `subscribe(key: Hashable, addr: tuple):`
+
+Subscribe a peer to a specific key. The key must be a Hashable object.
+
+##### `unsubscribe(key: Hashable, addr: tuple):`
+
+Unsubscribe a peer from a specific key. If no subscribers are left, the key will
+be removed from the subscriptions dictionary.
+
+##### `async start():`
+
+Start the UDPNode. When a datagram is received, the datagram_received method is
+called.
+
+##### `send(message: MessageProtocol, addr: tuple, use_auth: bool = True, use_cipher: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, cipher_plugin: netaio.cipher.CipherPluginProtocol | None = None):`
+
+Send a message to a given address (unicast or multicast). If an auth plugin is
+provided, it will be used to authorize the message in addition to any auth
+plugin that is set on the node. If a cipher plugin is provided, it will be used
+to encrypt the message in addition to any cipher plugin that is set on the node.
+If use_auth is False, the auth plugin set on the node will not be used. If
+use_cipher is False, the cipher plugin set on the node will not be used.
+
+##### `broadcast(message: MessageProtocol, use_auth: bool = True, use_cipher: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, cipher_plugin: netaio.cipher.CipherPluginProtocol | None = None):`
+
+Send the message to all known peers. If an auth plugin is provided, it will be
+used to authorize the message in addition to any auth plugin that is set on the
+node. If a cipher plugin is provided, it will be used to encrypt the message in
+addition to any cipher plugin that is set on the node. If use_auth is False, the
+auth plugin set on the node will not be used. If use_cipher is False, the cipher
+plugin set on the node will not be used.
+
+##### `multicast(message: MessageProtocol, port: int | None = None, use_auth: bool = True, use_cipher: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, cipher_plugin: netaio.cipher.CipherPluginProtocol | None = None):`
+
+Send the message to the multicast group. If an auth plugin is provided, it will
+be used to authorize the message in addition to any auth plugin that is set on
+the node. If a cipher plugin is provided, it will be used to encrypt the message
+in addition to any cipher plugin that is set on the node. If use_auth is False,
+the auth plugin set on the node will not be used. If use_cipher is False, the
+cipher plugin set on the node will not be used.
+
+##### `notify(key: Hashable, message: MessageProtocol, use_auth: bool = True, use_cipher: bool = True, auth_plugin: netaio.auth.AuthPluginProtocol | None = None, cipher_plugin: netaio.cipher.CipherPluginProtocol | None = None):`
+
+Send the message to all subscribed peers for the given key concurrently using
+asyncio.gather. If an auth plugin is provided, it will be used to authorize the
+message in addition to any auth plugin that is set on the node. If a cipher
+plugin is provided, it will be used to encrypt the message in addition to any
+cipher plugin that is set on the node. If use_auth is False, the auth plugin set
+on the node will not be used. If use_cipher is False, the cipher plugin set on
+the node will not be used.
+
+##### `stop():`
+
+Stop the UDPNode.
 
 ### `Header`
 
@@ -433,9 +582,9 @@ Prepare a message from a body and optional arguments.
 ### `MessageType(Enum)`
 
 Some default message types: REQUEST_URI, RESPOND_URI, CREATE_URI, UPDATE_URI,
-DELETE_URI, SUBSCRIBE_URI, UNSUBSCRIBE_URI, PUBLISH_URI, NOTIFY_URI, OK,
-CONFIRM_SUBSCRIBE, CONFIRM_UNSUBSCRIBE, ERROR, AUTH_ERROR, NOT_FOUND,
-DISCONNECT.
+DELETE_URI, SUBSCRIBE_URI, UNSUBSCRIBE_URI, PUBLISH_URI, NOTIFY_URI,
+ADVERTISE_PEER, OK, CONFIRM_SUBSCRIBE, CONFIRM_UNSUBSCRIBE, ERROR, AUTH_ERROR,
+NOT_FOUND, DISCONNECT.
 
 ### `HeaderProtocol(Protocol)`
 
@@ -443,12 +592,14 @@ Shows what a Header class should have and do.
 
 #### Properties
 
-- body_length: At a minimum, a Header must have body_length, auth_length, and
-message_type properties.
-- auth_length: At a minimum, a Header must have body_length, auth_length, and
-message_type properties.
-- message_type: At a minimum, a Header must have body_length and message_type
-properties.
+- body_length: At a minimum, a Header must have body_length, auth_length,
+message_type, and checksum properties.
+- auth_length: At a minimum, a Header must have body_length, auth_length,
+message_type, and checksum properties.
+- message_type: At a minimum, a Header must have body_length, auth_length,
+message_type, and checksum properties.
+- checksum: At a minimum, a Header must have body_length, auth_length,
+message_type, and checksum properties.
 
 #### Methods
 
@@ -533,6 +684,20 @@ Encode the message into a bytes object.
 
 Prepare a message from a body.
 
+### `Peer`
+
+Class for storing peer information.
+
+#### Annotations
+
+- addr: tuple[str, int]
+- peer_id: bytes | None
+- peer_data: bytes | None
+
+#### Methods
+
+##### `__init__(addr: tuple[str, int], peer_id: bytes | None = None, peer_data: bytes | None = None):`
+
 ## Functions
 
 ### `keys_extractor(message: MessageProtocol) -> list[Hashable]:`
@@ -554,6 +719,8 @@ Return the version of the netaio package.
 ## Values
 
 - `Handler`: _CallableGenericAlias
+- `UDPHandler`: _CallableGenericAlias
 - `default_server_logger`: Logger
 - `default_client_logger`: Logger
+- `default_node_logger`: Logger
 

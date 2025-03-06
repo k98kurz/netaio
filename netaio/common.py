@@ -337,7 +337,7 @@ class Message:
 
 @dataclass
 class Peer:
-    """Peer class for storing peer information."""
+    """Class for storing peer information."""
     addr: tuple[str, int]
     peer_id: bytes|None = field(default=None)
     peer_data: bytes|None = field(default=None)
