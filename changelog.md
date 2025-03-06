@@ -1,3 +1,8 @@
+## 0.0.4
+
+- Added UDPNode class with multicast support
+- Small, miscellaneous updates to common, TCPClient, and TCPServer
+
 ## 0.0.3
 
 - Added cipher plugin system
