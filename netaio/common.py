@@ -335,6 +335,17 @@ class Message:
         )
 
 
+@dataclass
+class Peer:
+    """Peer class for storing peer information."""
+    addr: tuple[str, int]
+    peer_id: bytes|None = field(default=None)
+    peer_data: bytes|None = field(default=None)
+
+    def __hash__(self):
+        return hash((self.addr, self.peer_id, self.peer_data))
+
+
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None]
 

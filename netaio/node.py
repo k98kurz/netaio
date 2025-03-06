@@ -8,6 +8,7 @@ from .common import (
     HeaderProtocol,
     BodyProtocol,
     MessageProtocol,
+    Peer,
     keys_extractor,
     make_error_response,
     UDPHandler,
@@ -22,17 +23,6 @@ import logging
 
 def not_found_handler(*_) -> MessageProtocol | None:
     return make_error_response("not found")
-
-
-@dataclass
-class Peer:
-    """Peer class for storing peer information."""
-    addr: tuple[str, int]
-    peer_id: bytes|None = field(default=None)
-    peer_data: bytes|None = field(default=None)
-
-    def __hash__(self):
-        return hash((self.addr, self.peer_id, self.peer_data))
 
 
 class UDPNode(asyncio.DatagramProtocol):

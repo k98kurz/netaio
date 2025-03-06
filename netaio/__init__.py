@@ -13,6 +13,7 @@ from .common import (
     AuthFieldsProtocol,
     BodyProtocol,
     MessageProtocol,
+    Peer,
     keys_extractor,
     make_error_response,
     Handler,
@@ -22,7 +23,7 @@ from .common import (
     default_node_logger,
 )
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 def version():
     """Return the version of the netaio package."""
