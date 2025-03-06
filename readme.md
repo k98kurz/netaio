@@ -7,15 +7,19 @@ server library inspired by fastapi but for non-HTTP use cases.
 
 This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 
-- [x] Add authorization plugin
-- [x] Add cipher plugin
-- [x] Add optional authorization plugin using HMAC
-- [x] Add optional cipher plugin using simple symmetric stream cipher
+- [x] Authorization plugin system
+- [x] Cipher plugin system
+- [x] Optional authorization plugin using HMAC
+- [x] Optional cipher plugin using simple symmetric stream cipher
 - [x] UDP node with multicast
-- [ ] Add optional authorization plugin using tapescript
 - [ ] Automatic peer advertisement/discovery/management for UDP node
-- [ ] More thorough test suite
-- [ ] Better usage examples/documentation
+- [ ] Error/errored message handling system
+- [ ] Optional authorization plugin using tapescript
+- [ ] Optional cipher plugin using Curve25519 asymmetric encryption
+- [ ] Optional authorization plugin using Hashcash/PoW for anti-spam DoS protection
+- [ ] Ephemeral handlers (i.e. handlers that are removed after first use)
+- [ ] Core daemon to proxy traffic for local apps
+- [ ] E2e encrypted chat app example
 
 After that, issues will be tracked [here](https://github.com/k98kurz/netaio/issues).
 
