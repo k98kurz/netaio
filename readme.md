@@ -122,7 +122,8 @@ Note that to run this example on a single machine, the port must be different
 in the second node instance, e.g. `local_addr = ("127.0.0.1", 8889)`, and then
 the remote address must be set to the first node's address, e.g.
 `remote_addr = ("127.0.0.1", 8888)`. Multicast will not work locally because of
-the different ports.
+the different ports. Note also that the interface may need to be set to
+"0.0.0.0" or the local IP address for multicast to work across the LAN.
 
 ### Authentication/Authorization
 
