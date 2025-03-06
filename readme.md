@@ -88,10 +88,33 @@ print(received_resources)
 ```python
 from netaio import UDPNode, Body, Message, MessageType, HMACAuthPlugin
 import asyncio
+import socket
+
+def get_ip():
+    """Get the primary local IP address of the machine.
+        Credit: fatal_error CC BY-SA 4.0
+        https://stackoverflow.com/a/28950776
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.254.254.254', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
+
+local_ip = get_ip()
 
 echo_node = UDPNode(auth_plugin=HMACAuthPlugin(config={"secret": "test"}))
 
-def default_handler(msg: Message, addr: tuple[str, int]):
+@echo_node.on(MessageType.REQUEST_URI)
+def request_uri(msg: Message, addr: tuple[str, int]):
+    if addr[0] == local_ip:
+        return
     echo_node.logger.info("Sending echo to %s...", addr)
     return Message.prepare(msg.body, MessageType.OK)
 
@@ -99,7 +122,6 @@ def default_handler(msg: Message, addr: tuple[str, int]):
 def echo(msg: Message, addr: tuple[str, int]):
     echo_node.logger.info("Received echo from %s.", addr)
 
-echo_node.default_handler = default_handler
 echo_msg = Message.prepare(Body.prepare(b'echo'), MessageType.REQUEST_URI)
 
 async def main(local_addr: tuple[str, int], remote_addr: tuple[str, int]|None = None):
@@ -109,11 +131,13 @@ async def main(local_addr: tuple[str, int], remote_addr: tuple[str, int]|None = 
     while True:
         await asyncio.sleep(1)
         if remote_addr:
+            echo_node.logger.info("Sending message to %s...", remote_addr)
             echo_node.send(echo_msg, remote_addr)
         else:
+            echo_node.logger.info("Multicasting message...")
             echo_node.multicast(echo_msg)
 
-local_addr = ("127.0.0.1", 8888)
+local_addr = ("0.0.0.0", 8888)
 remote_addr = None
 asyncio.run(main(local_addr, remote_addr))
 ```
@@ -122,8 +146,9 @@ Note that to run this example on a single machine, the port must be different
 in the second node instance, e.g. `local_addr = ("127.0.0.1", 8889)`, and then
 the remote address must be set to the first node's address, e.g.
 `remote_addr = ("127.0.0.1", 8888)`. Multicast will not work locally because of
-the different ports. Note also that the interface may need to be set to
-"0.0.0.0" or the local IP address for multicast to work across the LAN.
+the different ports. If the interface is set to "0.0.0.0", multicast will work
+across the LAN, but this will result in the node hearing its own multicast
+messages; hence, the request_uri handler ignores messages from the local machine.
 
 ### Authentication/Authorization
 
