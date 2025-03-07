@@ -141,6 +141,122 @@ class MessageProtocol(Protocol):
         ...
 
 
+@runtime_checkable
+class AuthPluginProtocol(Protocol):
+    """Shows what an auth plugin should do."""
+    def __init__(self, config: dict):
+        """Initialize the auth plugin with a config."""
+        ...
+
+    def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
+        """Set auth_fields appropriate for a given body."""
+        ...
+
+    def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
+        """Check if the auth fields are valid for the given body."""
+        ...
+
+    def error(self) -> MessageProtocol:
+        """Make an error message."""
+        ...
+
+
+@runtime_checkable
+class CipherPluginProtocol(Protocol):
+    """Shows what a cipher plugin should do."""
+    def __init__(self, config: dict):
+        """Initialize the cipher plugin with a config."""
+        ...
+
+    def encrypt(self, message: MessageProtocol) -> MessageProtocol:
+        """Encrypt the message body, setting values in the header or
+            auth_data as necessary. Returns a new message with the
+            encrypted body and updated auth_data.
+        """
+        ...
+
+    def decrypt(self, message: MessageProtocol) -> MessageProtocol:
+        """Decrypt the message body, reading values from the auth_data
+            as necessary. Returns a new message with the decrypted body.
+            May raise an exception if the decryption fails.
+        """
+        ...
+
+
+@runtime_checkable
+class HasNodePropertiesProtocol(Protocol):
+    """For type-hinting objects that handle networking."""
+    @property
+    def interface(self) -> str:
+        """A class must have an interface property."""
+        ...
+
+    @property
+    def port(self) -> int:
+        """A class must have a port property."""
+        ...
+
+    @property
+    def header_class(self) -> type[HeaderProtocol]:
+        """A class must have a header_class property."""
+        ...
+
+    @property
+    def message_type_class(self) -> type[MessageType]:
+        """A class must have a message_type_class property."""
+        ...
+
+    @property
+    def body_class(self) -> type[BodyProtocol]:
+        """A class must have a body_class property."""
+        ...
+
+    @property
+    def message_class(self) -> type[MessageProtocol]:
+        """A class must have a message_class property."""
+        ...
+
+    @property
+    def handlers(self) -> dict[Hashable, tuple[Handler|UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
+        """A class must have a handlers property."""
+        ...
+
+    @property
+    def default_handler(self) -> Handler|UDPHandler:
+        """A class must have a default_handler property."""
+        ...
+
+    @property
+    def extract_keys(self) -> Callable[[MessageProtocol], list[Hashable]]:
+        """A class must have an extract_keys property."""
+        ...
+
+    @property
+    def make_error(self) -> Callable[[str], MessageProtocol]:
+        """A class must have a make_error property."""
+        ...
+
+    @property
+    def logger(self) -> logging.Logger:
+        """A class must have a logger property."""
+        ...
+
+    @property
+    def auth_plugin(self) -> AuthPluginProtocol:
+        """A class must have an auth_plugin property."""
+        ...
+
+    @property
+    def cipher_plugin(self) -> CipherPluginProtocol:
+        """A class must have a cipher_plugin property."""
+        ...
+
+    @property
+    def handle_auth_error(self) -> AuthErrorHandler:
+        """A class must have a handle_auth_error property."""
+        ...
+
+
 class MessageType(IntEnum):
     """Some default message types: REQUEST_URI, RESPOND_URI, CREATE_URI,
         UPDATE_URI, DELETE_URI, SUBSCRIBE_URI, UNSUBSCRIBE_URI,
@@ -358,6 +474,7 @@ class Peer:
 
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None]
+AuthErrorHandler = Callable[[HasNodePropertiesProtocol, AuthPluginProtocol, MessageProtocol|None], MessageProtocol|None]
 
 
 def keys_extractor(message: MessageProtocol) -> list[Hashable]:
@@ -386,6 +503,21 @@ def make_error_response(msg: str) -> Message:
     )
 
     return Message.prepare(body, message_type)
+
+def auth_error_handler(
+        node: HasNodePropertiesProtocol, auth_plugin: AuthPluginProtocol,
+        msg: MessageProtocol
+    ) -> MessageProtocol|None:
+    """Called when the auth check call fails for a message. If the
+        message that failed the auth check was an error message, do
+        not send a response. Otherwise, send the error message returned
+        by the auth plugin.
+    """
+    node.logger.debug(f"Message auth failed for message with type {msg.header.message_type.name}")
+    if msg.header.message_type in (MessageType.AUTH_ERROR, MessageType.ERROR):
+        node.logger.debug("Message is an error message, not sending a response")
+        return None
+    return auth_plugin.error()
 
 # Setup default loggers for netaio
 default_server_logger = logging.getLogger("netaio.server")

@@ -1,29 +1,6 @@
 from .common import MessageProtocol
 from .crypto import encrypt, decrypt
 from hashlib import sha256
-from typing import Protocol, runtime_checkable
-
-
-@runtime_checkable
-class CipherPluginProtocol(Protocol):
-    """Shows what a cipher plugin should do."""
-    def __init__(self, config: dict):
-        """Initialize the cipher plugin with a config."""
-        ...
-
-    def encrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Encrypt the message body, setting values in the header or
-            auth_data as necessary. Returns a new message with the
-            encrypted body and updated auth_data.
-        """
-        ...
-
-    def decrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Decrypt the message body, reading values from the auth_data
-            as necessary. Returns a new message with the decrypted body.
-            May raise an exception if the decryption fails.
-        """
-        ...
 
 
 class Sha256StreamCipherPlugin:

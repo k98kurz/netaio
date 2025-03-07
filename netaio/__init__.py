@@ -1,5 +1,5 @@
-from .auth import AuthPluginProtocol, HMACAuthPlugin
-from .cipher import CipherPluginProtocol, Sha256StreamCipherPlugin
+from .auth import HMACAuthPlugin
+from .cipher import Sha256StreamCipherPlugin
 from .client import TCPClient
 from .server import TCPServer
 from .node import UDPNode
@@ -13,6 +13,9 @@ from .common import (
     AuthFieldsProtocol,
     BodyProtocol,
     MessageProtocol,
+    AuthPluginProtocol,
+    CipherPluginProtocol,
+    HasNodePropertiesProtocol,
     Peer,
     keys_extractor,
     make_error_response,

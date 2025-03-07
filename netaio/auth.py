@@ -7,27 +7,6 @@ from .common import (
 from .crypto import sha256, hmac, check_hmac, IV_SIZE
 from os import urandom
 from time import time
-from typing import Protocol, runtime_checkable
-
-
-@runtime_checkable
-class AuthPluginProtocol(Protocol):
-    """Shows what an auth plugin should do."""
-    def __init__(self, config: dict):
-        """Initialize the auth plugin with a config."""
-        ...
-
-    def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
-        """Set auth_fields appropriate for a given body."""
-        ...
-
-    def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
-        """Check if the auth fields are valid for the given body."""
-        ...
-
-    def error(self) -> MessageProtocol:
-        """Make an error message."""
-        ...
 
 
 class HMACAuthPlugin:
