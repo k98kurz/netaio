@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import IntEnum
 from typing import Hashable, Protocol, runtime_checkable, Callable, Coroutine, Any
 from zlib import crc32
 import asyncio
@@ -141,7 +141,7 @@ class MessageProtocol(Protocol):
         ...
 
 
-class MessageType(Enum):
+class MessageType(IntEnum):
     """Some default message types: REQUEST_URI, RESPOND_URI, CREATE_URI,
         UPDATE_URI, DELETE_URI, SUBSCRIBE_URI, UNSUBSCRIBE_URI,
         PUBLISH_URI, NOTIFY_URI, ADVERTISE_PEER, OK, CONFIRM_SUBSCRIBE,
@@ -160,6 +160,7 @@ class MessageType(Enum):
     OK = 10
     CONFIRM_SUBSCRIBE = 11
     CONFIRM_UNSUBSCRIBE = 12
+    PEER_DISCOVERED = 13
     ERROR = 20
     AUTH_ERROR = 23
     NOT_FOUND = 24
@@ -173,6 +174,7 @@ class Header:
     auth_length: int
     body_length: int
     checksum: int
+    message_type_class = MessageType
 
     @staticmethod
     def header_length() -> int:
@@ -185,7 +187,10 @@ class Header:
         return '!BHHI'
 
     @classmethod
-    def decode(cls, data: bytes) -> Header:
+    def decode(
+            cls, data: bytes,
+            message_type_factory: Callable[[int], IntEnum]|None = None
+        ) -> Header:
         """Decode the header from the data."""
         excess = False
         fstr = cls.struct_fstring()
@@ -204,8 +209,11 @@ class Header:
                 data
             )
 
+        if message_type_factory is None:
+            message_type_factory = cls.message_type_class
+
         return cls(
-            message_type=MessageType(message_type),
+            message_type=message_type_factory(message_type),
             auth_length=auth_length,
             body_length=body_length,
             checksum=checksum
@@ -292,11 +300,14 @@ class Message:
         return self.header.checksum == crc32(self.body.encode())
 
     @classmethod
-    def decode(cls, data: bytes) -> Message:
+    def decode(
+            cls, data: bytes,
+            message_type_factory: Callable[[int], IntEnum]|None = None
+        ) -> Message:
         """Decode the message from the data. Raises ValueError if the
             checksum does not match.
         """
-        header = Header.decode(data[:Header.header_length()])
+        header = Header.decode(data[:Header.header_length()], message_type_factory)
         body = Body.decode(data[Header.header_length():])
 
         if header.checksum != crc32(body.encode()):
@@ -317,9 +328,8 @@ class Message:
 
     @classmethod
     def prepare(
-            cls, body: BodyProtocol,
-            message_type: MessageType = MessageType.REQUEST_URI,
-            auth_data: AuthFields = None
+            cls, body: BodyProtocol, message_type: MessageType|IntEnum,
+            auth_data: AuthFields|None = None
         ) -> Message:
         """Prepare a message from a body and optional arguments."""
         auth_data = AuthFields() if auth_data is None else auth_data

@@ -14,6 +14,7 @@ from .common import (
     UDPHandler,
     default_node_logger,
 )
+from enum import IntEnum
 from typing import Callable, Hashable, Any
 import asyncio
 import socket
@@ -31,6 +32,7 @@ class UDPNode:
     interface: str
     multicast_group: str
     header_class: type[HeaderProtocol]
+    message_type_class: type[IntEnum]|None
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
@@ -49,6 +51,7 @@ class UDPNode:
         interface: str = '0.0.0.0',
         multicast_group: str = '224.0.0.1',
         header_class: type[HeaderProtocol] = Header,
+        message_type_class: type[IntEnum]|None = None,
         body_class: type[BodyProtocol] = Body,
         message_class: type[MessageProtocol] = Message,
         default_handler: UDPHandler = not_found_handler,
@@ -64,6 +67,8 @@ class UDPNode:
             `multicast_group` is the multicast group to join.
             `header_class`, `body_class`, and `message_class` will be
             used for sending and parsing messages.
+            `message_type_class` is the class to inject in calls to the
+            decode method of the header class.
             `default_handler` is the default handler to use for messages
             that do not match any registered handler keys.
             `extract_keys` is a function that extracts the keys from a
@@ -81,6 +86,7 @@ class UDPNode:
         self.interface = interface
         self.multicast_group = multicast_group
         self.header_class = header_class
+        self.message_type_class = message_type_class
         self.body_class = body_class
         self.message_class = message_class
         self.handlers = {}
@@ -116,7 +122,10 @@ class UDPNode:
 
         header_bytes = data[:self.header_class.header_length()]
         data = data[self.header_class.header_length():]
-        header = self.header_class.decode(header_bytes)
+        header = self.header_class.decode(
+            header_bytes,
+            message_type_factory=self.message_type_class
+        )
 
         auth_bytes = data[:header.auth_length]
         data = data[header.auth_length:]

@@ -12,6 +12,7 @@ from .common import (
     Handler,
     default_client_logger
 )
+from enum import IntEnum
 from typing import Callable, Coroutine, Hashable
 import asyncio
 import logging
@@ -23,6 +24,7 @@ class TCPClient:
     default_host: tuple[str, int]
     port: int
     header_class: type[HeaderProtocol]
+    message_type_class: type[IntEnum]|None
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
@@ -34,6 +36,7 @@ class TCPClient:
     def __init__(
             self, host: str = "127.0.0.1", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
+            message_type_class: type[IntEnum]|None = None,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
@@ -56,6 +59,7 @@ class TCPClient:
         self.default_host = (host, port)
         self.port = port
         self.header_class = header_class
+        self.message_type_class = message_type_class
         self.body_class = body_class
         self.message_class = message_class
         self.handlers = {}
@@ -182,7 +186,10 @@ class TCPClient:
         server = server or self.default_host
         reader, writer = self.hosts[server]
         data = await reader.readexactly(self.header_class.header_length())
-        header = self.header_class.decode(data)
+        header = self.header_class.decode(
+            data,
+            message_type_factory=self.message_type_class
+        )
         self.logger.debug(f"Received message of type={header.message_type} from server")
 
         auth_bytes = await reader.readexactly(header.auth_length)

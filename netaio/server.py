@@ -13,6 +13,7 @@ from .common import (
     Handler,
     default_server_logger
 )
+from enum import IntEnum
 from typing import Callable, Coroutine, Hashable
 import asyncio
 import logging
@@ -29,6 +30,7 @@ class TCPServer:
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     default_handler: Handler
     header_class: type[HeaderProtocol]
+    message_type_class: type[IntEnum]|None
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     extract_keys: Callable[[MessageProtocol], list[Hashable]]
@@ -42,6 +44,7 @@ class TCPServer:
     def __init__(
             self, host: str = "0.0.0.0", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
+            message_type_class: type[IntEnum]|None = None,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             keys_extractor: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
@@ -71,6 +74,7 @@ class TCPServer:
         self.subscriptions = {}
         self.clients = set()
         self.header_class = header_class
+        self.message_type_class = message_type_class
         self.body_class = body_class
         self.message_class = message_class
         self.extract_keys = keys_extractor
@@ -162,7 +166,10 @@ class TCPServer:
                 auth_plugin = None
                 cipher_plugin = None
                 header_bytes = await reader.readexactly(header_length)
-                header = self.header_class.decode(header_bytes)
+                header = self.header_class.decode(
+                    header_bytes,
+                    message_type_factory=self.message_type_class
+                )
 
                 auth_bytes = await reader.readexactly(header.auth_length)
                 auth = AuthFields.decode(auth_bytes)
