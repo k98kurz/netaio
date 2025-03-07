@@ -15,8 +15,8 @@ class TestTCPE2E(unittest.TestCase):
 
     def test_e2e(self):
         async def run_test():
-            server_log = []
-            client_log = []
+            server_log: list[netaio.Message] = []
+            client_log: list[netaio.Message] = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
             cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
@@ -130,15 +130,43 @@ class TestTCPE2E(unittest.TestCase):
             assert len(server_log) == 3, len(server_log)
             assert len(client_log) == 2, len(client_log)
 
-            # test auth failure
+            # test auth failure with mismatchedauth plugin config
             client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
             await client.send(client_msg)
             response = await client.receive_once()
             assert response is None
+
+            # test auth failure with no auth plugins
+            client.auth_plugin = None
             await client.send(client_msg)
             response = await client.receive_once(use_auth=False, use_cipher=False)
             assert response is not None
             assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+
+            # set different error handler on client
+            def log_auth_error(client, auth_plugin, msg):
+                client_log.append(msg)
+                return None
+            client.handle_auth_error = log_auth_error
+
+            # test auth failure with mismatchedauth plugin config
+            client_log.clear()
+            client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
+            await client.send(client_msg)
+            response = await client.receive_once()
+            assert response is None, response
+            assert len(client_log) == 1, len(client_log)
+            response = client_log[-1]
+            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+
+            # test auth failure with no auth plugins
+            # should pass through without calling log_auth_error
+            client_log.clear()
+            await client.send(client_msg)
+            response = await client.receive_once(use_auth=False, use_cipher=False)
+            assert response is not None
+            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+            assert len(client_log) == 0, len(client_log)
 
             # close client and stop server
             await client.close()
@@ -310,7 +338,8 @@ class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
 
     def test_e2e_two_layers_of_plugins(self):
         async def run_test():
-            server_log = []
+            server_log: list[netaio.Message] = []
+            client_log: list[netaio.Message] = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
             cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
             auth_plugin2 = netaio.HMACAuthPlugin(config={
@@ -340,7 +369,7 @@ class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
                 netaio.Body.prepare(b'hello', uri=b'echo'),
                 netaio.MessageType.REQUEST_URI
             )
-            publish_msg = netaio.Message.prepare(
+            publish_msg = lambda: netaio.Message.prepare(
                 netaio.Body.prepare(b'hello', uri=b'publish'),
                 netaio.MessageType.PUBLISH_URI
             )
@@ -368,17 +397,37 @@ class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
                 (response.header.message_type, echo_msg.header.message_type)
 
             # send to twice-protected route
-            await client.send(publish_msg, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            await client.send(publish_msg(), auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
             response = await client.receive_once(auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
             assert response is not None
-            assert response.body.content == publish_msg.body.content, \
-                (response.body.content, publish_msg.body.content)
-            assert response.body.uri == publish_msg.body.uri, \
-                (response.body.uri, publish_msg.body.uri)
-            assert response.header.message_type == publish_msg.header.message_type, \
-                (response.header.message_type, publish_msg.header.message_type)
+            assert response.body.content == publish_msg().body.content, \
+                (response.body.content, publish_msg().body.content)
+            assert response.body.uri == publish_msg().body.uri, \
+                (response.body.uri, publish_msg().body.uri)
+            assert response.header.message_type == publish_msg().header.message_type, \
+                (response.header.message_type, publish_msg().header.message_type)
 
             assert len(server_log) == 2, len(server_log)
+
+            # send to twice-protected route without the inner auth plugin
+            await client.send(publish_msg())
+            response = await client.receive_once()
+            assert response is None, response
+
+            # set different error handler on client
+            def log_auth_error(client, auth_plugin, msg):
+                client.logger.debug("log_auth_error called")
+                client_log.append(msg)
+                return None
+            client.handle_auth_error = log_auth_error
+
+            # send to twice-protected route without the inner auth plugin
+            await client.send(publish_msg())
+            response = await client.receive_once()
+            assert response is None, response
+            assert len(client_log) == 1, len(client_log)
+            response = client_log[-1]
+            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
 
             # close client and stop server
             await client.close()

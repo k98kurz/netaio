@@ -180,10 +180,26 @@ class TestUDPE2E(unittest.TestCase):
 
             # test auth failure
             client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
+            client_log.clear()
             client.send(client_msg, server_addr)
-            assert len(client_log) == 5, len(client_log) # response message should be dropped
+            await asyncio.sleep(0.1)
+            assert len(client_log) == 0, len(client_log) # response error message should be dropped
 
-            # assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+            # set different error handler on client
+            def log_auth_error(client, auth_plugin, msg):
+                client.logger.debug("log_auth_error called")
+                client_log.append(msg)
+                return None
+            client.handle_auth_error = log_auth_error
+
+            # test auth failure again
+            client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
+            client_log.clear()
+            client.send(client_msg, server_addr)
+            await asyncio.sleep(0.1)
+            assert len(client_log) == 1, len(client_log)
+            response = client_log[-1]
+            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
 
             # stop nodes
             server.stop()
