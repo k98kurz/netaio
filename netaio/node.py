@@ -344,7 +344,7 @@ class UDPNode:
 
         # inner cipher
         if use_cipher and cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
+            self.logger.debug("Calling cipher_plugin.encrypt on message (broadcast)")
             message = cipher_plugin.encrypt(message)
 
         # inner auth
@@ -354,7 +354,7 @@ class UDPNode:
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
+            self.logger.debug("Calling cipher_plugin.encrypt on message (broadcast)")
             message = self.cipher_plugin.encrypt(message)
 
         # outer auth
@@ -384,22 +384,22 @@ class UDPNode:
 
         # inner cipher
         if use_cipher and cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
+            self.logger.debug("Calling cipher_plugin.encrypt on message (multicast)")
             message = cipher_plugin.encrypt(message)
 
         # inner auth
         if use_auth and auth_plugin is not None:
-            self.logger.debug("Calling auth_plugin.make on message.body (broadcast)")
+            self.logger.debug("Calling auth_plugin.make on message.body (multicast)")
             auth_plugin.make(message.auth_data, message.body)
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
+            self.logger.debug("Calling cipher_plugin.encrypt on message (multicast)")
             message = self.cipher_plugin.encrypt(message)
 
         # outer auth
         if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling self.auth_plugin.make on message.body (broadcast)")
+            self.logger.debug("Calling self.auth_plugin.make on message.body (multicast)")
             self.auth_plugin.make(message.auth_data, message.body)
 
         addr = (self.multicast_group, port or self.port)
@@ -428,7 +428,7 @@ class UDPNode:
 
         # inner cipher
         if use_cipher and cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
+            self.logger.debug("Calling cipher_plugin.encrypt on message (notify)")
             message = cipher_plugin.encrypt(message)
 
         # inner auth
@@ -438,7 +438,7 @@ class UDPNode:
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
+            self.logger.debug("Calling cipher_plugin.encrypt on message(notify)")
             message = self.cipher_plugin.encrypt(message)
 
         # outer auth
