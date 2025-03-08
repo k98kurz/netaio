@@ -106,6 +106,8 @@ class UDPNode:
             send error messages for failed auth checks (e.g. if the
             auth plugin is an anti-spam plugin and messages that fail
             the auth check should just be dropped).
+            If `ignore_own_ip` is True, messages from the local IP
+            address will be ignored.
         """
         self.peers = {}
         self.peer_addrs = {}
