@@ -1,7 +1,7 @@
 # netaio
 
 This is designed to be a simple and easy to use asyncio-based TCP client and
-server library inspired by fastapi but for non-HTTP use cases.
+server and UDP node library inspired by fastapi but for non-HTTP use cases.
 
 ## Status
 
@@ -18,6 +18,7 @@ This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 - [ ] Optional cipher plugin using Curve25519 asymmetric encryption
 - [ ] Optional authorization plugin using Hashcash/PoW for anti-spam DoS protection
 - [ ] Ephemeral handlers (i.e. handlers that are removed after first use)
+- [ ] IPv6 support
 - [ ] Core daemon to proxy traffic for local apps
 - [ ] E2e encrypted chat app example
 
