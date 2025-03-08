@@ -451,7 +451,7 @@ class UDPNode:
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message (multicast)")
+            self.logger.debug("Calling self.cipher_plugin.encrypt on message (multicast)")
             message = self.cipher_plugin.encrypt(message)
 
         # outer auth
@@ -515,26 +515,30 @@ class UDPNode:
 
     def add_or_update_peer(
             self, peer_id: bytes, peer_data: bytes, addr: tuple[str, int]
-        ):
+        ) -> bool:
         """Add or update a peer in the peer list. If the peer is the
-            local peer, it will not be added to the peer list.
+            local peer, it will not be added to the peer list. Returns
+            True if a PEER_DISCOVERED message should be sent (False if
+            it is the local peer).
         """
         if peer_id == self.local_peer.peer_id:
-            return
+            self.logger.debug("Ignoring local peer.")
+            return False
         if peer_id in self.peers:
             self.logger.debug(
-                "Updating peer %s at %s with data %s",
+                "Updating peer 0x%s at %s with data %s",
                 peer_id.hex(), addr, peer_data.hex()
             )
             self.peers[peer_id].update(peer_data)
             self.peers[peer_id].addrs.add(addr)
         else:
             self.logger.debug(
-                "Adding peer %s at %s with data %s",
+                "Adding peer 0x%s at %s with data %s",
                 peer_id.hex(), addr, peer_data.hex()
             )
             self.peers[peer_id] = Peer({addr}, peer_id, peer_data)
         self.peer_addrs[addr] = peer_id
+        return True
 
     def get_peer(
             self, addr: tuple[str, int]|None = None, peer_id: bytes|None = None
@@ -554,7 +558,7 @@ class UDPNode:
     def remove_peer(self, addr: tuple[str, int], peer_id: bytes):
         """Remove a peer from the peer list."""
         self.logger.debug(
-            "Removing peer %s at %s from peer list", peer_id.hex(), addr
+            "Removing peer 0x%s at %s from peer list", peer_id.hex(), addr
         )
         if peer_id in self.peers:
             del self.peers[peer_id]
@@ -688,7 +692,8 @@ class UDPNode:
                 self.logger.error("Error unpacking peer data: %s", e)
                 return
 
-            self.add_or_update_peer(peer_id, peer_data, addr)
+            if not self.add_or_update_peer(peer_id, peer_data, addr):
+                return
 
             # prepare the response
             return self.message_class.prepare(
