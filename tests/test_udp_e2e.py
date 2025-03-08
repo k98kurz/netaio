@@ -25,12 +25,12 @@ class TestUDPE2E(unittest.TestCase):
             server = netaio.UDPNode(
                 port=self.PORT, auth_plugin=auth_plugin,
                 cipher_plugin=cipher_plugin, logger=netaio.default_server_logger,
-                default_handler=default_server_handler
+                default_handler=default_server_handler, ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, auth_plugin=auth_plugin,
                 cipher_plugin=cipher_plugin, logger=netaio.default_client_logger,
-                default_handler=default_client_handler
+                default_handler=default_client_handler, ignore_own_ip=False
             )
             server_addr = ('0.0.0.0', self.PORT)
 
@@ -128,10 +128,12 @@ class TestUDPE2E(unittest.TestCase):
             assert response.body.content == expected_response.body.content, \
                 (response.body.content, expected_response.body.content)
 
+            client_log.clear()
+            server_log.clear()
             client.multicast(client_multicast_msg, port=server.port)
             await asyncio.sleep(0.1)
-            # assert len(server_log) == 2, len(server_log)
-            assert len(client_log) == 2, len(client_log)
+            # assert len(server_log) == 1, len(server_log)
+            assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
             expected_response = client_multicast_msg
             assert response.header.message_type == expected_response.header.message_type, \
@@ -139,10 +141,11 @@ class TestUDPE2E(unittest.TestCase):
             assert response.body.uri == expected_response.body.uri, \
                 (response.body.uri, expected_response.body.uri)
 
+            server_log.clear()
             client.send(client_subscribe_msg, addr=server_addr)
             await asyncio.sleep(0.1)
-            assert len(server_log) == 3, len(client_log)
-            assert len(client_log) == 3, len(client_log)
+            assert len(server_log) == 1, len(server_log)
+            assert len(client_log) == 2, len(client_log)
             response = client_log[-1]
             assert response.header.message_type == expected_subscribe_response.header.message_type, \
                 (response.header.message_type, expected_subscribe_response.header.message_type)
@@ -151,10 +154,12 @@ class TestUDPE2E(unittest.TestCase):
             assert response.body.content == expected_subscribe_response.body.content, \
                 (response.body.content, expected_subscribe_response.body.content)
 
+            client_log.clear()
+            server_log.clear()
             server.notify(b'subscribe/test', server_notify_msg)
             await asyncio.sleep(0.1)
-            assert len(server_log) == 3, len(server_log)
-            assert len(client_log) == 4, len(client_log)
+            assert len(server_log) == 0, len(server_log)
+            assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
             assert response.header.message_type == server_notify_msg.header.message_type, \
                 (response.header.message_type, server_notify_msg.header.message_type)
@@ -163,10 +168,12 @@ class TestUDPE2E(unittest.TestCase):
             assert response.body.content == server_notify_msg.body.content, \
                 (response.body.content, server_notify_msg.body.content)
 
+            client_log.clear()
+            server_log.clear()
             client.send(client_unsubscribe_msg, addr=server_addr)
             await asyncio.sleep(0.1)
-            assert len(server_log) == 4, len(server_log)
-            assert len(client_log) == 5, len(client_log)
+            assert len(server_log) == 1, len(server_log)
+            assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
             assert response.header.message_type == expected_unsubscribe_response.header.message_type, \
                 (response.header.message_type, expected_unsubscribe_response.header.message_type)
@@ -174,9 +181,6 @@ class TestUDPE2E(unittest.TestCase):
                 (response.body.uri, expected_unsubscribe_response.body.uri)
             assert response.body.content == expected_unsubscribe_response.body.content, \
                 (response.body.content, expected_unsubscribe_response.body.content)
-
-            assert len(server_log) == 4, len(server_log)
-            assert len(client_log) == 5, len(client_log)
 
             # test auth failure
             client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
@@ -219,12 +223,14 @@ class TestUDPE2E(unittest.TestCase):
             server = netaio.UDPNode(
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, peer_id=b'server', peer_data=b'abc')
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, peer_id=b'server', peer_data=b'abc'),
+                ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, peer_id=b'client', peer_data=b'def')
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, peer_id=b'client', peer_data=b'def'),
+                ignore_own_ip=False
             )
 
             @server.on(netaio.MessageType.ADVERTISE_PEER)
@@ -364,13 +370,15 @@ class TestUDPE2E(unittest.TestCase):
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
                 local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, peer_id=b'server', peer_data=b'abc'),
-                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+                ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
                 local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, peer_id=b'client', peer_data=b'def'),
-                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+                ignore_own_ip=False
             )
 
             await server.start()
@@ -473,11 +481,13 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
 
             server = netaio.UDPNode(
                 port=self.PORT, default_handler=default_server_handler,
-                logger=netaio.default_server_logger
+                logger=netaio.default_server_logger,
+                ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, default_handler=default_client_handler,
-                logger=netaio.default_client_logger
+                logger=netaio.default_client_logger,
+                ignore_own_ip=False
             )
             server_addr = ('0.0.0.0', self.PORT)
 
@@ -572,11 +582,13 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
 
             server = netaio.UDPNode(
                 port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
-                default_handler=default_server_handler, logger=netaio.default_server_logger
+                default_handler=default_server_handler, logger=netaio.default_server_logger,
+                ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
-                default_handler=default_client_handler, logger=netaio.default_client_logger
+                default_handler=default_client_handler, logger=netaio.default_client_logger,
+                ignore_own_ip=False
             )
             server_addr = ('0.0.0.0', self.PORT)
 

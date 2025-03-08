@@ -7,6 +7,7 @@ from zlib import crc32
 import asyncio
 import logging
 import packify
+import socket
 import struct
 
 
@@ -639,6 +640,23 @@ def auth_error_handler(
         auth_fields_class=node.auth_fields_class,
         body_class=node.body_class
     )
+
+def get_ip():
+    """Get the primary local IP address of the machine.
+        Credit: fatal_error CC BY-SA 4.0
+        https://stackoverflow.com/a/28950776
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.254.254.254', 1))
+        IP = s.getsockname()[0]
+    except Exception:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
 
 # Setup default loggers for netaio
 default_server_logger = logging.getLogger("netaio.server")

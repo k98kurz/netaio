@@ -12,6 +12,7 @@ from .common import (
     AuthPluginProtocol,
     CipherPluginProtocol,
     Peer,
+    get_ip,
     keys_extractor,
     make_error_response,
     auth_error_handler,
@@ -74,6 +75,7 @@ class UDPNode:
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None,
             auth_error_handler: AuthErrorHandler = auth_error_handler,
+            ignore_own_ip: bool = True,
         ):
         """Initialize the UDPNode.
             `port` is the port to listen on.
@@ -127,6 +129,7 @@ class UDPNode:
         self.transport = None
         self.subscriptions = {}
         self._advertise_peer_tasks = {}
+        self._local_ip = get_ip() if ignore_own_ip else None
 
     def connection_made(self, transport: asyncio.DatagramTransport):
         """Called when a connection is made. The argument is the
@@ -146,6 +149,9 @@ class UDPNode:
             will parse the message and call the appropriate handler,
             calling plugins as necessary.
         """
+        if addr[0] == self._local_ip:
+            self.logger.debug("Received datagram from self, ignoring")
+            return
         self.logger.debug(f"Received datagram from {addr}")
         cipher_plugin, auth_plugin = None, None
 
