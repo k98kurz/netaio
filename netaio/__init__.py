@@ -15,7 +15,7 @@ from .common import (
     MessageProtocol,
     AuthPluginProtocol,
     CipherPluginProtocol,
-    HasNodePropertiesProtocol,
+    NetworkNodeProtocol,
     Peer,
     keys_extractor,
     make_error_response,

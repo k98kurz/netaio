@@ -150,6 +150,12 @@ class TCPServer:
             return func
         return decorator
 
+    def remove_handler(self, key: Hashable):
+        """Remove a handler for a specific key."""
+        self.logger.debug("Removing handler for key=%s", key)
+        if key in self.handlers:
+            del self.handlers[key]
+
     def subscribe(self, key: Hashable, writer: asyncio.StreamWriter):
         """Subscribe a client to a specific key. The key must be a
             Hashable object.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import IntEnum
+from time import time
 from typing import Hashable, Protocol, runtime_checkable, Callable, Coroutine, Any
 from zlib import crc32
 import asyncio
@@ -164,7 +165,7 @@ class CipherPluginProtocol(Protocol):
 
 
 @runtime_checkable
-class HasNodePropertiesProtocol(Protocol):
+class NetworkNodeProtocol(Protocol):
     """For type-hinting objects that handle networking."""
     @property
     def port(self) -> int:
@@ -278,6 +279,49 @@ class HasNodePropertiesProtocol(Protocol):
             a response to the sender of the message that failed the auth
             check.
         """
+        ...
+
+    def add_handler(
+            self, key: Hashable, handler: Handler|UDPHandler,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ):
+        """Register a handler for a specific key. The handler must
+            accept a MessageProtocol object as an argument and return a
+            MessageProtocol or None. If an auth plugin is provided, it
+            will be used to check the message in addition to any auth
+            plugin that is set on the node. If a cipher plugin is
+            provided, it will be used to decrypt the message in addition
+            to any cipher plugin that is set on the node. These
+            plugins will also be used for preparing any response
+            message sent by the handler.
+        """
+        ...
+
+    def on(
+            self,
+            key: Hashable,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Decorator to register a handler for a specific key. The handler must
+            accept a MessageProtocol object as an argument and return a
+            MessageProtocol or None. If an auth plugin is provided, it
+            will be used to check the message in addition to any auth
+            plugin that is set on the node. If a cipher plugin is
+            provided, it will be used to decrypt the message in addition
+            to any cipher plugin that is set on the node. These
+            plugins will also be used for preparing any response
+            message sent by the handler.
+        """
+        ...
+
+    def remove_handler(self, key: Hashable):
+        """Remove a handler from the node."""
+        ...
+
+    def set_logger(self, logger: logging.Logger):
+        """Replace the current logger."""
         ...
 
 
@@ -519,14 +563,26 @@ class Peer:
     addr: tuple[str, int]
     peer_id: bytes|None = field(default=None)
     peer_data: bytes|None = field(default=None)
+    last_rx: int = field(default_factory=lambda: int(time()))
 
     def __hash__(self):
+        """Make the peer Hashable."""
         return hash((self.addr, self.peer_id, self.peer_data))
+
+    def update(self, peer_data: bytes|None = None):
+        """Update the peer data and last_rx time."""
+        if peer_data is not None:
+            self.peer_data = peer_data
+        self.last_rx = int(time())
+
+    def timed_out(self, timeout: int = 60) -> bool:
+        """Check if the peer has timed out."""
+        return int(time()) - self.last_rx > timeout
 
 
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None]
-AuthErrorHandler = Callable[[HasNodePropertiesProtocol, AuthPluginProtocol, MessageProtocol|None], MessageProtocol|None]
+AuthErrorHandler = Callable[[NetworkNodeProtocol, AuthPluginProtocol, MessageProtocol|None], MessageProtocol|None]
 
 
 def keys_extractor(message: MessageProtocol) -> list[Hashable]:
@@ -564,7 +620,7 @@ def make_error_response(
     return message_class.prepare(body, message_type)
 
 def auth_error_handler(
-        node: HasNodePropertiesProtocol, auth_plugin: AuthPluginProtocol,
+        node: NetworkNodeProtocol, auth_plugin: AuthPluginProtocol,
         msg: MessageProtocol
     ) -> MessageProtocol|None:
     """Called when the auth check call fails for a message. If the

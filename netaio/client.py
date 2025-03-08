@@ -130,6 +130,12 @@ class TCPClient:
             return func
         return decorator
 
+    def remove_handler(self, key: Hashable):
+        """Remove a handler for a specific key."""
+        self.logger.debug("Removing handler for key=%s", key)
+        if key in self.handlers:
+            del self.handlers[key]
+
     async def connect(self, host: str = None, port: int = None):
         """Connect to a server."""
         host = host or self.default_host[0]

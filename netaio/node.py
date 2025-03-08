@@ -291,6 +291,12 @@ class UDPNode:
             return func
         return decorator
 
+    def remove_handler(self, key: Hashable):
+        """Remove a handler for a specific key."""
+        self.logger.debug("Removing handler for key=%s", key)
+        if key in self.handlers:
+            del self.handlers[key]
+
     def subscribe(self, key: Hashable, addr: tuple[str, int]):
         """Subscribe a peer to a specific key. The key must be a
             Hashable object.
@@ -495,3 +501,7 @@ class UDPNode:
     def stop(self):
         """Stop the UDPNode."""
         self.transport.close()
+
+    def set_logger(self, logger: logging.Logger):
+        """Replace the current logger."""
+        self.logger = logger
