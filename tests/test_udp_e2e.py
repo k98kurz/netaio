@@ -235,6 +235,18 @@ class TestUDPE2E(unittest.TestCase):
             def client_advertise(message: netaio.Message, _: tuple[str, int]):
                 client_log.append(message)
 
+            @server.on(netaio.MessageType.REQUEST_URI)
+            def server_request(message: netaio.Message, _: tuple[str, int]):
+                server_log.append(message)
+                return netaio.Message.prepare(
+                    message.body,
+                    netaio.MessageType.RESPOND_URI
+                )
+
+            @client.on(netaio.MessageType.RESPOND_URI)
+            def client_request(message: netaio.Message, _: tuple[str, int]):
+                client_log.append(message)
+
             await server.start()
             await client.start()
 
@@ -265,14 +277,14 @@ class TestUDPE2E(unittest.TestCase):
             # it is a known issue that the client will not receive the ADVERTISE_PEER message
 
             # begin automatic peer management of server
-            await server.manage_peers_automatically(every=0.1, peer_timeout=0.3)
+            await server.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
 
             # wait some time to prove the server does not add itself as a peer
             await asyncio.sleep(0.2)
             assert len(server.peers) == 0, len(server.peers)
 
             # begin automatic peer management of client
-            await client.manage_peers_automatically(every=0.1, peer_timeout=0.3)
+            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
 
             # wait for peers to be discovered
             await asyncio.sleep(0.2)
@@ -284,13 +296,28 @@ class TestUDPE2E(unittest.TestCase):
             assert len(client.peers) == 1, len(client.peers)
             assert b'server' in client.peers, client.peers
 
+            # client broadcasts a message to all peers
+            client_log.clear()
+            server_log.clear()
+            client.broadcast(netaio.Message.prepare(
+                netaio.Body.prepare(b'hello', uri=b'broadcast'),
+                netaio.MessageType.REQUEST_URI
+            ))
+
+            # server should receive the message and respond
+            await asyncio.sleep(0.1)
+            assert len(server_log) == 1, len(server_log)
+            assert server_log[-1].header.message_type is netaio.MessageType.REQUEST_URI, server_log[-1].header
+            assert len(client_log) == 1, len(client_log)
+            assert client_log[-1].header.message_type is netaio.MessageType.RESPOND_URI, client_log[-1].header
+
             # stop peer management on client and wait for the DISCONNECT message to be received
             await client.stop_peer_management()
             await asyncio.sleep(0.1)
             assert len(server.peers) == 0, len(server.peers)
 
             # begin automatic peer management
-            await client.manage_peers_automatically(every=0.1, peer_timeout=0.3)
+            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
 
             # wait for peers to be discovered
             await asyncio.sleep(0.2)
@@ -307,8 +334,8 @@ class TestUDPE2E(unittest.TestCase):
             await server.stop_peer_management()
 
             # wait for server to time out
-            await asyncio.sleep(0.4)
-            assert len(client.peers) == 0, len(client.peers)
+            await asyncio.sleep(1)
+            assert len(client.peers) == 0
 
             # stop nodes
             await server.stop()
@@ -373,8 +400,8 @@ class TestUDPE2E(unittest.TestCase):
             # it is a known issue that the client will not receive the ADVERTISE_PEER message
 
             # begin automatic peer management
-            await server.manage_peers_automatically(every=0.1, peer_timeout=0.3)
-            await client.manage_peers_automatically(every=0.1, peer_timeout=0.3)
+            await server.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
 
             # wait for peers to be discovered
             await asyncio.sleep(0.2)
@@ -397,11 +424,11 @@ class TestUDPE2E(unittest.TestCase):
 
             # test with an additional layer of plugins
             await server.manage_peers_automatically(
-                every=0.1, peer_timeout=0.3, auth_plugin=auth_plugin2,
+                advertise_every=0.1, peer_timeout=0.3, auth_plugin=auth_plugin2,
                 cipher_plugin=cipher_plugin2
             )
             await client.manage_peers_automatically(
-                every=0.1, peer_timeout=0.3, auth_plugin=auth_plugin2,
+                advertise_every=0.1, peer_timeout=0.3, auth_plugin=auth_plugin2,
                 cipher_plugin=cipher_plugin2
             )
 

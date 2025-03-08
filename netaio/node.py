@@ -419,8 +419,8 @@ class UDPNode:
             self.logger.debug("Calling self.auth_plugin.make on message.body (broadcast)")
             self.auth_plugin.make(message.auth_data, message.body)
 
-        for peer in self.peers:
-            self.send(message, peer.addr, use_auth=False, use_cipher=False)
+        for peer_addr, _ in self.peer_addrs.items():
+            self.send(message, peer_addr, use_auth=False, use_cipher=False)
 
     def multicast(
             self, message: MessageProtocol, port: int|None = None,
@@ -652,14 +652,14 @@ class UDPNode:
             del self._advertise_peer_tasks[app_id]
 
     async def manage_peers_automatically(
-            self, every: int = 20, app_id: bytes = b'netaio',
+            self, advertise_every: int = 20, app_id: bytes = b'netaio',
             peer_timeout: int = 60, auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Begins automatic peer management. This starts a task that
-            will advertise the local peer every `every` seconds to the
-            multicast group, and it will use the `app_id` as a URI to
-            identify the application. Also registers 3 handlers: 1) for
+            will advertise the local peer every `advertise_every` seconds
+            to the multicast group, and it will use the `app_id` as a URI
+            to identify the application. Also registers 3 handlers: 1) for
             the 'ADVERTISE_PEER' message type which will add the peer to
             the peer list and respond with a 'PEER_DISCOVERED' message
             to reciprocate; 2) for the 'PEER_DISCOVERED' message that
@@ -737,7 +737,7 @@ class UDPNode:
             self.remove_peer(addr, peer_id)
 
         await self.begin_peer_advertisement(
-            every, app_id, peer_timeout, auth_plugin, cipher_plugin
+            advertise_every, app_id, peer_timeout, auth_plugin, cipher_plugin
         )
 
     async def stop_peer_management(self, app_id: bytes = b'netaio'):
