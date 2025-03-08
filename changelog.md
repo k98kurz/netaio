@@ -1,3 +1,11 @@
+## 0.0.5
+
+- Added automatic peer discovery/management to UDPNode
+- Several refactors:
+  - Added dependency injection (message/part classes) to auth plugins
+  - Added handler system for failed auth checks on received messages
+  - Made MessageType monkey-patchable and injectible where it is used
+
 ## 0.0.4
 
 - Added UDPNode class with multicast support
