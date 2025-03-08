@@ -20,10 +20,12 @@ from .common import (
     default_node_logger,
 )
 from enum import IntEnum
+from time import time
 from typing import Callable, Hashable, Any
 import asyncio
 import socket
 import logging
+import packify
 
 
 def not_found_handler(*_) -> MessageProtocol | None:
@@ -32,10 +34,12 @@ def not_found_handler(*_) -> MessageProtocol | None:
 
 class UDPNode:
     """UDP node class."""
-    peers: set[Peer]
+    peers: dict[bytes, Peer]
+    peer_addrs: dict[tuple[str, int], bytes]
     port: int
     interface: str
     multicast_group: str
+    local_peer: Peer
     header_class: type[HeaderProtocol]
     message_type_class: type[IntEnum]
     auth_fields_class: type[AuthFieldsProtocol]
@@ -57,6 +61,7 @@ class UDPNode:
             port: int = 8888,
             interface: str = '0.0.0.0',
             multicast_group: str = '224.0.0.1',
+            local_peer: Peer = None,
             header_class: type[HeaderProtocol] = Header,
             message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
@@ -100,10 +105,12 @@ class UDPNode:
             auth plugin is an anti-spam plugin and messages that fail
             the auth check should just be dropped).
         """
-        self.peers = set()
+        self.peers = {}
+        self.peer_addrs = {}
         self.port = port
         self.interface = interface
         self.multicast_group = multicast_group
+        self.local_peer = local_peer
         self.header_class = header_class
         self.message_type_class = message_type_class
         self.auth_fields_class = auth_fields_class
@@ -119,6 +126,7 @@ class UDPNode:
         self.logger = logger
         self.transport = None
         self.subscriptions = {}
+        self._advertise_peer_tasks = {}
 
     def connection_made(self, transport: asyncio.DatagramTransport):
         """Called when a connection is made. The argument is the
@@ -215,6 +223,13 @@ class UDPNode:
             response = self.default_handler(message, addr)
 
         if response is not None:
+            # if the sender is a peer, update that peer timestamp
+            peer_id = self.peer_addrs.get(addr, None)
+            if peer_id is not None:
+                peer = self.peers.get(peer_id, None)
+                if peer is not None:
+                    peer.update()
+
             # inner cipher
             if cipher_plugin is not None:
                 self.logger.debug("Calling cipher_plugin.encrypt on response (handler)")
@@ -497,6 +512,218 @@ class UDPNode:
         for addr in subscribers:
             self.send(message, addr, use_auth=False, use_cipher=False)
         self.logger.debug("Notified %d peers for key=%s", len(subscribers), key)
+
+    def add_or_update_peer(
+            self, peer_id: bytes, peer_data: bytes, addr: tuple[str, int]
+        ):
+        """Add or update a peer in the peer list."""
+        if peer_id in self.peers:
+            self.logger.debug(
+                "Updating peer %s at %s with data %s",
+                peer_id.hex(), addr, peer_data.hex()
+            )
+            self.peers[peer_id].update(peer_data)
+            self.peers[peer_id].addrs.add(addr)
+        else:
+            self.logger.debug(
+                "Adding peer %s at %s with data %s",
+                peer_id.hex(), addr, peer_data.hex()
+            )
+            self.peers[peer_id] = Peer({addr}, peer_id, peer_data)
+        self.peer_addrs[addr] = peer_id
+
+    def remove_peer(self, addr: tuple[str, int], peer_id: bytes):
+        """Remove a peer from the peer list."""
+        self.logger.debug(
+            "Removing peer %s at %s from peer list", peer_id.hex(), addr
+        )
+        if peer_id in self.peers:
+            del self.peers[peer_id]
+        if addr in self.peer_addrs:
+            del self.peer_addrs[addr]
+
+    def remove_timed_out_peers(self, timeout: int):
+        """Remove timed out peers from the peer list."""
+        peers_to_remove = []
+        for addr, peer_id in self.peer_addrs.items():
+            if peer_id not in self.peers:
+                peers_to_remove.append((addr, peer_id))
+                continue
+            if self.peers[peer_id].timed_out(timeout):
+                peers_to_remove.append((addr, peer_id))
+
+        for addr, peer_id in peers_to_remove:
+            self.remove_peer(addr, peer_id)
+
+    async def begin_peer_advertisement(
+            self, every: int = 20, app_id: bytes = b'netaio',
+            peer_timeout: int = 60, auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ):
+        """Begin peer advertisement. This starts a task that will
+            advertise the local peer every `every` seconds to the
+            multicast group, and it will use the `app_id` as a URI to
+            identify the application. The loop will drop any peers that
+            have timed out. Raises AssertionError if `local_peer` is not
+            set or if the message_type_class does not contain the
+            'ADVERTISE_PEER' message type.
+        """
+        # preconditions
+        assert self.local_peer is not None
+        assert self.message_type_class.ADVERTISE_PEER is not None
+
+        # start the advertisement loop task
+        self._advertise_peer_tasks[app_id] = asyncio.create_task(
+            self._advertise_peer_loop(every, app_id, peer_timeout, auth_plugin, cipher_plugin)
+        )
+
+    async def _advertise_peer_loop(
+            self, every: int = 20, app_id: bytes = b'netaio',
+            peer_timeout: int = 60, auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ):
+        """Advertise peer loop."""
+        # send a fresh message every time to avoid stale auth fields
+        message = lambda: self.message_class.prepare(
+            self.body_class.prepare(
+                packify.pack((self.local_peer.peer_id, self.local_peer.peer_data)),
+                app_id
+            ),
+            self.message_type_class.ADVERTISE_PEER,
+        )
+        disconnect_msg = self.message_class.prepare(
+            self.body_class.prepare(
+                packify.pack((self.local_peer.peer_id, b'')),
+                app_id
+            ),
+            self.message_type_class.DISCONNECT
+        )
+        while True:
+            try:
+                start_ts = time()
+                # remove any timed out peers
+                self.remove_timed_out_peers(peer_timeout)
+
+                # advertise the peer
+                self.logger.debug("Advertising peer")
+                self.multicast(
+                    message(), auth_plugin=auth_plugin,
+                    cipher_plugin=cipher_plugin
+                )
+                done_ts = time()
+                await asyncio.sleep(max(0.1, every - (done_ts - start_ts)))
+            except asyncio.CancelledError:
+                self.logger.debug("Advertise peer loop cancelled")
+                self.multicast(
+                    disconnect_msg, auth_plugin=auth_plugin,
+                    cipher_plugin=cipher_plugin
+                )
+                break
+            except Exception as e:
+                self.logger.error("Error in advertise peer loop: %s", e)
+
+    async def stop_peer_advertisement(self, app_id: bytes = b'netaio'):
+        """Stop the peer advertisement task if it exists."""
+        if app_id in self._advertise_peer_tasks:
+            self._advertise_peer_tasks[app_id].cancel()
+            del self._advertise_peer_tasks[app_id]
+
+    async def manage_peers_automatically(
+            self, every: int = 20, app_id: bytes = b'netaio',
+            peer_timeout: int = 60, auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ):
+        """Begins automatic peer management. This starts a task that
+            will advertise the local peer every `every` seconds to the
+            multicast group, and it will use the `app_id` as a URI to
+            identify the application. Also registers 3 handlers: 1) for
+            the 'ADVERTISE_PEER' message type which will add the peer to
+            the peer list and respond with a 'PEER_DISCOVERED' message
+            to reciprocate; 2) for the 'PEER_DISCOVERED' message that
+            will add the peer to the peer list; and 3) for the
+            'DISCONNECT' message which will remove the peer from the
+            local peer list. The loop will also drop any peers that have
+            timed out. Raises AssertionError if `local_peer` is not set
+            or if the message_type_class does not contain
+            'ADVERTISE_PEER',  'PEER_DISCOVERED', and 'DISCONNECT'
+            message types.
+        """
+        # preconditions
+        assert self.local_peer is not None
+        assert self.message_type_class.ADVERTISE_PEER is not None
+        assert self.message_type_class.PEER_DISCOVERED is not None
+        assert self.message_type_class.DISCONNECT is not None
+
+        # create the handlers
+        @self.on((self.message_type_class.ADVERTISE_PEER, app_id), auth_plugin, cipher_plugin)
+        def handle_advertise_peer(message: MessageProtocol, addr: tuple[str, int]):
+            self.logger.debug("Received ADVERTISE_PEER message from %s", addr)
+
+            if app_id != message.body.uri:
+                self.logger.debug("Ignoring ADVERTISE_PEER message with mismatched app_id")
+                return
+
+            try:
+                peer_id, peer_data = packify.unpack(message.body.content)
+            except Exception as e:
+                self.logger.error("Error unpacking peer data: %s", e)
+                return
+
+            self.add_or_update_peer(peer_id, peer_data, addr)
+
+            # prepare the response
+            return self.message_class.prepare(
+                self.body_class.prepare(
+                    packify.pack((self.local_peer.peer_id, self.local_peer.peer_data)),
+                    app_id
+                ),
+                self.message_type_class.PEER_DISCOVERED
+            )
+
+        @self.on((self.message_type_class.PEER_DISCOVERED, app_id), auth_plugin, cipher_plugin)
+        def handle_peer_discovered(message: MessageProtocol, addr: tuple[str, int]):
+            self.logger.debug("Received PEER_DISCOVERED message from %s", addr)
+
+            if app_id != message.body.uri:
+                self.logger.debug("Ignoring PEER_DISCOVERED message with mismatched app_id")
+                return
+
+            try:
+                peer_id, peer_data = packify.unpack(message.body.content)
+            except Exception as e:
+                self.logger.error("Error unpacking peer data: %s", e)
+                return
+
+            self.add_or_update_peer(peer_id, peer_data, addr)
+
+        @self.on((self.message_type_class.DISCONNECT, app_id), auth_plugin, cipher_plugin)
+        def handle_disconnect(message: MessageProtocol, addr: tuple[str, int]):
+            self.logger.debug("Received DISCONNECT message from %s", addr)
+
+            if app_id != message.body.uri:
+                self.logger.debug("Ignoring DISCONNECT message with mismatched app_id")
+                return
+
+            try:
+                peer_id, _ = packify.unpack(message.body.content)
+            except Exception as e:
+                self.logger.error("Error unpacking peer id: %s", e)
+                return
+
+            self.remove_peer(addr, peer_id)
+
+        await self.begin_peer_advertisement(
+            every, app_id, peer_timeout, auth_plugin, cipher_plugin
+        )
+
+    async def stop_peer_management(self, app_id: bytes = b'netaio'):
+        """Stop automatic peer management by stopping peer advertisement
+            and removing the handlers.
+        """
+        self.remove_handler((self.message_type_class.ADVERTISE_PEER, app_id))
+        self.remove_handler((self.message_type_class.PEER_DISCOVERED, app_id))
+        self.remove_handler((self.message_type_class.DISCONNECT, app_id))
+        await self.stop_peer_advertisement()
 
     def stop(self):
         """Stop the UDPNode."""

@@ -560,14 +560,14 @@ class AuthPluginProtocol(Protocol):
 @dataclass
 class Peer:
     """Class for storing peer information."""
-    addr: tuple[str, int]
+    addrs: set[tuple[str, int]]
     peer_id: bytes|None = field(default=None)
     peer_data: bytes|None = field(default=None)
     last_rx: int = field(default_factory=lambda: int(time()))
 
     def __hash__(self):
         """Make the peer Hashable."""
-        return hash((self.addr, self.peer_id, self.peer_data))
+        return hash((self.addrs, self.peer_id, self.peer_data))
 
     def update(self, peer_data: bytes|None = None):
         """Update the peer data and last_rx time."""
