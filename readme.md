@@ -164,7 +164,7 @@ and client to authenticate and authorize requests. This uses a shared secret to
 generate and check HMACs over message bodies.
 
 <details>
-<summary>Example</summary>
+<summary>Example of additional auth layer</summary>
 
 ```python
 from netaio import TCPServer, TCPClient, HMACAuthPlugin, MessageType, Body, Message
@@ -219,7 +219,7 @@ default key extractor is used (i.e. handlers set on the tuple of MessageType
 and URI).
 
 <details>
-<summary>Example</summary>
+<summary>Example of additional encryption layer</summary>
 
 ```python
 from netaio import TCPServer, TCPClient, Sha256StreamCipherPlugin, MessageType, Body, Message
