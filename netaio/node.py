@@ -50,22 +50,22 @@ class UDPNode:
     handle_auth_error: AuthErrorHandler
 
     def __init__(
-        self,
-        port: int = 8888,
-        interface: str = '0.0.0.0',
-        multicast_group: str = '224.0.0.1',
-        header_class: type[HeaderProtocol] = Header,
-        message_type_class: type[IntEnum]|None = None,
-        body_class: type[BodyProtocol] = Body,
-        message_class: type[MessageProtocol] = Message,
-        default_handler: UDPHandler = not_found_handler,
-        extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
-        make_error_response: Callable[[str], MessageProtocol] = make_error_response,
-        logger: logging.Logger = default_node_logger,
-        auth_plugin: AuthPluginProtocol = None,
-        cipher_plugin: CipherPluginProtocol = None,
-        auth_error_handler: AuthErrorHandler = auth_error_handler,
-    ):
+            self,
+            port: int = 8888,
+            interface: str = '0.0.0.0',
+            multicast_group: str = '224.0.0.1',
+            header_class: type[HeaderProtocol] = Header,
+            message_type_class: type[IntEnum]|None = None,
+            body_class: type[BodyProtocol] = Body,
+            message_class: type[MessageProtocol] = Message,
+            default_handler: UDPHandler = not_found_handler,
+            extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
+            make_error_response: Callable[[str], MessageProtocol] = make_error_response,
+            logger: logging.Logger = default_node_logger,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None,
+            auth_error_handler: AuthErrorHandler = auth_error_handler,
+        ):
         """Initialize the UDPNode.
             `port` is the port to listen on.
             `interface` is the interface to listen on.
@@ -241,12 +241,12 @@ class UDPNode:
         self.logger.info("Connection closed")
 
     def add_handler(
-        self,
-        key: Hashable,
-        handler: Callable[[Any, Any], Any],
-        auth_plugin: AuthPluginProtocol = None,
-        cipher_plugin: CipherPluginProtocol = None
-    ):
+            self,
+            key: Hashable,
+            handler: Callable[[Any, Any], Any],
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
         """Register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
             MessageProtocol or None. If an auth plugin is provided, it
@@ -261,11 +261,11 @@ class UDPNode:
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def on(
-        self,
-        key: Hashable,
-        auth_plugin: AuthPluginProtocol = None,
-        cipher_plugin: CipherPluginProtocol = None
-    ):
+            self,
+            key: Hashable,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
         """Decorator to register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
             MessageProtocol or None. If an auth plugin is provided, it
