@@ -12,8 +12,8 @@ This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 - [x] Optional authorization plugin using HMAC
 - [x] Optional cipher plugin using simple symmetric stream cipher
 - [x] UDP node with multicast
-- [ ] Automatic peer advertisement/discovery/management for UDP node
-- [ ] Error/errored message handling system
+- [x] Automatic peer advertisement/discovery/management for UDP node
+- [x] Error/errored message handling system
 - [ ] Optional authorization plugin using tapescript
 - [ ] Optional cipher plugin using Curve25519 asymmetric encryption
 - [ ] Optional authorization plugin using Hashcash/PoW for anti-spam DoS protection
@@ -86,35 +86,23 @@ print(received_resources)
 ### UDPNode
 
 ```python
-from netaio import UDPNode, Body, Message, MessageType, HMACAuthPlugin
+from netaio import UDPNode, Peer, Body, Message, MessageType, HMACAuthPlugin
+from os import urandom
 import asyncio
-import socket
 
-def get_ip():
-    """Get the primary local IP address of the machine.
-        Credit: fatal_error CC BY-SA 4.0
-        https://stackoverflow.com/a/28950776
-    """
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(0)
-    try:
-        # doesn't even have to be reachable
-        s.connect(('10.254.254.254', 1))
-        IP = s.getsockname()[0]
-    except Exception:
-        IP = '127.0.0.1'
-    finally:
-        s.close()
-    return IP
+local_peer = Peer(
+    addrs={('127.0.0.1', 8888)},
+    peer_id=urandom(16),
+    peer_data=b''
+)
 
-local_ip = get_ip()
-
-echo_node = UDPNode(auth_plugin=HMACAuthPlugin(config={"secret": "test"}))
+echo_node = UDPNode(
+    local_peer=local_peer,
+    auth_plugin=HMACAuthPlugin(config={"secret": "test"})
+)
 
 @echo_node.on(MessageType.REQUEST_URI)
 def request_uri(msg: Message, addr: tuple[str, int]):
-    if addr[0] == local_ip:
-        return
     echo_node.logger.info("Sending echo to %s...", addr)
     return Message.prepare(msg.body, MessageType.OK)
 
@@ -128,14 +116,18 @@ async def main(local_addr: tuple[str, int], remote_addr: tuple[str, int]|None = 
     echo_node.interface = local_addr[0]
     echo_node.port = local_addr[1]
     await echo_node.start()
+    await echo_node.manage_peers_automatically(advertise_every=1, peer_timeout=3)
     while True:
         await asyncio.sleep(1)
         if remote_addr:
             echo_node.logger.info("Sending message to %s...", remote_addr)
             echo_node.send(echo_msg, remote_addr)
         else:
-            echo_node.logger.info("Multicasting message...")
-            echo_node.multicast(echo_msg)
+            if len(echo_node.peers) > 0:
+                echo_node.logger.info("Broadcasting message to all known peers...")
+                echo_node.broadcast(echo_msg)
+            else:
+                echo_node.logger.info("No peers known, waiting to discover peers...")
 
 local_addr = ("0.0.0.0", 8888)
 remote_addr = None
@@ -149,6 +141,9 @@ the remote address must be set to the first node's address, e.g.
 the different ports. If the interface is set to "0.0.0.0", multicast will work
 across the LAN, but this will result in the node hearing its own multicast
 messages; hence, the request_uri handler ignores messages from the local machine.
+
+(It is technically possible to get multicast to work in one direction on a
+single machine by changing the `.port` property after one has started.)
 
 ### Authentication/Authorization
 
@@ -199,7 +194,12 @@ instance and per-handler, both will be applied to the message.
 
 Currently, netaio includes a `Sha256StreamCipherPlugin` that can be used by
 the server and client to encrypt and decrypt messages using a simple symmetric
-stream cipher. This uses a shared secret key and per-message IVs.
+stream cipher. This uses a shared secret key and per-message IVs. Note that the
+`encrypt_uri` config option should be `False` to prevent the URI from being
+encrypted when using this as an additional, inner layer of encryption, else the
+URI will not be usable for routing requests/determining responses when the
+default key extractor is used (i.e. handlers set on the tuple of MessageType
+and URI).
 
 <details>
 <summary>Example</summary>
@@ -227,13 +227,13 @@ The encapsulation model for plugin interactions with messages is as follows:
 
 1. Per-handler/injected `cipher_plugin.encrypt`
 2. Per-handler/injected `auth_plugin.make`
-3. Instance `cipher_plugin.encrypt`
-4. Instance `auth_plugin.make`
+3. Instance `self.cipher_plugin.encrypt`
+4. Instance `self.auth_plugin.make`
 
 #### Receive
 
-1. Instance `auth_plugin.check`
-2. Instance `cipher_plugin.decrypt`
+1. Instance `self.auth_plugin.check`
+2. Instance `self.cipher_plugin.decrypt`
 3. Per-handler/injected `auth_plugin.check`
 4. Per-handler/injected `cipher_plugin.decrypt`
 
@@ -244,12 +244,13 @@ To test, clone the repo and run `python -m unittest discover -s tests`. Or to
 run the individual tests and see the output separated by test file, instead run
 `find tests/ -name test_*.py -print -exec python {} \;`.
 
-Currently, there are 4 unit tests and 7 e2e tests. The unit tests cover the
-bundled plugins. The e2e tests start a server and client, then send messages
-from the client to the server and receive responses; the UDP e2e test suite
-starts 2 nodes and treats them like a server and client to make testing a bit
-simpler and easier to follow. The bundled plugins are used for the e2e tests,
-and authentication failure cases are also tested.
+Currently, there are 7 unit tests and 9 e2e tests. The unit tests cover the
+bundled plugins and miscellaneous features. The e2e tests start a server and
+client, then send messages from the client to the server and receive responses;
+the UDP e2e test suite starts 2 nodes and treats them like a server and client
+to make testing a bit simpler and easier to follow, and it tests the automatic
+peer management system. The bundled plugins are used for the e2e tests, and
+authentication failure cases are also tested.
 
 ## License
 
