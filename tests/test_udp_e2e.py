@@ -204,6 +204,7 @@ class TestUDPE2E(unittest.TestCase):
             # stop nodes
             await server.stop()
             await client.stop()
+            await asyncio.sleep(0.1)
 
         print()
         asyncio.run(run_test())
@@ -312,6 +313,7 @@ class TestUDPE2E(unittest.TestCase):
             # stop nodes
             await server.stop()
             await client.stop() # peer management will be stopped automatically
+            await asyncio.sleep(0.1)
 
         print()
         asyncio.run(run_test())
@@ -419,6 +421,7 @@ class TestUDPE2E(unittest.TestCase):
             # stop nodes
             await server.stop() # peer management will be stopped automatically
             await client.stop()
+            await asyncio.sleep(0.1)
 
         print()
         asyncio.run(run_test())
@@ -508,6 +511,7 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
             # stop nodes
             await server.stop()
             await client.stop()
+            await asyncio.sleep(0.1)
 
         print()
         asyncio.run(run_test())
@@ -612,6 +616,7 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
             # close client and stop server
             await client.stop()
             await server.stop()
+            await asyncio.sleep(0.1)
 
         print()
         asyncio.run(run_test())
