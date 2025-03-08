@@ -168,6 +168,7 @@ generate and check HMACs over message bodies.
 
 ```python
 from netaio import TCPServer, TCPClient, HMACAuthPlugin, MessageType, Body, Message
+import asyncio
 
 outer_auth_plugin = HMACAuthPlugin(config={"secret": "test"})
 inner_auth_plugin = HMACAuthPlugin(config={"secret": "tset", "hmac_field": "camh"})
@@ -178,6 +179,22 @@ client = TCPClient(host="127.0.0.1", port=8888, auth_plugin=outer_auth_plugin)
 async def put_uri(msg: Message, writer: asyncio.StreamWriter):
     body = Body.prepare(b'Resource saved.', uri=msg.body.uri)
     return Message.prepare(body, MessageType.OK)
+
+async def main():
+    task = asyncio.create_task(server.start())
+    await asyncio.sleep(0.1)
+    await client.connect()
+    await client.send(
+        Message.prepare(Body.prepare(b'test'), MessageType.CREATE_URI),
+        auth_plugin=inner_auth_plugin
+    )
+    result = await client.receive_once()
+    await client.close()
+    task.cancel()
+    return result
+
+response = asyncio.run(main())
+print(response)
 ```
 </details>
 
@@ -206,6 +223,7 @@ and URI).
 
 ```python
 from netaio import TCPServer, TCPClient, Sha256StreamCipherPlugin, MessageType, Body, Message
+import asyncio
 
 outer_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "test"})
 inner_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "tset", "iv_field": "iv2"})
@@ -216,6 +234,25 @@ client = TCPClient(host="127.0.0.1", port=8888, cipher_plugin=outer_cipher_plugi
 async def request_uri(msg: Message, writer: asyncio.StreamWriter):
     body = Body.prepare(b'Super secret data.', uri=msg.body.uri)
     return Message.prepare(body, MessageType.RESPOND_URI)
+
+async def main():
+    task = asyncio.create_task(server.start())
+    await asyncio.sleep(0.1)
+    await client.connect()
+    await client.send(
+        Message.prepare(
+            Body.prepare(b'psst gimme the secret', uri=b'something'),
+            MessageType.REQUEST_URI
+        ),
+        cipher_plugin=inner_cipher_plugin
+    )
+    result = await client.receive_once(cipher_plugin=inner_cipher_plugin)
+    await client.close()
+    task.cancel()
+    return result
+
+response = asyncio.run(main())
+print(response)
 ```
 </details>
 
