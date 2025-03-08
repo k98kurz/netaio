@@ -174,7 +174,7 @@ inner_auth_plugin = HMACAuthPlugin(config={"secret": "tset", "hmac_field": "camh
 server = TCPServer(port=8888, auth_plugin=outer_auth_plugin)
 client = TCPClient(host="127.0.0.1", port=8888, auth_plugin=outer_auth_plugin)
 
-@server.on(MessageType.CREATE_URI, inner_auth_plugin)
+@server.on(MessageType.CREATE_URI, auth_plugin=inner_auth_plugin)
 async def put_uri(msg: Message, writer: asyncio.StreamWriter):
     body = Body.prepare(b'Resource saved.', uri=msg.body.uri)
     return Message.prepare(body, MessageType.OK)
@@ -212,7 +212,7 @@ inner_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "tset", "iv_field"
 server = TCPServer(port=8888, cipher_plugin=outer_cipher_plugin)
 client = TCPClient(host="127.0.0.1", port=8888, cipher_plugin=outer_cipher_plugin)
 
-@server.on(MessageType.REQUEST_URI, inner_cipher_plugin)
+@server.on(MessageType.REQUEST_URI, cipher_plugin=inner_cipher_plugin)
 async def request_uri(msg: Message, writer: asyncio.StreamWriter):
     body = Body.prepare(b'Super secret data.', uri=msg.body.uri)
     return Message.prepare(body, MessageType.RESPOND_URI)

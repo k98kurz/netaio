@@ -1,5 +1,3 @@
-from .auth import HMACAuthPlugin
-from .cipher import Sha256StreamCipherPlugin
 from .client import TCPClient
 from .server import TCPServer
 from .node import UDPNode
@@ -25,9 +23,12 @@ from .common import (
     default_client_logger,
     default_node_logger,
 )
+from .auth import HMACAuthPlugin
+from .cipher import Sha256StreamCipherPlugin
+
 
 __version__ = "0.0.5"
 
-def version():
+def version() -> str:
     """Return the version of the netaio package."""
     return __version__

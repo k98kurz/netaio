@@ -2,75 +2,6 @@
 
 ## Classes
 
-### `HMACAuthPlugin`
-
-HMAC auth plugin.
-
-#### Annotations
-
-- secret: <class 'bytes'>
-- nonce_field: <class 'str'>
-- ts_field: <class 'str'>
-- hmac_field: <class 'str'>
-
-#### Methods
-
-##### `__init__(config: dict):`
-
-Initialize the HMAC auth plugin with a config. The config must contain
-{"secret": <str|bytes>}. It can contain {"hmac_field": <str>} to specify the
-auth field name for the hmac; the default is "hmac". It can contain
-{"nonce_field": <str>} to specify the auth field name for the nonce; the default
-is "nonce". It can contain {"ts_field": <str>} to specify the auth field name
-for the timestamp; the default is "ts".
-
-##### `make(auth_fields: AuthFieldsProtocol, body: BodyProtocol):`
-
-If the nonce and ts fields are not set, generate them. If the nonce is not the
-IV_SIZE, generate a new one. Then, create an hmac of the nonce, ts, and body and
-store it in the auth_data field specified by the "hmac_field" config option; the
-default is "hmac".
-
-##### `check(auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:`
-
-Check if the auth fields are valid for the given body. Performs an hmac check on
-the nonce, ts, and body. Returns False if any of the fields are missing or if
-the hmac check fails.
-
-##### `error(message_class: type = Message, message_type_class: type = <enum 'MessageType'>, header_class: type = Header, auth_fields_class: type = AuthFields, body_class: type = Body) -> MessageProtocol:`
-
-Make an error message that says "HMAC auth failed".
-
-### `Sha256StreamCipherPlugin`
-
-SHA-256 stream cipher plugin.
-
-#### Annotations
-
-- key: <class 'bytes'>
-- iv_field: <class 'str'>
-- encrypt_uri: <class 'bool'>
-
-#### Methods
-
-##### `__init__(config: dict):`
-
-Initialize the cipher plugin with a config. The config must contain {"key":
-<str|bytes>}. It can contain {"iv_field": <str>} to specify the auth field name
-for the iv; the default is "iv". It can contain {"encrypt_uri": <bool>} to
-specify whether to encrypt the uri; the default is True.
-
-##### `encrypt(message: MessageProtocol) -> MessageProtocol:`
-
-Encrypt the message body, setting the self.iv_field in the auth_data. This will
-overwrite any existing value in that auth_data field. If the self.encrypt_uri is
-True, the uri will be encrypted as well as the content.
-
-##### `decrypt(message: MessageProtocol) -> MessageProtocol:`
-
-Decrypt the message body, reading the self.iv_field from the auth_data. Returns
-a new message with the decrypted body.
-
 ### `TCPClient`
 
 TCP client class.
@@ -103,7 +34,7 @@ netaio.common.MessageProtocol | None]
 
 #### Methods
 
-##### `__init__(host: str = '127.0.0.1', port: int = 8888, header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, extract_keys: Callable = <function keys_extractor at 0x72a279422710>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x72a278d8b6d0>):`
+##### `__init__(host: str = '127.0.0.1', port: int = 8888, header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, extract_keys: Callable = <function keys_extractor at 0x7c74568227a0>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x7c74565b37f0>):`
 
 Initialize the TCPClient. `host` is the default host IPv4 address to connect to.
 `port` is the default port to connect to. `header_class`, `auth_fields_class`,
@@ -228,7 +159,7 @@ netaio.common.MessageProtocol | None]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x72a279422710>, make_error_response: Callable = <function make_error_response at 0x72a278d8b5b0>, default_handler: Callable = <function not_found_handler at 0x72a278dacaf0>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x72a278d8b6d0>):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x7c74568227a0>, make_error_response: Callable = <function make_error_response at 0x7c74565b36d0>, default_handler: Callable = <function not_found_handler at 0x7c74565b3eb0>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x7c74565b37f0>):`
 
 Initialize the TCPServer. `interface` is the interface to listen on. `port` is
 the port to listen on. `header_class`, `auth_fields_class`, `body_class`, and
@@ -359,7 +290,7 @@ CipherPluginProtocol | None]]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: UDPHandler = <function not_found_handler at 0x72a278dad870>, extract_keys: Callable[[MessageProtocol], list[Hashable]] = <function keys_extractor at 0x72a279422710>, make_error_response: Callable[[str], MessageProtocol] = <function make_error_response at 0x72a278d8b5b0>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x72a278d8b6d0>):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: UDPHandler = <function not_found_handler at 0x7c74565c4af0>, extract_keys: Callable[[MessageProtocol], list[Hashable]] = <function keys_extractor at 0x7c74568227a0>, make_error_response: Callable[[str], MessageProtocol] = <function make_error_response at 0x7c74565b36d0>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x7c74565b37f0>, ignore_own_ip: bool = True):`
 
 Initialize the UDPNode. `port` is the port to listen on. `interface` is the
 interface to listen on. `multicast_group` is the multicast group to join.
@@ -881,6 +812,75 @@ Update the peer data and last_rx time.
 
 Check if the peer has timed out.
 
+### `HMACAuthPlugin`
+
+HMAC auth plugin.
+
+#### Annotations
+
+- secret: <class 'bytes'>
+- nonce_field: <class 'str'>
+- ts_field: <class 'str'>
+- hmac_field: <class 'str'>
+
+#### Methods
+
+##### `__init__(config: dict):`
+
+Initialize the HMAC auth plugin with a config. The config must contain
+{"secret": <str|bytes>}. It can contain {"hmac_field": <str>} to specify the
+auth field name for the hmac; the default is "hmac". It can contain
+{"nonce_field": <str>} to specify the auth field name for the nonce; the default
+is "nonce". It can contain {"ts_field": <str>} to specify the auth field name
+for the timestamp; the default is "ts".
+
+##### `make(auth_fields: AuthFieldsProtocol, body: BodyProtocol):`
+
+If the nonce and ts fields are not set, generate them. If the nonce is not the
+IV_SIZE, generate a new one. Then, create an hmac of the nonce, ts, and body and
+store it in the auth_data field specified by the "hmac_field" config option; the
+default is "hmac".
+
+##### `check(auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:`
+
+Check if the auth fields are valid for the given body. Performs an hmac check on
+the nonce, ts, and body. Returns False if any of the fields are missing or if
+the hmac check fails.
+
+##### `error(message_class: type = Message, message_type_class: type = <enum 'MessageType'>, header_class: type = Header, auth_fields_class: type = AuthFields, body_class: type = Body) -> MessageProtocol:`
+
+Make an error message that says "HMAC auth failed".
+
+### `Sha256StreamCipherPlugin`
+
+SHA-256 stream cipher plugin.
+
+#### Annotations
+
+- key: <class 'bytes'>
+- iv_field: <class 'str'>
+- encrypt_uri: <class 'bool'>
+
+#### Methods
+
+##### `__init__(config: dict):`
+
+Initialize the cipher plugin with a config. The config must contain {"key":
+<str|bytes>}. It can contain {"iv_field": <str>} to specify the auth field name
+for the iv; the default is "iv". It can contain {"encrypt_uri": <bool>} to
+specify whether to encrypt the uri; the default is True.
+
+##### `encrypt(message: MessageProtocol) -> MessageProtocol:`
+
+Encrypt the message body, setting the self.iv_field in the auth_data. This will
+overwrite any existing value in that auth_data field. If the self.encrypt_uri is
+True, the uri will be encrypted as well as the content.
+
+##### `decrypt(message: MessageProtocol) -> MessageProtocol:`
+
+Decrypt the message body, reading the self.iv_field from the auth_data. Returns
+a new message with the decrypted body.
+
 ## Functions
 
 ### `keys_extractor(message: MessageProtocol) -> list[Hashable]:`
@@ -895,7 +895,7 @@ just the message type.
 
 Make an error response message.
 
-### `version():`
+### `version() -> str:`
 
 Return the version of the netaio package.
 
@@ -906,3 +906,4 @@ Return the version of the netaio package.
 - `default_server_logger`: Logger
 - `default_client_logger`: Logger
 - `default_node_logger`: Logger
+
