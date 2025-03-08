@@ -516,7 +516,11 @@ class UDPNode:
     def add_or_update_peer(
             self, peer_id: bytes, peer_data: bytes, addr: tuple[str, int]
         ):
-        """Add or update a peer in the peer list."""
+        """Add or update a peer in the peer list. If the peer is the
+            local peer, it will not be added to the peer list.
+        """
+        if peer_id == self.local_peer.peer_id:
+            return
         if peer_id in self.peers:
             self.logger.debug(
                 "Updating peer %s at %s with data %s",
@@ -531,6 +535,21 @@ class UDPNode:
             )
             self.peers[peer_id] = Peer({addr}, peer_id, peer_data)
         self.peer_addrs[addr] = peer_id
+
+    def get_peer(
+            self, addr: tuple[str, int]|None = None, peer_id: bytes|None = None
+        ) -> Peer|None:
+        """Get a peer from the peer list if addr or peer_id is provided
+            and if it exists. Prefers peer_id if both are provided but
+            will fall back to addr if the provided peer_id is not found.
+        """
+        peer = None
+        if peer_id is not None:
+            peer = self.peers.get(peer_id, None)
+        if addr is not None and peer is None:
+            peer_id = self.peer_addrs.get(addr, None)
+            peer = self.peers.get(peer_id, None)
+        return peer
 
     def remove_peer(self, addr: tuple[str, int], peer_id: bytes):
         """Remove a peer from the peer list."""
@@ -725,8 +744,10 @@ class UDPNode:
         self.remove_handler((self.message_type_class.DISCONNECT, app_id))
         await self.stop_peer_advertisement()
 
-    def stop(self):
+    async def stop(self):
         """Stop the UDPNode."""
+        for app_id in list(self._advertise_peer_tasks.keys()):
+            await self.stop_peer_management(app_id)
         self.transport.close()
 
     def set_logger(self, logger: logging.Logger):

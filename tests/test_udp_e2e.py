@@ -202,8 +202,89 @@ class TestUDPE2E(unittest.TestCase):
             assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
 
             # stop nodes
-            server.stop()
-            client.stop()
+            await server.stop()
+            await client.stop()
+
+        print()
+        asyncio.run(run_test())
+
+    def test_peer_management_e2e(self):
+        async def run_test():
+            server_log: list[netaio.Message] = []
+            client_log: list[netaio.Message] = []
+            default_server_handler = lambda msg, addr: server_log.append(msg)
+            default_client_handler = lambda msg, addr: client_log.append(msg)
+
+            server = netaio.UDPNode(
+                port=self.PORT, default_handler=default_server_handler,
+                logger=netaio.default_server_logger,
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, peer_id=b'server', peer_data=b'abc')
+            )
+            client = netaio.UDPNode(
+                port=self.PORT+1, default_handler=default_client_handler,
+                logger=netaio.default_client_logger,
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, peer_id=b'client', peer_data=b'def')
+            )
+
+            @server.on(netaio.MessageType.ADVERTISE_PEER)
+            def server_advertise(message: netaio.Message, _: tuple[str, int]):
+                server_log.append(message)
+
+            @client.on(netaio.MessageType.ADVERTISE_PEER)
+            def client_advertise(message: netaio.Message, _: tuple[str, int]):
+                client_log.append(message)
+
+            await server.start()
+            await client.start()
+
+            # Wait briefly to allow the nodes time to bind and begin listening.
+            await asyncio.sleep(0.01)
+
+            # monkey-patch the client port to make local multicast work
+            client.port = self.PORT
+
+            # begin automatic peer advertisement
+            await server.begin_peer_advertisement(every=0.1)
+            await client.begin_peer_advertisement(every=0.1)
+
+            # wait for peers to be advertised
+            await asyncio.sleep(0.3)
+
+            # stop peer advertisement
+            await server.stop_peer_advertisement()
+            await client.stop_peer_advertisement()
+
+            assert len(server_log) > 0, len(server_log)
+            for msg in server_log:
+                assert msg.header.message_type is netaio.MessageType.ADVERTISE_PEER, msg.header
+            server_log.clear()
+            # it is a known issue that the client will not receive the ADVERTISE_PEER message
+
+            # begin automatic peer management
+            await server.manage_peers_automatically(every=0.1, peer_timeout=0.3)
+            await client.manage_peers_automatically(every=0.1, peer_timeout=0.3)
+
+            # wait for peers to be discovered
+            await asyncio.sleep(0.3)
+
+            # stop peer management on client
+            await client.stop_peer_management()
+
+            # server should have the client as a peer because of the ADVERTISE_PEER messages
+            assert len(server.peers) == 1, len(server.peers)
+            assert b'client' in server.peers, server.peers
+            # client should have the server as a peer because of the PEER_DISCOVERED responses
+            assert len(client.peers) == 1, len(client.peers)
+            assert b'server' in client.peers, client.peers
+
+            # wait for client to time out
+            await asyncio.sleep(0.4)
+
+            assert len(server.peers) == 0, len(server.peers)
+
+            # stop nodes
+            await server.stop() # peer management will be stopped automatically
+            await client.stop()
 
         print()
         asyncio.run(run_test())
@@ -291,8 +372,8 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
                 (response.header.message_type, publish_msg.header.message_type)
 
             # stop nodes
-            server.stop()
-            client.stop()
+            await server.stop()
+            await client.stop()
 
         print()
         asyncio.run(run_test())
@@ -395,8 +476,8 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
             assert len(server_log) == 2, len(server_log)
 
             # close client and stop server
-            client.stop()
-            server.stop()
+            await client.stop()
+            await server.stop()
 
         print()
         asyncio.run(run_test())
