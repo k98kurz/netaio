@@ -3,7 +3,9 @@ from .common import (
     AuthFields,
     Body,
     Message,
+    MessageType,
     HeaderProtocol,
+    AuthFieldsProtocol,
     BodyProtocol,
     MessageProtocol,
     AuthPluginProtocol,
@@ -32,7 +34,8 @@ class TCPServer:
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     default_handler: Handler
     header_class: type[HeaderProtocol]
-    message_type_class: type[IntEnum]|None
+    message_type_class: type[IntEnum]
+    auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     extract_keys: Callable[[MessageProtocol], list[Hashable]]
@@ -47,7 +50,8 @@ class TCPServer:
     def __init__(
             self, port: int = 8888, interface: str = "0.0.0.0",
             header_class: type[HeaderProtocol] = Header,
-            message_type_class: type[IntEnum]|None = None,
+            message_type_class: type[IntEnum] = MessageType,
+            auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             keys_extractor: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
@@ -61,8 +65,11 @@ class TCPServer:
         """Initialize the TCPServer.
             `interface` is the interface to listen on.
             `port` is the port to listen on.
-            `header_class`, `body_class`, and `message_class` will be
-            used for parsing received messages and sending responses.
+            `header_class`, `auth_fields_class`, `body_class`, and
+            `message_class` will be used for sending messages and
+            parsing responses.
+            `message_type_class` is the class to inject in calls to the
+            decode method of the header class.
             `keys_extractor` is a function that extracts the keys from a
             message.
             `make_error_response` is a function that makes an error
@@ -91,6 +98,7 @@ class TCPServer:
         self.clients = set()
         self.header_class = header_class
         self.message_type_class = message_type_class
+        self.auth_fields_class = auth_fields_class
         self.body_class = body_class
         self.message_class = message_class
         self.extract_keys = keys_extractor
@@ -183,21 +191,25 @@ class TCPServer:
                 auth_plugin = None
                 cipher_plugin = None
                 header_bytes = await reader.readexactly(header_length)
-                header = self.header_class.decode(
+                header: HeaderProtocol = self.header_class.decode(
                     header_bytes,
                     message_type_factory=self.message_type_class
                 )
 
                 auth_bytes = await reader.readexactly(header.auth_length)
-                auth = AuthFields.decode(auth_bytes)
+                auth: AuthFieldsProtocol = self.auth_fields_class.decode(auth_bytes)
 
                 body_bytes = await reader.readexactly(header.body_length)
-                body = self.body_class.decode(body_bytes)
+                body: BodyProtocol = self.body_class.decode(body_bytes)
 
-                message = self.message_class(
+                message: MessageProtocol = self.message_class(
                     header=header,
                     auth_data=auth,
                     body=body
+                )
+                self.logger.debug(
+                    "Received message with checksum=%s from %s",
+                    message.header.checksum, writer.get_extra_info("peername")
                 )
 
                 if not message.check():

@@ -1,10 +1,17 @@
 from .common import (
-    BodyProtocol,
+    HeaderProtocol,
     AuthFieldsProtocol,
+    BodyProtocol,
     MessageProtocol,
-    make_error_response
+    make_error_response,
+    Message,
+    MessageType,
+    Header,
+    AuthFields,
+    Body
 )
 from .crypto import sha256, hmac, check_hmac, IV_SIZE
+from enum import IntEnum
 from os import urandom
 from time import time
 
@@ -68,6 +75,18 @@ class HMACAuthPlugin:
             mac
         )
 
-    def error(self) -> MessageProtocol:
+    def error(
+            self,
+            message_class: type[MessageProtocol] = Message,
+            message_type_class: type[IntEnum] = MessageType,
+            header_class: type[HeaderProtocol] = Header,
+            auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
+            body_class: type[BodyProtocol] = Body
+        ) -> MessageProtocol:
         """Make an error message that says "HMAC auth failed"."""
-        return make_error_response("HMAC auth failed")
+        return make_error_response(
+            "HMAC auth failed",
+            message_class=message_class,
+            message_type_class=message_type_class,
+            body_class=body_class
+        )

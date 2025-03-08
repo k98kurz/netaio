@@ -3,7 +3,9 @@ from .common import (
     AuthFields,
     Body,
     Message,
+    MessageType,
     HeaderProtocol,
+    AuthFieldsProtocol,
     BodyProtocol,
     MessageProtocol,
     AuthPluginProtocol,
@@ -26,7 +28,8 @@ class TCPClient:
     default_host: tuple[str, int]
     port: int
     header_class: type[HeaderProtocol]
-    message_type_class: type[IntEnum]|None
+    message_type_class: type[IntEnum]
+    auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
@@ -39,7 +42,8 @@ class TCPClient:
     def __init__(
             self, host: str = "127.0.0.1", port: int = 8888,
             header_class: type[HeaderProtocol] = Header,
-            message_type_class: type[IntEnum]|None = None,
+            message_type_class: type[IntEnum] = MessageType,
+            auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
@@ -51,8 +55,11 @@ class TCPClient:
         """Initialize the TCPClient.
             `host` is the default host IPv4 address to connect to.
             `port` is the default port to connect to.
-            `header_class`, `body_class`, and `message_class` will be
-            used for sending messages and parsing responses.
+            `header_class`, `auth_fields_class`, `body_class`, and
+            `message_class` will be used for sending messages and
+            parsing responses.
+            `message_type_class` is the class to inject in calls to the
+            decode method of the header class.
             `extract_keys` is a function that extracts the keys from a
             message.
             If `auth_plugin` is provided, it will be used to check the
@@ -75,6 +82,7 @@ class TCPClient:
         self.port = port
         self.header_class = header_class
         self.message_type_class = message_type_class
+        self.auth_fields_class = auth_fields_class
         self.body_class = body_class
         self.message_class = message_class
         self.handlers = {}
@@ -209,12 +217,16 @@ class TCPClient:
         self.logger.debug("Received message of type=%s from server", header.message_type)
 
         auth_bytes = await reader.readexactly(header.auth_length)
-        auth = AuthFields.decode(auth_bytes)
+        auth: AuthFieldsProtocol = self.auth_fields_class.decode(auth_bytes)
 
         body_bytes = await reader.readexactly(header.body_length)
-        body = self.body_class.decode(body_bytes)
+        body: BodyProtocol = self.body_class.decode(body_bytes)
 
-        msg = self.message_class(header=header, auth_data=auth, body=body)
+        msg: MessageProtocol = self.message_class(
+            header=header,
+            auth_data=auth,
+            body=body
+        )
 
         if not msg.check():
             self.logger.warning("Message checksum failed")

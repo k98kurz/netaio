@@ -142,26 +142,6 @@ class MessageProtocol(Protocol):
 
 
 @runtime_checkable
-class AuthPluginProtocol(Protocol):
-    """Shows what an auth plugin should do."""
-    def __init__(self, config: dict):
-        """Initialize the auth plugin with a config."""
-        ...
-
-    def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
-        """Set auth_fields appropriate for a given body."""
-        ...
-
-    def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
-        """Check if the auth fields are valid for the given body."""
-        ...
-
-    def error(self) -> MessageProtocol:
-        """Make an error message."""
-        ...
-
-
-@runtime_checkable
 class CipherPluginProtocol(Protocol):
     """Shows what a cipher plugin should do."""
     def __init__(self, config: dict):
@@ -187,73 +167,117 @@ class CipherPluginProtocol(Protocol):
 class HasNodePropertiesProtocol(Protocol):
     """For type-hinting objects that handle networking."""
     @property
-    def interface(self) -> str:
-        """A class must have an interface property."""
-        ...
-
-    @property
     def port(self) -> int:
-        """A class must have a port property."""
+        """A class implementing this protocol must have a port property
+            representing either the port to listen on or the port to
+            connect to.
+        """
         ...
 
     @property
     def header_class(self) -> type[HeaderProtocol]:
-        """A class must have a header_class property."""
+        """A class implementing this protocol must have a header_class
+            property referencing the header class to use for parsing
+            received messages.
+        """
         ...
 
     @property
     def message_type_class(self) -> type[MessageType]:
-        """A class must have a message_type_class property."""
+        """A class implementing this protocol must have a message_type_class
+            property referencing the message type class to use for parsing
+            received messages.
+        """
+        ...
+
+    @property
+    def auth_fields_class(self) -> type[AuthFieldsProtocol]:
+        """A class implementing this protocol must have an auth_fields_class
+            property referencing the auth fields class to use for parsing
+            received messages.
+        """
         ...
 
     @property
     def body_class(self) -> type[BodyProtocol]:
-        """A class must have a body_class property."""
+        """A class implementing this protocol must have a body_class
+            property referencing the body class to use for parsing
+            received messages.
+        """
         ...
 
     @property
     def message_class(self) -> type[MessageProtocol]:
-        """A class must have a message_class property."""
+        """A class implementing this protocol must have a message_class
+            property referencing the message class to use for parsing
+            received messages.
+        """
         ...
 
     @property
     def handlers(self) -> dict[Hashable, tuple[Handler|UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
-        """A class must have a handlers property."""
+        """A class implementing this protocol must have a handlers property
+            referencing a dictionary of handler functions, keyed by a hashable
+            object, that will be called when a message with the corresponding
+            key is received.
+        """
         ...
 
     @property
     def default_handler(self) -> Handler|UDPHandler:
-        """A class must have a default_handler property."""
+        """A class implementing this protocol must have a default_handler
+            property referencing the default handler to use for messages
+            that do not match any registered handler keys.
+        """
         ...
 
     @property
     def extract_keys(self) -> Callable[[MessageProtocol], list[Hashable]]:
-        """A class must have an extract_keys property."""
+        """A class implementing this protocol must have an extract_keys
+            property referencing a function that extracts the keys used
+            for routing/choosing responses from a message.
+        """
         ...
 
     @property
     def make_error(self) -> Callable[[str], MessageProtocol]:
-        """A class must have a make_error property."""
+        """A class implementing this protocol must have a make_error
+            property referencing a function that makes error messages.
+        """
         ...
 
     @property
     def logger(self) -> logging.Logger:
-        """A class must have a logger property."""
+        """A class implementing this protocol must have a logger property
+            referencing a logger for logging messages.
+        """
         ...
 
     @property
     def auth_plugin(self) -> AuthPluginProtocol:
-        """A class must have an auth_plugin property."""
+        """A class implementing this protocol must have an auth_plugin
+            property referencing an auth plugin for
+            authenticating/authorizing messages.
+        """
         ...
 
     @property
     def cipher_plugin(self) -> CipherPluginProtocol:
-        """A class must have a cipher_plugin property."""
+        """A class implementing this protocol must have a cipher_plugin
+            property referencing a cipher plugin for encrypting and
+            decrypting messages.
+        """
         ...
 
     @property
     def handle_auth_error(self) -> AuthErrorHandler:
-        """A class must have a handle_auth_error property."""
+        """A class implementing this protocol must have a
+            handle_auth_error property referencing a function that is
+            called when the auth check fails for a received message. If
+            the function returns a message, that message will be sent as
+            a response to the sender of the message that failed the auth
+            check.
+        """
         ...
 
 
@@ -462,6 +486,33 @@ class Message:
         )
 
 
+@runtime_checkable
+class AuthPluginProtocol(Protocol):
+    """Shows what an auth plugin should do."""
+    def __init__(self, config: dict):
+        """Initialize the auth plugin with a config."""
+        ...
+
+    def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
+        """Set auth_fields appropriate for a given body."""
+        ...
+
+    def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
+        """Check if the auth fields are valid for the given body."""
+        ...
+
+    def error(
+            self,
+            message_class: type[MessageProtocol] = Message,
+            message_type_class: type[IntEnum] = MessageType,
+            header_class: type[HeaderProtocol] = Header,
+            auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
+            body_class: type[BodyProtocol] = Body
+        ) -> MessageProtocol:
+        """Make an error message."""
+        ...
+
+
 @dataclass
 class Peer:
     """Class for storing peer information."""
@@ -488,22 +539,29 @@ def keys_extractor(message: MessageProtocol) -> list[Hashable]:
     """
     return [(message.header.message_type, message.body.uri), message.header.message_type]
 
-def make_error_response(msg: str) -> Message:
+def make_error_response(
+        msg: str,
+        message_class: type[MessageProtocol] = Message,
+        message_type_class: type[IntEnum] = MessageType,
+        body_class: type[BodyProtocol] = Body
+    ) -> MessageProtocol:
     """Make an error response message."""
     if "not found" in msg:
-        message_type = MessageType.NOT_FOUND
+        assert 'NOT_FOUND' in dir(message_type_class)
+        message_type = message_type_class.NOT_FOUND
     elif "auth" in msg:
-        message_type = MessageType.AUTH_ERROR
+        assert 'AUTH_ERROR' in dir(message_type_class)
+        message_type = message_type_class.AUTH_ERROR
     else:
-        message_type = MessageType.ERROR
+        assert 'ERROR' in dir(message_type_class)
+        message_type = message_type_class.ERROR
 
-    body = Body(
-        uri_length=5,
+    body = body_class.prepare(
+        content=msg.encode(),
         uri=b'ERROR',
-        content=msg.encode()
     )
 
-    return Message.prepare(body, message_type)
+    return message_class.prepare(body, message_type)
 
 def auth_error_handler(
         node: HasNodePropertiesProtocol, auth_plugin: AuthPluginProtocol,
@@ -515,10 +573,16 @@ def auth_error_handler(
         by the auth plugin.
     """
     node.logger.debug(f"Message auth failed for message with type {msg.header.message_type.name}")
-    if msg.header.message_type in (MessageType.AUTH_ERROR, MessageType.ERROR):
+    if 'ERROR' in msg.header.message_type.name.upper():
         node.logger.debug("Message is an error message, not sending a response")
         return None
-    return auth_plugin.error()
+    return auth_plugin.error(
+        message_class=node.message_class,
+        message_type_class=node.message_type_class,
+        header_class=node.header_class,
+        auth_fields_class=node.auth_fields_class,
+        body_class=node.body_class
+    )
 
 # Setup default loggers for netaio
 default_server_logger = logging.getLogger("netaio.server")

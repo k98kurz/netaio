@@ -4,7 +4,9 @@ from .common import (
     AuthFields,
     Body,
     Message,
+    MessageType,
     HeaderProtocol,
+    AuthFieldsProtocol,
     BodyProtocol,
     MessageProtocol,
     AuthPluginProtocol,
@@ -35,7 +37,8 @@ class UDPNode:
     interface: str
     multicast_group: str
     header_class: type[HeaderProtocol]
-    message_type_class: type[IntEnum]|None
+    message_type_class: type[IntEnum]
+    auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
@@ -55,7 +58,8 @@ class UDPNode:
             interface: str = '0.0.0.0',
             multicast_group: str = '224.0.0.1',
             header_class: type[HeaderProtocol] = Header,
-            message_type_class: type[IntEnum]|None = None,
+            message_type_class: type[IntEnum] = MessageType,
+            auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             default_handler: UDPHandler = not_found_handler,
@@ -70,8 +74,9 @@ class UDPNode:
             `port` is the port to listen on.
             `interface` is the interface to listen on.
             `multicast_group` is the multicast group to join.
-            `header_class`, `body_class`, and `message_class` will be
-            used for sending and parsing messages.
+            `header_class`, `auth_fields_class`, `body_class`, and
+            `message_class` will be used for sending messages and
+            parsing responses.
             `message_type_class` is the class to inject in calls to the
             decode method of the header class.
             `default_handler` is the default handler to use for messages
@@ -101,6 +106,7 @@ class UDPNode:
         self.multicast_group = multicast_group
         self.header_class = header_class
         self.message_type_class = message_type_class
+        self.auth_fields_class = auth_fields_class
         self.body_class = body_class
         self.message_class = message_class
         self.handlers = {}
@@ -137,19 +143,23 @@ class UDPNode:
 
         header_bytes = data[:self.header_class.header_length()]
         data = data[self.header_class.header_length():]
-        header = self.header_class.decode(
+        header: HeaderProtocol = self.header_class.decode(
             header_bytes,
             message_type_factory=self.message_type_class
         )
 
         auth_bytes = data[:header.auth_length]
         data = data[header.auth_length:]
-        auth = AuthFields.decode(auth_bytes)
+        auth: AuthFieldsProtocol = self.auth_fields_class.decode(auth_bytes)
 
         body_bytes = data[:header.body_length]
-        body = self.body_class.decode(body_bytes)
+        body: BodyProtocol = self.body_class.decode(body_bytes)
 
-        message = self.message_class(header=header, auth_data=auth, body=body)
+        message: MessageProtocol = self.message_class(
+            header=header,
+            auth_data=auth,
+            body=body
+        )
         self.logger.debug("Received message with checksum=%s from %s", message.header.checksum, addr)
 
         if not message.check():
