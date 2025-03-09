@@ -125,6 +125,19 @@ class TestPlugins(unittest.TestCase):
         assert message is not None
         assert message.body.encode() == before
 
+    def test_default_peer_plugin(self):
+        peer_plugin = netaio.DefaultPeerPlugin()
+        peer_data = {'foo': 'bar'}
+        peer_data = peer_plugin.encode_data(peer_data)
+        peer = netaio.Peer(addrs=set(), id=b'test', data=peer_data)
+        packed = peer_plugin.pack(peer)
+        unpacked = peer_plugin.unpack(packed)
+        assert unpacked == peer
+        assert unpacked.data == peer_data
+        assert type(peer_plugin.parse_data(peer)) == dict
+        assert 'foo' in peer_plugin.parse_data(peer)
+        assert peer_plugin.parse_data(peer)['foo'] == 'bar'
+
 
 if __name__ == "__main__":
     unittest.main()

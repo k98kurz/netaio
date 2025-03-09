@@ -56,12 +56,12 @@ class TestMisc(unittest.TestCase):
         # get the peer by id
         peer = node.get_peer(peer_id=b'test id')
         assert peer is not None
-        assert peer.peer_id == b'test id'
+        assert peer.id == b'test id'
 
         # get the peer by addr
         peer = node.get_peer(addr=('0.0.0.0', 8888))
         assert peer is not None
-        assert peer.peer_id == b'test id'
+        assert peer.id == b'test id'
 
         # now remove the peer
         node.remove_peer(('0.0.0.0', 8888), b'test id')

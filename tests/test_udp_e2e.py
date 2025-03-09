@@ -223,13 +223,13 @@ class TestUDPE2E(unittest.TestCase):
             server = netaio.UDPNode(
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, peer_id=b'server', peer_data=b'abc'),
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, id=b'server', data=b'abc'),
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, peer_id=b'client', peer_data=b'def'),
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, id=b'client', data=b'def'),
                 ignore_own_ip=False
             )
 
@@ -369,14 +369,14 @@ class TestUDPE2E(unittest.TestCase):
             server = netaio.UDPNode(
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, peer_id=b'server', peer_data=b'abc'),
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, id=b'server', data=b'abc'),
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, peer_id=b'client', peer_data=b'def'),
+                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, id=b'client', data=b'def'),
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 ignore_own_ip=False
             )

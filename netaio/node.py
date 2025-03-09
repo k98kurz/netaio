@@ -11,6 +11,7 @@ from .common import (
     MessageProtocol,
     AuthPluginProtocol,
     CipherPluginProtocol,
+    PeerPluginProtocol,
     Peer,
     get_ip,
     keys_extractor,
@@ -18,6 +19,7 @@ from .common import (
     auth_error_handler,
     UDPHandler,
     AuthErrorHandler,
+    DefaultPeerPlugin,
     default_node_logger,
 )
 from enum import IntEnum
@@ -26,7 +28,6 @@ from typing import Callable, Hashable, Any
 import asyncio
 import socket
 import logging
-import packify
 
 
 def not_found_handler(*_) -> MessageProtocol | None:
@@ -55,6 +56,7 @@ class UDPNode:
     transport: asyncio.DatagramTransport
     auth_plugin: AuthPluginProtocol
     cipher_plugin: CipherPluginProtocol
+    peer_plugin: PeerPluginProtocol
     handle_auth_error: AuthErrorHandler
 
     def __init__(
@@ -74,6 +76,7 @@ class UDPNode:
             logger: logging.Logger = default_node_logger,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None,
+            peer_plugin: PeerPluginProtocol = None,
             auth_error_handler: AuthErrorHandler = auth_error_handler,
             ignore_own_ip: bool = True,
         ):
@@ -97,6 +100,8 @@ class UDPNode:
             authenticity/authorization of all received messages.
             If `cipher_plugin` is provided, it will be used to encrypt
             and decrypt all messages.
+            If `peer_plugin` is provided, it will be used to encode and
+            decode peer data.
             `auth_error_handler` is a function that handles auth errors,
             i.e. when an auth check fails for a received message. If it
             returns a message, that message will be sent as a response
@@ -126,6 +131,7 @@ class UDPNode:
         self.make_error = make_error_response
         self.auth_plugin = auth_plugin
         self.cipher_plugin = cipher_plugin
+        self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
         self.logger = logger
         self.transport = None
@@ -617,14 +623,14 @@ class UDPNode:
         # send a fresh message every time to avoid stale auth fields
         message = lambda: self.message_class.prepare(
             self.body_class.prepare(
-                packify.pack((self.local_peer.id, self.local_peer.data)),
+                self.peer_plugin.pack(self.local_peer),
                 app_id
             ),
             self.message_type_class.ADVERTISE_PEER,
         )
         disconnect_msg = self.message_class.prepare(
             self.body_class.prepare(
-                packify.pack((self.local_peer.id, b'')),
+                self.peer_plugin.pack(self.local_peer),
                 app_id
             ),
             self.message_type_class.DISCONNECT
@@ -695,18 +701,18 @@ class UDPNode:
                 return
 
             try:
-                peer_id, peer_data = packify.unpack(message.body.content)
+                peer = self.peer_plugin.unpack(message.body.content)
             except Exception as e:
                 self.logger.error("Error unpacking peer data: %s", e)
                 return
 
-            if not self.add_or_update_peer(peer_id, peer_data, addr):
+            if not self.add_or_update_peer(peer.id, peer.data, addr):
                 return
 
             # prepare the response
             return self.message_class.prepare(
                 self.body_class.prepare(
-                    packify.pack((self.local_peer.id, self.local_peer.data)),
+                    self.peer_plugin.pack(self.local_peer),
                     app_id
                 ),
                 self.message_type_class.PEER_DISCOVERED
@@ -721,12 +727,12 @@ class UDPNode:
                 return
 
             try:
-                peer_id, peer_data = packify.unpack(message.body.content)
+                peer = self.peer_plugin.unpack(message.body.content)
             except Exception as e:
                 self.logger.error("Error unpacking peer data: %s", e)
                 return
 
-            self.add_or_update_peer(peer_id, peer_data, addr)
+            self.add_or_update_peer(peer.id, peer.data, addr)
 
         @self.on((self.message_type_class.DISCONNECT, app_id), auth_plugin, cipher_plugin)
         def handle_disconnect(message: MessageProtocol, addr: tuple[str, int]):
@@ -737,12 +743,12 @@ class UDPNode:
                 return
 
             try:
-                peer_id, _ = packify.unpack(message.body.content)
+                peer = self.peer_plugin.unpack(message.body.content)
             except Exception as e:
                 self.logger.error("Error unpacking peer id: %s", e)
                 return
 
-            self.remove_peer(addr, peer_id)
+            self.remove_peer(addr, peer.id)
 
         await self.begin_peer_advertisement(
             advertise_every, app_id, peer_timeout, auth_plugin, cipher_plugin
