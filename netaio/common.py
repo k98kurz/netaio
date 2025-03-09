@@ -2,7 +2,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import IntEnum
 from time import time
-from typing import Hashable, Protocol, runtime_checkable, Callable, Coroutine, Any
+from typing import (
+    Hashable,
+    Protocol,
+    runtime_checkable,
+    Callable,
+    Coroutine,
+    Any,
+    NamedTuple,
+)
 from zlib import crc32
 import asyncio
 import logging
@@ -140,28 +148,6 @@ class MessageProtocol(Protocol):
             auth_data: AuthFieldsProtocol = None
         ) -> MessageProtocol:
         """Prepare a message from a body."""
-        ...
-
-
-@runtime_checkable
-class CipherPluginProtocol(Protocol):
-    """Shows what a cipher plugin should do."""
-    def __init__(self, config: dict):
-        """Initialize the cipher plugin with a config."""
-        ...
-
-    def encrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Encrypt the message body, setting values in the header or
-            auth_data as necessary. Returns a new message with the
-            encrypted body and updated auth_data.
-        """
-        ...
-
-    def decrypt(self, message: MessageProtocol) -> MessageProtocol:
-        """Decrypt the message body, reading values from the auth_data
-            as necessary. Returns a new message with the decrypted body.
-            May raise an exception if the decryption fails.
-        """
         ...
 
 
@@ -531,6 +517,29 @@ class Message:
         )
 
 
+@dataclass
+class Peer:
+    """Class for storing peer information."""
+    addrs: set[tuple[str, int]]
+    id: bytes|None = field(default=None)
+    data: bytes|None = field(default=None)
+    last_rx: int = field(default_factory=lambda: int(time()))
+
+    def __hash__(self):
+        """Make the peer Hashable."""
+        return hash((self.addrs, self.id, self.data))
+
+    def update(self, data: bytes|None = None):
+        """Update the peer data and last_rx time."""
+        if data is not None:
+            self.data = data
+        self.last_rx = int(time())
+
+    def timed_out(self, timeout: int = 60) -> bool:
+        """Check if the peer has timed out."""
+        return int(time()) - self.last_rx > timeout
+
+
 @runtime_checkable
 class AuthPluginProtocol(Protocol):
     """Shows what an auth plugin should do."""
@@ -558,27 +567,48 @@ class AuthPluginProtocol(Protocol):
         ...
 
 
-@dataclass
-class Peer:
-    """Class for storing peer information."""
-    addrs: set[tuple[str, int]]
-    peer_id: bytes|None = field(default=None)
-    peer_data: bytes|None = field(default=None)
-    last_rx: int = field(default_factory=lambda: int(time()))
+@runtime_checkable
+class CipherPluginProtocol(Protocol):
+    """Shows what a cipher plugin should do."""
+    def __init__(self, config: dict):
+        """Initialize the cipher plugin with a config."""
+        ...
 
-    def __hash__(self):
-        """Make the peer Hashable."""
-        return hash((self.addrs, self.peer_id, self.peer_data))
+    def encrypt(self, message: MessageProtocol) -> MessageProtocol:
+        """Encrypt the message body, setting values in the header or
+            auth_data as necessary. Returns a new message with the
+            encrypted body and updated auth_data.
+        """
+        ...
 
-    def update(self, peer_data: bytes|None = None):
-        """Update the peer data and last_rx time."""
-        if peer_data is not None:
-            self.peer_data = peer_data
-        self.last_rx = int(time())
+    def decrypt(self, message: MessageProtocol) -> MessageProtocol:
+        """Decrypt the message body, reading values from the auth_data
+            as necessary. Returns a new message with the decrypted body.
+            May raise an exception if the decryption fails.
+        """
+        ...
 
-    def timed_out(self, timeout: int = 60) -> bool:
-        """Check if the peer has timed out."""
-        return int(time()) - self.last_rx > timeout
+
+@runtime_checkable
+class PeerPluginProtocol(Protocol):
+    """Shows what a peer plugin should do."""
+    def __init__(self, config: dict):
+        """Initialize the peer plugin with a config."""
+        ...
+
+    def validate(self, peer: Peer) -> bool:
+        """Validate a peer. Must return True if the peer is valid,
+            False otherwise, and it must not raise an exception.
+        """
+        ...
+
+    def parse(self, peer: Peer) -> dict[str, Any]|NamedTuple:
+        """Parse a peer's data. Must return a dictionary or namedtuple."""
+        ...
+
+    def encode(self, peer_id: bytes, peer_data: dict[str, Any]|NamedTuple) -> Peer:
+        """Encode a peer's id and data. Must return a Peer object."""
+        ...
 
 
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]

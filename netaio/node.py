@@ -529,7 +529,7 @@ class UDPNode:
             True if a PEER_DISCOVERED message should be sent (False if
             it is the local peer).
         """
-        if peer_id == self.local_peer.peer_id:
+        if peer_id == self.local_peer.id:
             self.logger.debug("Ignoring local peer.")
             return False
         if peer_id in self.peers:
@@ -617,14 +617,14 @@ class UDPNode:
         # send a fresh message every time to avoid stale auth fields
         message = lambda: self.message_class.prepare(
             self.body_class.prepare(
-                packify.pack((self.local_peer.peer_id, self.local_peer.peer_data)),
+                packify.pack((self.local_peer.id, self.local_peer.data)),
                 app_id
             ),
             self.message_type_class.ADVERTISE_PEER,
         )
         disconnect_msg = self.message_class.prepare(
             self.body_class.prepare(
-                packify.pack((self.local_peer.peer_id, b'')),
+                packify.pack((self.local_peer.id, b'')),
                 app_id
             ),
             self.message_type_class.DISCONNECT
@@ -706,7 +706,7 @@ class UDPNode:
             # prepare the response
             return self.message_class.prepare(
                 self.body_class.prepare(
-                    packify.pack((self.local_peer.peer_id, self.local_peer.peer_data)),
+                    packify.pack((self.local_peer.id, self.local_peer.data)),
                     app_id
                 ),
                 self.message_type_class.PEER_DISCOVERED
