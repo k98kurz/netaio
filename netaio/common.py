@@ -592,8 +592,8 @@ class CipherPluginProtocol(Protocol):
 @runtime_checkable
 class PeerPluginProtocol(Protocol):
     """Shows what a peer plugin should do."""
-    def __init__(self, config: dict):
-        """Initialize the peer plugin with a config."""
+    def __init__(self, config: dict = {}):
+        """Initialize the peer plugin. Optionally parse a config."""
         ...
 
     def validate(self, peer: Peer) -> bool:
@@ -602,18 +602,61 @@ class PeerPluginProtocol(Protocol):
         """
         ...
 
-    def parse(self, peer: Peer) -> dict[str, Any]|NamedTuple:
+    def parse_data(self, peer: Peer) -> dict[str, Any]|NamedTuple:
         """Parse a peer's data. Must return a dictionary or namedtuple."""
         ...
 
-    def encode(self, peer_id: bytes, peer_data: dict[str, Any]|NamedTuple) -> Peer:
-        """Encode a peer's id and data. Must return a Peer object."""
+    def encode_data(self, peer_data: dict[str, Any]|NamedTuple, peer_id: bytes|None = None) -> bytes:
+        """Encode a peer's data. Implementation may reference or include
+            the peer_id, but it should gracefully handle an empty
+            peer_id.
+        """
+        ...
+
+    def pack(self, peer: Peer) -> bytes:
+        """Pack a peer into a bytes object. Does not have to include the
+            addrs.
+        """
+        ...
+
+    def unpack(self, data: bytes) -> Peer:
+        """Unpack a peer from a bytes object. Should set the addrs to an
+            empty set if the data does not contain any addresses.
+        """
         ...
 
 
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None]
 AuthErrorHandler = Callable[[NetworkNodeProtocol, AuthPluginProtocol, MessageProtocol|None], MessageProtocol|None]
+
+
+class DefaultPeerPlugin:
+    """Default peer plugin."""
+    def __init__(self, config: dict = {}):
+        """Initialize the peer plugin. No configuration necessary."""
+        ...
+
+    def validate(self, peer: Peer) -> bool:
+        """Validate a peer. By default, accept all peers that have an id."""
+        return peer.id is not None
+
+    def parse_data(self, peer: Peer) -> dict[str, Any]|NamedTuple:
+        """Parse a peer's data. Must return a dictionary or namedtuple."""
+        return packify.unpack(peer.data)
+
+    def encode_data(self, peer_data: dict[str, Any]|NamedTuple, peer_id: bytes|None = None) -> bytes:
+        """Encode a peer's data. Ignores peer_id."""
+        return packify.pack(peer_data)
+
+    def pack(self, peer: Peer) -> bytes:
+        """Pack a peer into a bytes object. Does not include addrs."""
+        return packify.pack((peer.id, peer.data))
+
+    def unpack(self, data: bytes) -> Peer:
+        """Unpack a peer from a bytes object. Sets the addrs to an empty set."""
+        peer_id, peer_data = packify.unpack(data)
+        return Peer(addrs=set(), id=peer_id, data=peer_data)
 
 
 def keys_extractor(message: MessageProtocol) -> list[Hashable]:
