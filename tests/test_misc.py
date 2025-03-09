@@ -40,6 +40,49 @@ class TestMisc(unittest.TestCase):
         decoded = netaio.Header.decode(data, message_type_factory=TestMessageType)
         assert decoded.message_type is TestMessageType.TEST
 
+    def test_Message_encoding_decoding_and_copying(self):
+        message = netaio.Message.prepare(
+            body=netaio.Body.prepare(b'content', b'uri'),
+            message_type=netaio.MessageType.OK,
+            auth_data=netaio.AuthFields({'test': b'test'})
+        )
+        data = message.encode()
+        decoded = netaio.Message.decode(data)
+        assert decoded.body.content == b'content'
+        assert decoded.body.uri == b'uri'
+        assert decoded.header.message_type == netaio.MessageType.OK
+        assert decoded.auth_data.fields == {'test': b'test'}
+
+        msg = message.copy()
+        assert msg.body.content == message.body.content
+        assert msg.body.uri == message.body.uri
+        assert msg.header.message_type == message.header.message_type
+        assert msg.auth_data.fields == message.auth_data.fields
+
+        msg.body.content = b'new content'
+        assert msg.body.content != message.body.content
+
+        # now test with missing auth_data and empty body
+        message = netaio.Message.prepare(
+            body=netaio.Body.prepare(b'', b''),
+            message_type=netaio.MessageType.OK
+        )
+        data = message.encode()
+        decoded = netaio.Message.decode(data)
+        assert decoded.body.content == b''
+        assert decoded.body.uri == b''
+        assert decoded.header.message_type == netaio.MessageType.OK
+        assert decoded.auth_data.fields == {}
+
+        msg = message.copy()
+        assert msg.body.content == message.body.content
+        assert msg.body.uri == message.body.uri
+        assert msg.header.message_type == message.header.message_type
+        assert msg.auth_data.fields == message.auth_data.fields
+
+        msg.body.content = b'new content'
+        assert msg.body.content != message.body.content
+
     def test_UDPNode_peer_helper_methods(self):
         node = netaio.UDPNode(local_peer=netaio.Peer(set(), b'local id', b'local data'))
         # first add a peer

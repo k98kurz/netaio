@@ -142,6 +142,10 @@ class MessageProtocol(Protocol):
         """Encode the message into a bytes object."""
         ...
 
+    def copy(self) -> MessageProtocol:
+        """Returns a copy of the message."""
+        ...
+
     @classmethod
     def prepare(
             cls, body: BodyProtocol, message_type: MessageType,
@@ -479,14 +483,18 @@ class Message:
         """Decode the message from the data. Raises ValueError if the
             checksum does not match.
         """
-        header = Header.decode(data[:Header.header_length()], message_type_factory)
-        body = Body.decode(data[Header.header_length():])
+        header_data = data[:Header.header_length()]
+        data = data[Header.header_length():]
+        header = Header.decode(header_data, message_type_factory)
+        auth_data = AuthFields.decode(data[:header.auth_length])
+        body = Body.decode(data[header.auth_length:])
 
         if header.checksum != crc32(body.encode()):
             raise ValueError("Checksum mismatch")
 
         return cls(
             header=header,
+            auth_data=auth_data,
             body=body
         )
 
@@ -496,7 +504,12 @@ class Message:
         body = self.body.encode()
         self.header.auth_length = len(auth_data)
         self.header.body_length = len(body)
+        self.header.checksum = crc32(body)
         return self.header.encode() + auth_data + body
+
+    def copy(self) -> Message:
+        """Returns a copy of the message."""
+        return self.decode(self.encode(), self.header.message_type_class)
 
     @classmethod
     def prepare(
@@ -547,12 +560,31 @@ class AuthPluginProtocol(Protocol):
         """Initialize the auth plugin with a config."""
         ...
 
-    def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
-        """Set auth_fields appropriate for a given body."""
+    def make(
+            self, auth_fields: AuthFieldsProtocol, body: BodyProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None,
+        ) -> None:
+        """Set auth_fields appropriate for a given body. Optional args
+            peer and peer_plugin will be provided if they are available.
+            If peer and peer_plugin are required for functionality but
+            are not provided, this method should fail gracefully: log an
+            error message using node.logger (if provided) and return.
+        """
         ...
 
-    def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
-        """Check if the auth fields are valid for the given body."""
+    def check(
+            self, auth_fields: AuthFieldsProtocol, body: BodyProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None,
+        ) -> bool:
+        """Check if the auth fields are valid for the given body.
+            Optional args peer and peer_plugin will be provided if they
+            are available. If peer and peer_plugin are required for
+            functionality but are not provided, this method should fail
+            gracefully: log an error using node.logger (if provided) and
+            return False.
+        """
         ...
 
     def error(
@@ -574,17 +606,33 @@ class CipherPluginProtocol(Protocol):
         """Initialize the cipher plugin with a config."""
         ...
 
-    def encrypt(self, message: MessageProtocol) -> MessageProtocol:
+    def encrypt(
+            self, message: MessageProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None,
+        ) -> MessageProtocol:
         """Encrypt the message body, setting values in the header or
             auth_data as necessary. Returns a new message with the
-            encrypted body and updated auth_data.
+            encrypted body and updated auth_data. Optional args peer and
+            peer_plugin will be provided if they are available. If peer
+            and peer_plugin are required for functionality but are not
+            provided, or in the case of an encryption failure, this
+            method should raise an exception.
         """
         ...
 
-    def decrypt(self, message: MessageProtocol) -> MessageProtocol:
+    def decrypt(
+            self, message: MessageProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None,
+        ) -> MessageProtocol:
         """Decrypt the message body, reading values from the auth_data
             as necessary. Returns a new message with the decrypted body.
-            May raise an exception if the decryption fails.
+            May raise an exception if the decryption fails. Optional
+            args peer and peer_plugin will be provided if they are
+            available. If peer and peer_plugin are required for
+            functionality but are not provided, or in the case of a
+            decryption failure, this method should raise an exception.
         """
         ...
 
