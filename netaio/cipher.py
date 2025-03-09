@@ -1,4 +1,4 @@
-from .common import MessageProtocol
+from .common import MessageProtocol, NetworkNodeProtocol, Peer, PeerPluginProtocol
 from .crypto import encrypt, decrypt
 from hashlib import sha256
 
@@ -21,7 +21,11 @@ class Sha256StreamCipherPlugin:
         self.iv_field = config.get('iv_field', 'iv')
         self.encrypt_uri = config.get('encrypt_uri', True)
 
-    def encrypt(self, message: MessageProtocol) -> MessageProtocol:
+    def encrypt(
+            self, message: MessageProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None
+        ) -> MessageProtocol:
         """Encrypt the message body, setting the self.iv_field in the
             auth_data. This will overwrite any existing value in that
             auth_data field. If the self.encrypt_uri is True, the uri
@@ -33,9 +37,13 @@ class Sha256StreamCipherPlugin:
         plaintext += message.body.content
         iv, ciphertext = encrypt(self.key, plaintext)
         if self.encrypt_uri:
+            if node is not None:
+                node.logger.debug('Encrypting URI and content')
             uri = ciphertext[:len(message.body.uri)]
             content = ciphertext[len(message.body.uri):]
         else:
+            if node is not None:
+                node.logger.debug('Encrypting content')
             uri = message.body.uri
             content = ciphertext
 
@@ -46,15 +54,23 @@ class Sha256StreamCipherPlugin:
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, auth_data)
 
-    def decrypt(self, message: MessageProtocol) -> MessageProtocol:
+    def decrypt(
+            self, message: MessageProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None
+        ) -> MessageProtocol:
         """Decrypt the message body, reading the self.iv_field from
             the auth_data. Returns a new message with the decrypted body.
         """
         iv = message.auth_data.fields[self.iv_field]
 
         if self.encrypt_uri:
+            if node is not None:
+                node.logger.debug('Decrypting URI and content')
             ciphertext = message.body.uri + message.body.content
         else:
+            if node is not None:
+                node.logger.debug('Decrypting content')
             ciphertext = message.body.content
         content = decrypt(self.key, iv, ciphertext)
         if self.encrypt_uri:
