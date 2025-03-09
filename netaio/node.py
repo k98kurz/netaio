@@ -195,7 +195,10 @@ class UDPNode:
         # outer auth
         if self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.check on auth and body")
-            if not self.auth_plugin.check(message.auth_data, message.body):
+            check = self.auth_plugin.check(
+                message.auth_data, message.body, self, peer, self.peer_plugin
+            )
+            if not check:
                 self.logger.warning("Message auth failed")
                 response = self.handle_auth_error(self, self.auth_plugin, message)
                 if response is not None:
@@ -222,7 +225,10 @@ class UDPNode:
                 # inner auth
                 if auth_plugin is not None:
                     self.logger.debug("Calling auth_plugin.check on auth and body")
-                    if not auth_plugin.check(message.auth_data, message.body):
+                    check = auth_plugin.check(
+                        message.auth_data, message.body, self, peer, self.peer_plugin
+                    )
+                    if not check:
                         self.logger.warning("Message auth failed")
                         response = self.handle_auth_error(self, auth_plugin, message)
                         if response is not None:
@@ -266,7 +272,7 @@ class UDPNode:
             # inner auth
             if auth_plugin is not None:
                 self.logger.debug("Calling auth_plugin.make on response.body (handler)")
-                auth_plugin.make(response.auth_data, response.body)
+                auth_plugin.make(response.auth_data, response.body, self, peer, self.peer_plugin)
 
             # outer cipher
             if self.cipher_plugin is not None:
@@ -280,7 +286,7 @@ class UDPNode:
             # outer auth
             if self.auth_plugin is not None:
                 self.logger.debug("Calling self.auth_plugin.make on response.body")
-                self.auth_plugin.make(response.auth_data, response.body)
+                self.auth_plugin.make(response.auth_data, response.body, self, peer, self.peer_plugin)
 
             self.send(response, addr, use_auth=False, use_cipher=False)
 
@@ -406,7 +412,7 @@ class UDPNode:
         # inner auth
         if auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.make on message.body")
-            auth_plugin.make(message.auth_data, message.body)
+            auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
@@ -420,7 +426,7 @@ class UDPNode:
         # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on message.body")
-            self.auth_plugin.make(message.auth_data, message.body)
+            self.auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
 
         data = message.encode()
         self.transport.sendto(data, addr)
@@ -464,7 +470,7 @@ class UDPNode:
             # inner auth
             if use_auth and auth_plugin is not None:
                 self.logger.debug("Calling auth_plugin.make on message.body (broadcast)")
-                auth_plugin.make(msg.auth_data, msg.body)
+                auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
 
             # outer cipher
             if use_cipher and self.cipher_plugin is not None:
@@ -478,7 +484,7 @@ class UDPNode:
             # outer auth
             if use_auth and self.auth_plugin is not None:
                 self.logger.debug("Calling self.auth_plugin.make on message.body (broadcast)")
-                self.auth_plugin.make(msg.auth_data, msg.body)
+                self.auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
 
             messages.append((addr, msg))
 
@@ -514,7 +520,7 @@ class UDPNode:
         # inner auth
         if use_auth and auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.make on message.body (multicast)")
-            auth_plugin.make(message.auth_data, message.body)
+            auth_plugin.make(message.auth_data, message.body, self, None, self.peer_plugin)
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
@@ -528,7 +534,7 @@ class UDPNode:
         # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on message.body (multicast)")
-            self.auth_plugin.make(message.auth_data, message.body)
+            self.auth_plugin.make(message.auth_data, message.body, self, None, self.peer_plugin)
 
         addr = (self.multicast_group, port or self.port)
         self.send(message, addr, use_auth=False, use_cipher=False)
@@ -577,7 +583,7 @@ class UDPNode:
             # inner auth
             if use_auth and auth_plugin is not None:
                 self.logger.debug("Calling auth_plugin.make on message.body (notify)")
-                auth_plugin.make(msg.auth_data, msg.body)
+                auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
 
             # outer cipher
             if use_cipher and self.cipher_plugin is not None:
@@ -591,7 +597,7 @@ class UDPNode:
             # outer auth
             if use_auth and self.auth_plugin is not None:
                 self.logger.debug("Calling self.auth_plugin.make on message.body (notify)")
-                self.auth_plugin.make(msg.auth_data, msg.body)
+                self.auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
 
             self.send(msg, addr, use_auth=False, use_cipher=False)
 

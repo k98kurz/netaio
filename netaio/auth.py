@@ -3,12 +3,15 @@ from .common import (
     AuthFieldsProtocol,
     BodyProtocol,
     MessageProtocol,
+    NetworkNodeProtocol,
+    PeerPluginProtocol,
     make_error_response,
     Message,
     MessageType,
     Header,
     AuthFields,
-    Body
+    Body,
+    Peer,
 )
 from .crypto import sha256, hmac, check_hmac, IV_SIZE
 from enum import IntEnum
@@ -41,7 +44,11 @@ class HMACAuthPlugin:
         self.nonce_field = config.get("nonce_field", "nonce")
         self.ts_field = config.get("ts_field", "ts")
 
-    def make(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> None:
+    def make(
+            self, auth_fields: AuthFieldsProtocol, body: BodyProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None,
+        ) -> None:
         """If the nonce and ts fields are not set, generate them. If the
             nonce is not the IV_SIZE, generate a new one. Then, create
             an hmac of the nonce, ts, and body and store it in the
@@ -58,7 +65,11 @@ class HMACAuthPlugin:
             self.hmac_field: hmac(self.secret, nonce + ts.to_bytes(4, "big") + body.encode())
         })
 
-    def check(self, auth_fields: AuthFieldsProtocol, body: BodyProtocol) -> bool:
+    def check(
+            self, auth_fields: AuthFieldsProtocol, body: BodyProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None,
+        ) -> bool:
         """Check if the auth fields are valid for the given body.
             Performs an hmac check on the nonce, ts, and body. Returns
             False if any of the fields are missing or if the hmac check
