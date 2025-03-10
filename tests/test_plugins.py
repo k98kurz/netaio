@@ -55,7 +55,7 @@ class TestPlugins(unittest.TestCase):
         assert msg is not None
         assert msg.body.encode() == before
 
-    def test_hmac_auth_plugin_with_cipher(self):
+    def test_hmac_auth_plugin_with_stream_cipher(self):
         # setup
         body = netaio.Body.prepare(b'brutus attacks, pls send backup', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
@@ -277,6 +277,49 @@ class TestPlugins(unittest.TestCase):
         assert 'peer_plugin' in str(e.exception)
 
         msg = remote_cipher_plugin.decrypt(msg, peer=local_peer, peer_plugin=peer_plugin)
+        assert msg is not None
+        assert msg.body.encode() == message.body.encode()
+
+    def test_tapescript_auth_with_x25519_cipher(self):
+        seed1 = urandom(32)
+        seed2 = urandom(32)
+        pubkey1 = SigningKey(seed1).verify_key
+        pubkey2 = SigningKey(seed2).verify_key
+        lock = tapescript.make_multisig_lock([pubkey1, pubkey2], 1)
+        local_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": seed1})
+        remote_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": seed2})
+        local_auth_plugin = asymmetric.TapescriptAuthPlugin({
+            "lock": lock,
+            "seed": seed1,
+        })
+        remote_auth_plugin = asymmetric.TapescriptAuthPlugin({
+            "lock": lock,
+            "seed": seed2,
+        })
+        peer_plugin = netaio.DefaultPeerPlugin()
+        local_peer = netaio.Peer(
+            addrs=set(), id=b'local', data=peer_plugin.encode_data({
+                'pubkey': bytes(pubkey1),
+            })
+        )
+        remote_peer = netaio.Peer(
+            addrs=set(), id=b'remote', data=peer_plugin.encode_data({
+                'pubkey': bytes(pubkey2),
+            })
+        )
+        message = netaio.Message.prepare(
+            netaio.Body.prepare(b'hello world', b'123'),
+            netaio.MessageType.PUBLISH_URI,
+        )
+        msg = message.copy()
+        msg = local_cipher_plugin.encrypt(
+            msg, peer=remote_peer, peer_plugin=peer_plugin
+        )
+        local_auth_plugin.make(msg.auth_data, msg.body)
+        assert remote_auth_plugin.check(msg.auth_data, msg.body)
+        msg = remote_cipher_plugin.decrypt(
+            msg, peer=local_peer, peer_plugin=peer_plugin
+        )
         assert msg is not None
         assert msg.body.encode() == message.body.encode()
 
