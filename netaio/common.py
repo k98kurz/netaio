@@ -574,9 +574,11 @@ class AuthPluginProtocol(Protocol):
         ) -> None:
         """Set auth_fields appropriate for a given body. Optional args
             peer and peer_plugin will be provided if they are available.
-            If peer and peer_plugin are required for functionality but
-            are not provided, this method should fail gracefully: log an
-            error message using node.logger (if provided) and return.
+            The local peer information will be stored in node.local_peer
+            if it exists. If peer, peer_plugin, or node.local_peer are
+            required for functionality but are not provided/set, this
+            method should fail gracefully: log an error message using
+            node.logger (if provided) and return.
         """
         ...
 
@@ -587,10 +589,11 @@ class AuthPluginProtocol(Protocol):
         ) -> bool:
         """Check if the auth fields are valid for the given body.
             Optional args peer and peer_plugin will be provided if they
-            are available. If peer and peer_plugin are required for
-            functionality but are not provided, this method should fail
-            gracefully: log an error using node.logger (if provided) and
-            return False.
+            are available. The local peer information will be stored in
+            node.local_peer if it exists. If peer, peer_plugin, or
+            node.local_peer are required for functionality but are not
+            provided, this method should fail gracefully: log an error
+            using node.logger (if provided) and return False.
         """
         ...
 
@@ -621,10 +624,12 @@ class CipherPluginProtocol(Protocol):
         """Encrypt the message body, setting values in the header or
             auth_data as necessary. Returns a new message with the
             encrypted body and updated auth_data. Optional args peer and
-            peer_plugin will be provided if they are available. If peer
-            and peer_plugin are required for functionality but are not
-            provided, or in the case of an encryption failure, this
-            method should raise an exception.
+            peer_plugin will be provided if they are available. The
+            local peer information will be stored in node.local_peer if
+            it exists. If peer, peer_plugin, or node.local_peer are
+            required for functionality but are not provided, or in the
+            case of an encryption failure, this method should raise an
+            exception.
         """
         ...
 
@@ -637,9 +642,11 @@ class CipherPluginProtocol(Protocol):
             as necessary. Returns a new message with the decrypted body.
             May raise an exception if the decryption fails. Optional
             args peer and peer_plugin will be provided if they are
-            available. If peer and peer_plugin are required for
-            functionality but are not provided, or in the case of a
-            decryption failure, this method should raise an exception.
+            available. The local peer information will be stored in
+            node.local_peer if it exists. If peer and peer_plugin are
+            required for functionality but are not provided, or in the
+            case of a decryption failure, this method should raise an
+            exception.
         """
         ...
 
