@@ -107,6 +107,9 @@ class TCPClient:
         self.cipher_plugin = cipher_plugin
         self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
+        self._enable_automatic_peer_management = False
+        self._disconnect_msg = None
+        self._advertise_msg = None
 
     def add_handler(
             self, key: Hashable,
@@ -159,6 +162,8 @@ class TCPClient:
         self.logger.info("Connecting to %s:%d", host, port)
         reader, writer = await asyncio.open_connection(host, port)
         self.hosts[(host, port)] = (reader, writer)
+        if self._enable_automatic_peer_management and self._advertise_msg:
+            await self.send(self._advertise_msg.copy(), (host, port))
 
     async def send(
             self, message: MessageProtocol, server: tuple[str, int] = None,
@@ -367,9 +372,206 @@ class TCPClient:
         server = server or self.default_host
         self.logger.info("Closing connection to server...")
         _, writer = self.hosts[server]
+        if self._enable_automatic_peer_management and self._disconnect_msg:
+            await self.send(self._disconnect_msg.copy(), server)
         writer.close()
         await writer.wait_closed()
         self.logger.info("Connection to server closed")
+
+    def add_or_update_peer(
+            self, peer_id: bytes, peer_data: bytes, addr: tuple[str, int]
+        ) -> bool:
+        """Add or update a peer in the peer list. If the peer is the
+            local peer, it will not be added to the peer list. Returns
+            True if a PEER_DISCOVERED message should be sent (False if
+            it is the local peer).
+        """
+        if peer_id == self.local_peer.id:
+            self.logger.debug("Ignoring local peer.")
+            return False
+        if peer_id in self.peers:
+            self.logger.debug(
+                "Updating peer 0x%s at %s with data %s",
+                peer_id.hex(), addr, peer_data.hex()
+            )
+            self.peers[peer_id].update(peer_data)
+            self.peers[peer_id].addrs.add(addr)
+        else:
+            self.logger.debug(
+                "Adding peer 0x%s at %s with data %s",
+                peer_id.hex(), addr, peer_data.hex()
+            )
+            self.peers[peer_id] = Peer({addr}, peer_id, peer_data)
+        self.peer_addrs[addr] = peer_id
+        return True
+
+    def get_peer(
+            self, addr: tuple[str, int]|None = None, peer_id: bytes|None = None
+        ) -> Peer|None:
+        """Get a peer from the peer list if addr or peer_id is provided
+            and if it exists. Prefers peer_id if both are provided but
+            will fall back to addr if the provided peer_id is not found.
+        """
+        peer = None
+        if peer_id is not None:
+            peer = self.peers.get(peer_id, None)
+        if addr is not None and peer is None:
+            peer_id = self.peer_addrs.get(addr, None)
+            peer = self.peers.get(peer_id, None)
+        return peer
+
+    def remove_peer(self, addr: tuple[str, int], peer_id: bytes):
+        """Remove a peer from the peer list."""
+        self.logger.debug(
+            "Removing peer 0x%s at %s from peer list", peer_id.hex(), addr
+        )
+        if peer_id in self.peers:
+            del self.peers[peer_id]
+        if addr in self.peer_addrs:
+            del self.peer_addrs[addr]
+
+    async def manage_peers_automatically(
+            self, app_id: bytes = b'netaio',
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ):
+        """Begins automatic peer management: when the client connects to
+            a server, it will send its local_peer data. This also
+            registers 3 handlers: 1) for the 'ADVERTISE_PEER' message,
+            which will add the peer to the peer list and send a
+            'PEER_DISCOVERED' message to reciprocate; 2) for the
+            'PEER_DISCOVERED' message type which will add the peer to
+            the peer list; and 3) for the 'DISCONNECT' message which
+            will remove the peer from the local peer list. Then, it will
+            send an 'ADVERTISE_PEER' message to each server it has
+            already connected to. Raises AssertionError if `local_peer`
+            is not set or if the message_type_class does not contain
+            'ADVERTISE_PEER', 'PEER_DISCOVERED', and 'DISCONNECT'
+            message types.
+        """
+        # preconditions
+        assert self.local_peer is not None
+        assert hasattr(self.message_type_class, 'ADVERTISE_PEER')
+        assert hasattr(self.message_type_class, 'PEER_DISCOVERED')
+        assert hasattr(self.message_type_class, 'DISCONNECT')
+
+        # set enable flag
+        self._enable_automatic_peer_management = True
+
+        # create the advertise message
+        self._advertise_msg = self.message_class.prepare(
+            self.body_class.prepare(
+                self.peer_plugin.pack(self.local_peer),
+                app_id
+            ),
+            self.message_type_class.ADVERTISE_PEER
+        )
+
+        # create the disconnect message
+        self._disconnect_msg = self.message_class.prepare(
+            self.body_class.prepare(
+                self.peer_plugin.pack(self.local_peer),
+                app_id
+            ),
+            self.message_type_class.DISCONNECT
+        )
+
+        if cipher_plugin is not None:
+            self._advertise_msg = cipher_plugin.encrypt(
+                self._advertise_msg, self, None, self.peer_plugin
+            )
+            self._disconnect_msg = cipher_plugin.encrypt(
+                self._disconnect_msg, self, None, self.peer_plugin
+            )
+
+        if auth_plugin is not None:
+            auth_plugin.make(
+                self._advertise_msg.auth_data,
+                self._advertise_msg.body,
+                self, None, self.peer_plugin
+            )
+            auth_plugin.make(
+                self._disconnect_msg.auth_data,
+                self._disconnect_msg.body,
+                self, None, self.peer_plugin
+            )
+
+        # create the handlers
+        @self.on((self.message_type_class.ADVERTISE_PEER, app_id), auth_plugin, cipher_plugin)
+        def handle_advertise_peer(message: MessageProtocol, writer: asyncio.StreamWriter):
+            addr = writer.get_extra_info("peername")
+            self.logger.debug("Received ADVERTISE_PEER message from %s", addr)
+
+            if app_id != message.body.uri:
+                self.logger.debug("Ignoring ADVERTISE_PEER message with mismatched app_id")
+                return
+
+            try:
+                peer = self.peer_plugin.unpack(message.body.content)
+            except Exception as e:
+                self.logger.error("Error unpacking peer data: %s", e)
+                return
+
+            if not self.add_or_update_peer(peer.id, peer.data, addr):
+                return
+
+            # prepare the response
+            return self.message_class.prepare(
+                self.body_class.prepare(
+                    self.peer_plugin.pack(self.local_peer),
+                    app_id
+                ),
+                self.message_type_class.PEER_DISCOVERED
+            )
+
+        @self.on((self.message_type_class.PEER_DISCOVERED, app_id), auth_plugin, cipher_plugin)
+        def handle_peer_discovered(message: MessageProtocol, writer: asyncio.StreamWriter):
+            addr = writer.get_extra_info("peername")
+            self.logger.debug("Received PEER_DISCOVERED message from %s", addr)
+
+            if app_id != message.body.uri:
+                self.logger.debug("Ignoring PEER_DISCOVERED message with mismatched app_id")
+                return
+
+            try:
+                peer = self.peer_plugin.unpack(message.body.content)
+            except Exception as e:
+                self.logger.error("Error unpacking peer data: %s", e)
+                return
+
+            self.add_or_update_peer(peer.id, peer.data, addr)
+
+        @self.on((self.message_type_class.DISCONNECT, app_id), auth_plugin, cipher_plugin)
+        def handle_disconnect(message: MessageProtocol, writer: asyncio.StreamWriter):
+            addr = writer.get_extra_info("peername")
+            self.logger.debug("Received DISCONNECT message from %s", addr)
+
+            if app_id != message.body.uri:
+                self.logger.debug("Ignoring DISCONNECT message with mismatched app_id")
+                return
+
+            try:
+                peer = self.peer_plugin.unpack(message.body.content)
+            except Exception as e:
+                self.logger.error("Error unpacking peer id: %s", e)
+                return
+
+            self.remove_peer(addr, peer.id)
+
+        for addr in self.hosts:
+            await self.send(self._advertise_msg.copy(), addr)
+
+    async def stop_peer_management(self, app_id: bytes = b'netaio'):
+        """Stops automatic peer management by disabling the feature,
+            sending a DISCONNECT message, and removing the handlers.
+        """
+        self._enable_automatic_peer_management = False
+        self.remove_handler((self.message_type_class.ADVERTISE_PEER, app_id))
+        self.remove_handler((self.message_type_class.PEER_DISCOVERED, app_id))
+        self.remove_handler((self.message_type_class.DISCONNECT, app_id))
+        if self._disconnect_msg:
+            for addr in self.peer_addrs:
+                await self.send(self._disconnect_msg.copy(), addr)
 
     def set_logger(self, logger: logging.Logger):
         """Replace the current logger."""

@@ -180,6 +180,133 @@ class TestTCPE2E(unittest.TestCase):
         print()
         asyncio.run(run_test())
 
+    def test_peer_management_e2e(self):
+        async def run_test():
+            server_log: list[netaio.Message] = []
+            client_log: list[netaio.Message] = []
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
+
+            server_peer = netaio.Peer(
+                addrs={('127.0.0.1', self.PORT)}, id=b'server',
+                data=netaio.DefaultPeerPlugin().encode_data({
+                    "name": "server",
+                })
+            )
+            client_peer = netaio.Peer(
+                addrs={('127.0.0.1', self.PORT+1)}, id=b'client',
+                data=netaio.DefaultPeerPlugin().encode_data({
+                    "name": "client",
+                })
+            )
+            server = netaio.TCPServer(
+                port=self.PORT, local_peer=server_peer,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
+            client = netaio.TCPClient(
+                port=self.PORT, local_peer=client_peer,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
+
+            @server.on(netaio.MessageType.ADVERTISE_PEER)
+            def server_advertise(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+
+            @client.on(netaio.MessageType.ADVERTISE_PEER)
+            def client_advertise(message: netaio.Message, _: asyncio.StreamWriter):
+                client_log.append(message)
+
+            @server.on(netaio.MessageType.SUBSCRIBE_URI)
+            def server_subscribe(message: netaio.Message, writer: asyncio.StreamWriter):
+                server_log.append(message)
+                server.subscribe(message.body.uri, writer)
+                return netaio.Message.prepare(
+                    message.body,
+                    netaio.MessageType.CONFIRM_SUBSCRIBE
+                )
+
+            @client.on(netaio.MessageType.CONFIRM_SUBSCRIBE)
+            def client_confirm_subscribe(message: netaio.Message, _: asyncio.StreamWriter):
+                client_log.append(message)
+
+            # Start the server as a background task.
+            server_task = asyncio.create_task(server.start())
+
+            # Wait briefly to allow the server time to bind and listen.
+            await asyncio.sleep(0.1)
+
+            # enable automatic peer management of peer data
+            await server.manage_peers_automatically()
+            await client.manage_peers_automatically()
+
+            # connect client
+            await client.connect()
+
+            # wait for peer data to be transmitted and response received
+            await client.receive_once()
+
+            # server should have the client as a peer because of the ADVERTISE_PEER message
+            assert len(server.peers) == 1, len(server.peers)
+            assert client_peer.id in server.peers, server.peers
+            assert server.peers[client_peer.id].data == client_peer.data, \
+                (server.peers[client_peer.id].data, client_peer.data)
+            # client should have the server as a peer because of the PEER_DISCOVERED response
+            assert len(client.peers) == 1, len(client.peers)
+            assert server_peer.id in client.peers, client.peers
+            assert client.peers[server_peer.id].data == server_peer.data, \
+                (client.peers[server_peer.id].data, server_peer.data)
+
+            # subscribe the client to a topic URI
+            client_log.clear()
+            server_log.clear()
+            await client.send(netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'subscribe/test'),
+                netaio.MessageType.SUBSCRIBE_URI
+            ))
+
+            # server should receive the message and respond
+            await client.receive_once()
+            assert len(server_log) == 1, len(server_log)
+            assert server_log[-1].header.message_type is netaio.MessageType.SUBSCRIBE_URI, server_log[-1].header
+            assert len(client_log) == 1, len(client_log)
+            assert client_log[-1].header.message_type is netaio.MessageType.CONFIRM_SUBSCRIBE, client_log[-1].header
+
+            # client should be subscribed
+            assert len(server.subscriptions.get(b'subscribe/test', set())) == 1, server.subscriptions
+
+            # stop peer management on client and wait for the DISCONNECT message to be received
+            await client.stop_peer_management()
+            await asyncio.sleep(0.1)
+            assert len(server.peers) == 0, len(server.peers)
+
+            # client should not be a peer anymore or subscribed to the topic
+            assert client_peer.id not in server.peers, server.peers
+            subs = server.subscriptions.get(b'subscribe/test', set())
+            assert len(subs) == 0, (list(subs), len(subs))
+
+            # begin automatic peer management and let server respond
+            await client.manage_peers_automatically()
+            await client.receive_once()
+
+            # server should have the client as a peer because of the ADVERTISE_PEER messages
+            assert len(server.peers) == 1, len(server.peers)
+            assert client_peer.id in server.peers, server.peers
+            # client should have the server as a peer because of the PEER_DISCOVERED responses
+            assert len(client.peers) == 1, len(client.peers)
+            assert server_peer.id in client.peers, client.peers
+
+            # close client and stop server
+            await client.close()
+            server_task.cancel()
+
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+        print()
+        asyncio.run(run_test())
+
 
 class TestTCPE2EWithoutDefaultPlugins(unittest.TestCase):
     PORT = randint(10000, 65535)
