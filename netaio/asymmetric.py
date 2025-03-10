@@ -68,7 +68,9 @@ class TapescriptAuthPlugin:
         self.ts_field = config.get('ts_field', 'ts')
         self.witness_field = config.get('witness_field', 'witness')
         self.use_peer_lock = config.get('use_peer_lock', False)
-        self.witness_func = config.get('make', tapescript.make_single_sig_witness)
+        self.witness_func = config.get(
+            'witness_func', tapescript.make_single_sig_witness
+        )
         self.contracts = config.get('contracts', {})
         self.plugins = config.get('plugins', {})
 
@@ -94,7 +96,7 @@ class TapescriptAuthPlugin:
         auth_fields.fields.update({
             self.nonce_field: nonce,
             self.ts_field: ts,
-            self.witness_field: bytes(witness),
+            self.witness_field: witness.bytes,
         })
 
     def check(

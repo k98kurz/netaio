@@ -1,6 +1,7 @@
 from context import netaio, asymmetric
 from nacl.signing import SigningKey
 from os import urandom
+from time import time
 import tapescript
 import unittest
 
@@ -195,6 +196,44 @@ class TestPlugins(unittest.TestCase):
             peer_plugin=peer_plugin
         )
 
+    def test_tapescript_auth_plugin_with_custom_witness_func(self):
+        root_seed = urandom(32)
+        seed1 = urandom(32)
+        seed2 = urandom(32)
+        begin_ts = int(time()) - 120 # NB: must use int that encodes to 32 bits
+        end_ts = int(time()) + 120
+        certs = [
+            tapescript.make_delegate_key_cert(
+                seed1, SigningKey(seed2).verify_key, begin_ts, end_ts
+            ),
+            tapescript.make_delegate_key_cert(
+                root_seed, SigningKey(seed1).verify_key, begin_ts, end_ts
+            ),
+        ]
+
+        def witness_func(
+                seed: bytes, sigfields: dict[str, bytes]
+            ) -> tapescript.Script:
+            return tapescript.make_delegate_key_chain_witness(
+                seed, certs, sigfields
+            )
+
+        auth_plugin = asymmetric.TapescriptAuthPlugin({
+            "lock": tapescript.make_delegate_key_chain_lock(
+                SigningKey(root_seed).verify_key
+            ),
+            "seed": seed2,
+            "witness_func": witness_func,
+        })
+        message = netaio.Message.prepare(
+            netaio.Body.prepare(b'hello world', b'123'),
+            netaio.MessageType.PUBLISH_URI,
+        )
+        msg = message.copy()
+        auth_plugin.make(msg.auth_data, msg.body)
+        assert msg.auth_data.fields['witness'] is not None
+        assert auth_plugin.check(msg.auth_data, msg.body)
+
     def test_x25519_cipher_plugin(self):
         seed1 = urandom(32)
         seed2 = urandom(32)
@@ -222,12 +261,21 @@ class TestPlugins(unittest.TestCase):
             netaio.MessageType.PUBLISH_URI,
         )
         msg = message.copy()
-        with self.assertRaises(ValueError):
+
+        with self.assertRaises(ValueError) as e:
             local_cipher_plugin.encrypt(msg)
+        assert 'peer' in str(e.exception)
+        assert 'peer_plugin' in str(e.exception)
 
         msg = local_cipher_plugin.encrypt(msg, peer=remote_peer, peer_plugin=peer_plugin)
         assert msg.body.encode() != message.body.encode()
         assert len(msg.body.encode()) == len(message.body.encode()) + 40
+
+        with self.assertRaises(ValueError) as e:
+            remote_cipher_plugin.decrypt(msg)
+        assert 'peer' in str(e.exception)
+        assert 'peer_plugin' in str(e.exception)
+
         msg = remote_cipher_plugin.decrypt(msg, peer=local_peer, peer_plugin=peer_plugin)
         assert msg is not None
         assert msg.body.encode() == message.body.encode()
