@@ -647,14 +647,21 @@ class UDPNode:
         return peer
 
     def remove_peer(self, addr: tuple[str, int], peer_id: bytes):
-        """Remove a peer from the peer list."""
+        """Remove a peer from the peer list and all related subscriptions."""
         self.logger.debug(
             "Removing peer 0x%s at %s from peer list", peer_id.hex(), addr
         )
         if peer_id in self.peers:
+            peer = self.peers[peer_id]
             del self.peers[peer_id]
+            for addr in peer.addrs:
+                if addr in self.subscriptions:
+                    del self.subscriptions[addr]
         if addr in self.peer_addrs:
             del self.peer_addrs[addr]
+        for key in self.subscriptions:
+            if addr in self.subscriptions[key]:
+                self.subscriptions[key].remove(addr)
 
     def remove_timed_out_peers(self, timeout: int):
         """Remove timed out peers from the peer list."""
@@ -759,7 +766,7 @@ class UDPNode:
             local peer list. The loop will also drop any peers that have
             timed out. Raises AssertionError if `local_peer` is not set
             or if the message_type_class does not contain
-            'ADVERTISE_PEER',  'PEER_DISCOVERED', and 'DISCONNECT'
+            'ADVERTISE_PEER', 'PEER_DISCOVERED', and 'DISCONNECT'
             message types.
         """
         # preconditions

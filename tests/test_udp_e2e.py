@@ -220,16 +220,28 @@ class TestUDPE2E(unittest.TestCase):
             default_server_handler = lambda msg, addr: server_log.append(msg)
             default_client_handler = lambda msg, addr: client_log.append(msg)
 
+            server_peer = netaio.Peer(
+                addrs={('127.0.0.1', self.PORT)}, id=b'server',
+                data=netaio.DefaultPeerPlugin().encode_data({
+                    "name": "server",
+                })
+            )
+            client_peer = netaio.Peer(
+                addrs={('127.0.0.1', self.PORT+1)}, id=b'client',
+                data=netaio.DefaultPeerPlugin().encode_data({
+                    "name": "client",
+                })
+            )
             server = netaio.UDPNode(
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, id=b'server', data=b'abc'),
+                local_peer=server_peer,
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, id=b'client', data=b'def'),
+                local_peer=client_peer,
                 ignore_own_ip=False
             )
 
@@ -251,6 +263,19 @@ class TestUDPE2E(unittest.TestCase):
 
             @client.on(netaio.MessageType.RESPOND_URI)
             def client_request(message: netaio.Message, _: tuple[str, int]):
+                client_log.append(message)
+
+            @server.on(netaio.MessageType.SUBSCRIBE_URI)
+            def server_subscribe(message: netaio.Message, addr: tuple[str, int]):
+                server_log.append(message)
+                server.subscribe(message.body.uri, addr)
+                return netaio.Message.prepare(
+                    message.body,
+                    netaio.MessageType.CONFIRM_SUBSCRIBE
+                )
+
+            @client.on(netaio.MessageType.CONFIRM_SUBSCRIBE)
+            def client_confirm_subscribe(message: netaio.Message, _: tuple[str, int]):
                 client_log.append(message)
 
             await server.start()
@@ -297,10 +322,14 @@ class TestUDPE2E(unittest.TestCase):
 
             # server should have the client as a peer because of the ADVERTISE_PEER messages
             assert len(server.peers) == 1, len(server.peers)
-            assert b'client' in server.peers, server.peers
+            assert client_peer.id in server.peers, server.peers
+            assert server.peers[client_peer.id].data == client_peer.data, \
+                (server.peers[client_peer.id].data, client_peer.data)
             # client should have the server as a peer because of the PEER_DISCOVERED responses
             assert len(client.peers) == 1, len(client.peers)
-            assert b'server' in client.peers, client.peers
+            assert server_peer.id in client.peers, client.peers
+            assert client.peers[server_peer.id].data == server_peer.data, \
+                (client.peers[server_peer.id].data, server_peer.data)
 
             # client broadcasts a message to all peers
             client_log.clear()
@@ -317,10 +346,32 @@ class TestUDPE2E(unittest.TestCase):
             assert len(client_log) == 1, len(client_log)
             assert client_log[-1].header.message_type is netaio.MessageType.RESPOND_URI, client_log[-1].header
 
+            # subscribe the client to a topic URI
+            client_log.clear()
+            server_log.clear()
+            client.broadcast(netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'subscribe/test'),
+                netaio.MessageType.SUBSCRIBE_URI
+            ))
+
+            # server should receive the message and respond
+            await asyncio.sleep(0.1)
+            assert len(server_log) == 1, len(server_log)
+            assert server_log[-1].header.message_type is netaio.MessageType.SUBSCRIBE_URI, server_log[-1].header
+            assert len(client_log) == 1, len(client_log)
+            assert client_log[-1].header.message_type is netaio.MessageType.CONFIRM_SUBSCRIBE, client_log[-1].header
+
+            # client should be subscribed
+            assert len(server.subscriptions.get(b'subscribe/test', set())) == 1, server.subscriptions
+
             # stop peer management on client and wait for the DISCONNECT message to be received
             await client.stop_peer_management()
             await asyncio.sleep(0.1)
             assert len(server.peers) == 0, len(server.peers)
+
+            # client should not be a peer anymore or subscribed to the topic
+            assert client_peer.id not in server.peers, server.peers
+            assert len(server.subscriptions.get(b'subscribe/test', set())) == 0, server.subscriptions
 
             # begin automatic peer management
             await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
