@@ -1,6 +1,7 @@
 from .common import MessageProtocol, NetworkNodeProtocol, Peer, PeerPluginProtocol
 from .crypto import encrypt, decrypt
 from hashlib import sha256
+from random import randint
 
 
 class Sha256StreamCipherPlugin:
@@ -33,14 +34,16 @@ class Sha256StreamCipherPlugin:
         """
         plaintext = b''
         if self.encrypt_uri:
+            plaintext += message.body.uri_length.to_bytes(2, 'big')
             plaintext += message.body.uri
         plaintext += message.body.content
         iv, ciphertext = encrypt(self.key, plaintext)
         if self.encrypt_uri:
+            uri_len = randint(1, len(ciphertext)-1)
             if node is not None:
                 node.logger.debug('Encrypting URI and content')
-            uri = ciphertext[:len(message.body.uri)]
-            content = ciphertext[len(message.body.uri):]
+            uri = ciphertext[:uri_len]
+            content = ciphertext[uri_len:]
         else:
             if node is not None:
                 node.logger.debug('Encrypting content')
@@ -74,8 +77,9 @@ class Sha256StreamCipherPlugin:
             ciphertext = message.body.content
         content = decrypt(self.key, iv, ciphertext)
         if self.encrypt_uri:
-            uri = content[:len(message.body.uri)]
-            content = content[len(message.body.uri):]
+            uri_len = int.from_bytes(content[:2], 'big')
+            uri = content[2:uri_len+2]
+            content = content[uri_len+2:]
         else:
             uri = message.body.uri
 

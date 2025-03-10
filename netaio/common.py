@@ -93,12 +93,17 @@ class BodyProtocol(Protocol):
     """Shows what a Body class should have and do."""
     @property
     def content(self) -> bytes:
-        """At a minimum, a Body must have content and uri properties."""
+        """At a minimum, a Body must have content, uri, and uri_length properties."""
         ...
 
     @property
     def uri(self) -> bytes:
-        """At a minimum, a Body must have content and uri properties."""
+        """At a minimum, a Body must have content, uri, and uri_length properties."""
+        ...
+
+    @property
+    def uri_length(self) -> int:
+        """At a minimum, a Body must have content, uri, and uri_length properties."""
         ...
 
     @classmethod
@@ -439,7 +444,7 @@ class Body:
     def decode(cls, data: bytes) -> Body:
         """Decode the body from bytes."""
         uri_length, data = struct.unpack(
-            f'!I{len(data)-4}s',
+            f'!H{len(data)-2}s',
             data
         )
         uri, content = struct.unpack(
@@ -455,15 +460,20 @@ class Body:
     def encode(self) -> bytes:
         """Encode the body into bytes."""
         return struct.pack(
-            f'!I{len(self.uri)}s{len(self.content)}s',
+            f'!H{len(self.uri)}s{len(self.content)}s',
             self.uri_length,
             self.uri,
             self.content,
         )
 
     @classmethod
-    def prepare(cls, content: bytes, uri: bytes = b'1', *args, **kwargs) -> Body:
-        """Prepare a body from content and optional arguments."""
+    def prepare(cls, content: bytes, uri: bytes = b'', *args, **kwargs) -> Body:
+        """Prepare a body from content and optional arguments. Raises
+            ValueError if the content + uri is too long.
+        """
+        if len(content) + len(uri) >= 2**16 - Header.header_length() - 104:
+            raise ValueError("Content + uri is too long for encapsulation")
+
         return cls(
             uri_length=len(uri),
             uri=uri,
