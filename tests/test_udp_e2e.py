@@ -1,8 +1,11 @@
-from context import netaio
+from context import netaio, asymmetric
+from nacl.signing import SigningKey
+from os import urandom
 from random import randint
 import asyncio
-import unittest
 import logging
+import tapescript
+import unittest
 
 
 class TestUDPE2E(unittest.TestCase):
@@ -511,6 +514,119 @@ class TestUDPE2E(unittest.TestCase):
 
         print()
         asyncio.run(run_test())
+
+    def test_peer_management_with_asymmetric_plugins(self):
+        async def run_test():
+            server_log: list[netaio.Message] = []
+            client_log: list[netaio.Message] = []
+            server_seed = urandom(32)
+            server_pubkey = SigningKey(server_seed).verify_key
+            client_seed = urandom(32)
+            client_pubkey = SigningKey(client_seed).verify_key
+            lock = tapescript.make_multisig_lock([server_pubkey, client_pubkey], 1)
+            server_auth_plugin = asymmetric.TapescriptAuthPlugin({
+                "lock": lock,
+                "seed": server_seed,
+            })
+            client_auth_plugin = asymmetric.TapescriptAuthPlugin({
+                "lock": lock,
+                "seed": client_seed,
+            })
+            server_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": server_seed})
+            client_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": client_seed})
+            server_addr = ('127.0.0.1', self.PORT)
+            client_addr = ('127.0.0.1', self.PORT+1)
+            server_peer = netaio.Peer(
+                addrs={server_addr}, id=b'server',
+                data=netaio.DefaultPeerPlugin().encode_data({
+                    "pubkey": bytes(server_pubkey),
+                })
+            )
+            client_peer = netaio.Peer(
+                addrs={client_addr}, id=b'client',
+                data=netaio.DefaultPeerPlugin().encode_data({
+                    "pubkey": bytes(client_pubkey),
+                })
+            )
+
+            server = netaio.UDPNode(
+                port=self.PORT, local_peer=server_peer, ignore_own_ip=False,
+                logger=netaio.default_server_logger
+            )
+            client = netaio.UDPNode(
+                port=self.PORT+1, local_peer=client_peer, ignore_own_ip=False,
+                logger=netaio.default_client_logger
+            )
+
+            @server.on(netaio.MessageType.REQUEST_URI, server_auth_plugin, server_cipher_plugin)
+            def server_handle_request_uri(message: netaio.Message, _: tuple[str, int]):
+                server_log.append(message)
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'some content for u', uri=message.body.uri),
+                    netaio.MessageType.RESPOND_URI
+                )
+
+            @client.on(netaio.MessageType.RESPOND_URI, client_auth_plugin, client_cipher_plugin)
+            def client_handle_respond_uri(message: netaio.Message, _: tuple[str, int]):
+                client_log.append(message)
+
+            # Start the server and client
+            await server.start()
+            await client.start()
+
+            # Wait briefly to allow the server time to bind and listen.
+            await asyncio.sleep(0.1)
+
+            # monkey-patch the client port to make local multicast work
+            client.port = self.PORT
+
+            # enable automatic peer management of peer data
+            await server.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+
+            # wait for peers to be discovered
+            await asyncio.sleep(0.2)
+
+            # server should have the client as a peer because of the ADVERTISE_PEER message
+            assert len(server.peers) == 1, len(server.peers)
+            assert client_peer.id in server.peers, server.peers
+            assert server.peers[client_peer.id].data == client_peer.data, \
+                (server.peers[client_peer.id].data, client_peer.data)
+            client_addr = list(server.peers[client_peer.id].addrs)[0]
+            # client should have the server as a peer because of the PEER_DISCOVERED response
+            assert len(client.peers) == 1, len(client.peers)
+            assert server_peer.id in client.peers, client.peers
+            assert client.peers[server_peer.id].data == server_peer.data, \
+                (client.peers[server_peer.id].data, server_peer.data)
+            server_addr = list(client.peers[server_peer.id].addrs)[0]
+
+            # send request to publish from client to server
+            client.send(netaio.Message.prepare(
+                netaio.Body.prepare(b'pls gibs me dat', uri=b'something'),
+                netaio.MessageType.REQUEST_URI
+            ), server_addr, auth_plugin=client_auth_plugin, cipher_plugin=client_cipher_plugin)
+            await asyncio.sleep(0.1)
+
+            # server should have received the message and responded
+            assert len(server_log) == 1, len(server_log)
+            assert server_log[-1].header.message_type is netaio.MessageType.REQUEST_URI, server_log[-1].header
+            assert server_log[-1].body.uri == b'something', server_log[-1].body.uri
+            assert server_log[-1].body.content == b'pls gibs me dat', server_log[-1].body.content
+
+            # client should have received the response from the server
+            assert len(client_log) == 1, len(client_log)
+            assert client_log[-1].header.message_type is netaio.MessageType.RESPOND_URI, client_log[-1].header
+            assert client_log[-1].body.uri == b'something', client_log[-1].body.uri
+            assert client_log[-1].body.content == b'some content for u', client_log[-1].body.content
+
+            # close client and stop server
+            await client.stop()
+            await server.stop()
+            await asyncio.sleep(0.1)
+
+        print()
+        asyncio.run(run_test())
+
 
 
 class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
