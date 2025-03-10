@@ -1,4 +1,7 @@
-from context import netaio
+from context import netaio, asymmetric
+from nacl.signing import SigningKey
+from os import urandom
+import tapescript
 import unittest
 
 
@@ -137,6 +140,60 @@ class TestPlugins(unittest.TestCase):
         assert type(peer_plugin.parse_data(peer)) == dict
         assert 'foo' in peer_plugin.parse_data(peer)
         assert peer_plugin.parse_data(peer)['foo'] == 'bar'
+
+    def test_tapescript_auth_plugin(self):
+        seed = urandom(32)
+        auth_plugin = asymmetric.TapescriptAuthPlugin({
+            "lock": tapescript.make_single_sig_lock(SigningKey(seed).verify_key),
+            "seed": seed,
+        })
+        message = netaio.Message.prepare(
+            netaio.Body.prepare(b'hello world', b'123'),
+            netaio.MessageType.PUBLISH_URI,
+        )
+        msg = message.copy()
+        auth_plugin.make(msg.auth_data, msg.body)
+        assert msg.auth_data.fields['witness'] is not None
+        assert msg.auth_data.fields['ts'] is not None
+        assert auth_plugin.check(msg.auth_data, msg.body)
+
+        seed2 = urandom(32)
+        peer_plugin = netaio.DefaultPeerPlugin()
+        peer_data = {
+            'lock': tapescript.make_single_sig_lock(SigningKey(seed2).verify_key).bytes,
+        }
+        peer = netaio.Peer(
+            addrs=set(), id=b'test', data=peer_plugin.encode_data(peer_data)
+        )
+        msg = message.copy()
+        auth_plugin.seed = seed2
+        auth_plugin.make(
+            msg.auth_data, msg.body, peer=peer,
+            peer_plugin=peer_plugin
+        )
+        assert msg.auth_data.fields['witness'] is not None
+        assert msg.auth_data.fields['ts'] is not None
+
+        # prove it doesn't work without using the peer lock
+        auth_plugin.use_peer_lock = False
+        assert not auth_plugin.check(
+            msg.auth_data, msg.body, peer=peer,
+            peer_plugin=peer_plugin
+        )
+
+        # prove it works with the peer lock
+        auth_plugin.use_peer_lock = True
+        assert auth_plugin.check(
+            msg.auth_data, msg.body, peer=peer,
+            peer_plugin=peer_plugin
+        )
+
+        # tamper with the message
+        msg.body.content = b'hello world, caesar is alive'
+        assert not auth_plugin.check(
+            msg.auth_data, msg.body, peer=peer,
+            peer_plugin=peer_plugin
+        )
 
 
 if __name__ == "__main__":
