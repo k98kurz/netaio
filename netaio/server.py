@@ -206,184 +206,10 @@ class TCPServer:
         addr = writer.get_extra_info("peername")
         self.logger.info("Client connected from %s", addr)
         self.clients.add(writer)
-        header_length = self.header_class.header_length()
-        peer_id = self.peer_addrs.get(addr, None)
-        peer = self.peers.get(peer_id, None)
 
         try:
             while True:
-                auth_plugin = None
-                cipher_plugin = None
-                header_bytes = await reader.readexactly(header_length)
-                header: HeaderProtocol = self.header_class.decode(
-                    header_bytes,
-                    message_type_factory=self.message_type_class
-                )
-
-                auth_bytes = await reader.readexactly(header.auth_length)
-                auth: AuthFieldsProtocol = self.auth_fields_class.decode(auth_bytes)
-
-                body_bytes = await reader.readexactly(header.body_length)
-                body: BodyProtocol = self.body_class.decode(body_bytes)
-
-                message: MessageProtocol = self.message_class(
-                    header=header,
-                    auth_data=auth,
-                    body=body
-                )
-                self.logger.debug(
-                    "Received message with checksum=%s from %s",
-                    message.header.checksum, addr
-                )
-
-                if not message.check():
-                    self.logger.debug(
-                        "Invalid message received from %s",
-                        addr
-                    )
-                    response = self.make_error("invalid message")
-                else:
-                    # outer auth
-                    if use_auth and self.auth_plugin is not None:
-                        self.logger.debug("Calling self.auth_plugin.check on auth and body")
-                        check = self.auth_plugin.check(
-                            message.auth_data, message.body, self, peer,
-                            self.peer_plugin
-                        )
-                        if not check:
-                            self.logger.warning(
-                                "Invalid auth_fields received from %s", addr
-                            )
-                            response = self.handle_auth_error(self, self.auth_plugin, message)
-                            if response is not None:
-                                await self.send(writer, response, use_auth=False, use_cipher=False)
-                                response = None # prevent double sending
-                            continue
-                        else:
-                            self.logger.debug(
-                                "Valid auth_fields received from %s", addr
-                            )
-
-                    # outer cipher
-                    if use_cipher and self.cipher_plugin is not None:
-                        self.logger.debug(
-                            "Calling self.cipher_plugin.decrypt on message"
-                        )
-                        try:
-                            message = self.cipher_plugin.decrypt(
-                                message, self, peer, self.peer_plugin
-                            )
-                        except Exception as e:
-                            self.logger.warning(
-                                "Error decrypting message; dropping",
-                                exc_info=True
-                            )
-                            continue
-
-                    keys = self.extract_keys(message)
-                    self.logger.debug(
-                        "Message received from %s with keys=%s", addr, keys
-                    )
-
-                    for key in keys:
-                        if key in self.handlers:
-                            handler, auth_plugin, cipher_plugin = self.handlers[key]
-
-                            # inner auth
-                            if auth_plugin is not None:
-                                self.logger.debug(
-                                    "Calling auth_plugin.check on auth and body"
-                                )
-                                check = auth_plugin.check(
-                                    message.auth_data, message.body, self, peer,
-                                    self.peer_plugin
-                                )
-                                if not check:
-                                    self.logger.warning(
-                                        "Invalid auth_fields received from %s",
-                                        addr
-                                    )
-                                    response = self.handle_auth_error(
-                                        self, auth_plugin, message
-                                    )
-                                    if response is not None:
-                                        await self.send(
-                                            writer, response, use_auth=False,
-                                            use_cipher=False
-                                        )
-                                        response = None # prevent double sending
-                                        break
-
-                            # inner cipher
-                            if cipher_plugin is not None:
-                                self.logger.debug(
-                                    "Calling cipher_plugin.decrypt on message"
-                                )
-                                try:
-                                    message = cipher_plugin.decrypt(
-                                        message, self, peer, self.peer_plugin
-                                    )
-                                except Exception as e:
-                                    self.logger.warning(
-                                        "Error decrypting message; dropping",
-                                        exc_info=True
-                                    )
-                                    continue
-
-                            self.logger.debug("Calling handler for key=%s", key)
-                            response = handler(message, writer)
-                            if isinstance(response, Coroutine):
-                                response = await response
-                            break
-                    else:
-                        self.logger.warning(
-                            "No handler found for keys=%s, calling default handler",
-                            keys
-                        )
-                        response = self.default_handler(message, writer)
-
-                if response is not None:
-                    # inner cipher
-                    if cipher_plugin is not None:
-                        self.logger.debug(
-                            "Calling cipher_plugin.encrypt on response (handler)"
-                        )
-                        response = cipher_plugin.encrypt(
-                            response, self, peer, self.peer_plugin
-                        )
-
-                    # inner auth
-                    if auth_plugin is not None:
-                        self.logger.debug(
-                            "Calling auth_plugin.make on response.body (handler)"
-                        )
-                        auth_plugin.make(
-                            response.auth_data, response.body, self, peer,
-                            self.peer_plugin
-                        )
-
-                    # outer cipher
-                    if use_cipher and self.cipher_plugin is not None:
-                        self.logger.debug(
-                            "Calling cipher_plugin.encrypt on response"
-                        )
-                        response = self.cipher_plugin.encrypt(
-                            response, self, peer, self.peer_plugin
-                        )
-
-                    # outer auth
-                    if use_auth and self.auth_plugin is not None:
-                        self.logger.debug(
-                            "Calling self.auth_plugin.make on response.body"
-                        )
-                        self.auth_plugin.make(
-                            response.auth_data, response.body, self, peer,
-                            self.peer_plugin
-                        )
-
-                    await self.send(
-                        writer, response, use_auth=False, use_cipher=False
-                    )
+                await self.receive(reader, writer, use_auth, use_cipher)
         except asyncio.IncompleteReadError:
             self.logger.info("Client disconnected from %s", addr)
             pass  # Client disconnected
@@ -402,6 +228,192 @@ class TCPServer:
                         del self.subscriptions[key]
             writer.close()
             await writer.wait_closed()
+
+    async def receive(
+            self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+            use_auth: bool = True, use_cipher: bool = True,
+        ):
+        """Receive and process a message from a client. Used by the
+            handle_client coroutine.
+        """
+        addr = writer.get_extra_info("peername")
+        self.logger.info("Client connected from %s", addr)
+        self.clients.add(writer)
+        header_length = self.header_class.header_length()
+        peer_id = self.peer_addrs.get(addr, None)
+        peer = self.peers.get(peer_id, None)
+        auth_plugin = None
+        cipher_plugin = None
+        header_bytes = await reader.readexactly(header_length)
+        header: HeaderProtocol = self.header_class.decode(
+            header_bytes,
+            message_type_factory=self.message_type_class
+        )
+
+        auth_bytes = await reader.readexactly(header.auth_length)
+        auth: AuthFieldsProtocol = self.auth_fields_class.decode(auth_bytes)
+
+        body_bytes = await reader.readexactly(header.body_length)
+        body: BodyProtocol = self.body_class.decode(body_bytes)
+
+        message: MessageProtocol = self.message_class(
+            header=header,
+            auth_data=auth,
+            body=body
+        )
+        self.logger.debug(
+            "Received message with checksum=%s from %s",
+            message.header.checksum, addr
+        )
+
+        if not message.check():
+            self.logger.debug(
+                "Invalid message received from %s",
+                addr
+            )
+            response = self.make_error("invalid message")
+        else:
+            # outer auth
+            if use_auth and self.auth_plugin is not None:
+                self.logger.debug("Calling self.auth_plugin.check on auth and body")
+                check = self.auth_plugin.check(
+                    message.auth_data, message.body, self, peer,
+                    self.peer_plugin
+                )
+                if not check:
+                    self.logger.warning(
+                        "Invalid auth_fields received from %s", addr
+                    )
+                    response = self.handle_auth_error(self, self.auth_plugin, message)
+                    if response is not None:
+                        await self.send(writer, response, use_auth=False, use_cipher=False)
+                        response = None # prevent double sending
+                    return
+                else:
+                    self.logger.debug(
+                        "Valid auth_fields received from %s", addr
+                    )
+
+            # outer cipher
+            if use_cipher and self.cipher_plugin is not None:
+                self.logger.debug(
+                    "Calling self.cipher_plugin.decrypt on message"
+                )
+                try:
+                    message = self.cipher_plugin.decrypt(
+                        message, self, peer, self.peer_plugin
+                    )
+                except Exception as e:
+                    self.logger.warning(
+                        "Error decrypting message; dropping",
+                        exc_info=True
+                    )
+                    return
+
+            keys = self.extract_keys(message)
+            self.logger.debug(
+                "Message received from %s with keys=%s", addr, keys
+            )
+
+            for key in keys:
+                if key in self.handlers:
+                    handler, auth_plugin, cipher_plugin = self.handlers[key]
+
+                    # inner auth
+                    if auth_plugin is not None:
+                        self.logger.debug(
+                            "Calling auth_plugin.check on auth and body"
+                        )
+                        check = auth_plugin.check(
+                            message.auth_data, message.body, self, peer,
+                            self.peer_plugin
+                        )
+                        if not check:
+                            self.logger.warning(
+                                "Invalid auth_fields received from %s",
+                                addr
+                            )
+                            response = self.handle_auth_error(
+                                self, auth_plugin, message
+                            )
+                            if response is not None:
+                                await self.send(
+                                    writer, response, use_auth=False,
+                                    use_cipher=False
+                                )
+                                response = None # prevent double sending
+                                break
+
+                    # inner cipher
+                    if cipher_plugin is not None:
+                        self.logger.debug(
+                            "Calling cipher_plugin.decrypt on message"
+                        )
+                        try:
+                            message = cipher_plugin.decrypt(
+                                message, self, peer, self.peer_plugin
+                            )
+                        except Exception as e:
+                            self.logger.warning(
+                                "Error decrypting message; dropping",
+                                exc_info=True
+                            )
+                            return
+
+                    self.logger.debug("Calling handler for key=%s", key)
+                    response = handler(message, writer)
+                    if isinstance(response, Coroutine):
+                        response = await response
+                    break
+            else:
+                self.logger.warning(
+                    "No handler found for keys=%s, calling default handler",
+                    keys
+                )
+                response = self.default_handler(message, writer)
+
+        if response is not None:
+            # inner cipher
+            if cipher_plugin is not None:
+                self.logger.debug(
+                    "Calling cipher_plugin.encrypt on response (handler)"
+                )
+                response = cipher_plugin.encrypt(
+                    response, self, peer, self.peer_plugin
+                )
+
+            # inner auth
+            if auth_plugin is not None:
+                self.logger.debug(
+                    "Calling auth_plugin.make on response.body (handler)"
+                )
+                auth_plugin.make(
+                    response.auth_data, response.body, self, peer,
+                    self.peer_plugin
+                )
+
+            # outer cipher
+            if use_cipher and self.cipher_plugin is not None:
+                self.logger.debug(
+                    "Calling cipher_plugin.encrypt on response"
+                )
+                response = self.cipher_plugin.encrypt(
+                    response, self, peer, self.peer_plugin
+                )
+
+            # outer auth
+            if use_auth and self.auth_plugin is not None:
+                self.logger.debug(
+                    "Calling self.auth_plugin.make on response.body"
+                )
+                self.auth_plugin.make(
+                    response.auth_data, response.body, self, peer,
+                    self.peer_plugin
+                )
+
+            await self.send(
+                writer, response, use_auth=False, use_cipher=False
+            )
 
     async def start(self, use_auth: bool = True, use_cipher: bool = True):
         """Start the server."""
