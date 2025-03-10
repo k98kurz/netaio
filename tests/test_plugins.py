@@ -195,6 +195,43 @@ class TestPlugins(unittest.TestCase):
             peer_plugin=peer_plugin
         )
 
+    def test_x25519_cipher_plugin(self):
+        seed1 = urandom(32)
+        seed2 = urandom(32)
+        pubkey1 = SigningKey(seed1).verify_key
+        pubkey2 = SigningKey(seed2).verify_key
+        local_cipher_plugin = asymmetric.X25519CipherPlugin({
+            "seed": seed1,
+        })
+        remote_cipher_plugin = asymmetric.X25519CipherPlugin({
+            "seed": seed2,
+        })
+        peer_plugin = netaio.DefaultPeerPlugin()
+        local_peer = netaio.Peer(
+            addrs=set(), id=b'local', data=peer_plugin.encode_data({
+                'pubkey': bytes(pubkey1),
+            })
+        )
+        remote_peer = netaio.Peer(
+            addrs=set(), id=b'remote', data=peer_plugin.encode_data({
+                'pubkey': bytes(pubkey2),
+            })
+        )
+        message = netaio.Message.prepare(
+            netaio.Body.prepare(b'hello world', b'123'),
+            netaio.MessageType.PUBLISH_URI,
+        )
+        msg = message.copy()
+        with self.assertRaises(ValueError):
+            local_cipher_plugin.encrypt(msg)
+
+        msg = local_cipher_plugin.encrypt(msg, peer=remote_peer, peer_plugin=peer_plugin)
+        assert msg.body.encode() != message.body.encode()
+        assert len(msg.body.encode()) == len(message.body.encode()) + 40
+        msg = remote_cipher_plugin.decrypt(msg, peer=local_peer, peer_plugin=peer_plugin)
+        assert msg is not None
+        assert msg.body.encode() == message.body.encode()
+
 
 if __name__ == "__main__":
     unittest.main()

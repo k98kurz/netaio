@@ -145,3 +145,94 @@ class TapescriptAuthPlugin:
             message_type_class=message_type_class,
             body_class=body_class
         )
+
+
+class X25519CipherPlugin(CipherPluginProtocol):
+    """X25519 cipher plugin."""
+    key: PrivateKey
+    encrypt_uri: bool
+
+    def __init__(self, config: dict):
+        """Initialize the cipher plugin with a config. The config
+            must contain {"seed": <bytes>}.
+            It can contain {"encrypt_uri": <bool>} to specify whether to
+            encrypt the uri; the default is True.
+        """
+        seed = config['seed']
+        self.key = SigningKey(seed).to_curve25519_private_key()
+        self.encrypt_uri = config.get('encrypt_uri', True)
+
+    def encrypt(
+            self, message: MessageProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None
+        ) -> MessageProtocol:
+        """Encrypt the message body, setting the self.iv_field in the
+            auth_data. This will overwrite any existing value in that
+            auth_data field. If the self.encrypt_uri is True, the uri
+            will be encrypted as well as the content.
+        """
+        if peer is None or peer_plugin is None:
+            raise ValueError("peer and peer_plugin must be provided")
+
+        plaintext = b''
+        if self.encrypt_uri:
+            plaintext += message.body.uri
+        plaintext += message.body.content
+
+        peer_data = peer_plugin.parse_data(peer)
+        if 'pubkey' not in peer_data:
+            raise ValueError("peer pubkey not found")
+        pubkey = VerifyKey(peer_data['pubkey']).to_curve25519_public_key()
+        ciphertext = Box(self.key, pubkey).encrypt(plaintext)
+
+        if self.encrypt_uri:
+            if node is not None:
+                node.logger.debug('Encrypting URI and content')
+            uri = ciphertext[:len(message.body.uri)]
+            content = ciphertext[len(message.body.uri):]
+        else:
+            if node is not None:
+                node.logger.debug('Encrypting content')
+            uri = message.body.uri
+            content = ciphertext
+
+        message_type = message.header.message_type
+        body = message.body.prepare(content, uri)
+        return message.prepare(body, message_type, message.auth_data)
+
+    def decrypt(
+            self, message: MessageProtocol,
+            node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
+            peer_plugin: PeerPluginProtocol|None = None
+        ) -> MessageProtocol:
+        """Decrypt the message body, reading the self.iv_field from
+            the auth_data. Returns a new message with the decrypted body.
+        """
+        if peer is None or peer_plugin is None:
+            raise ValueError("peer and peer_plugin must be provided")
+
+        if self.encrypt_uri:
+            if node is not None:
+                node.logger.debug('Decrypting URI and content')
+            ciphertext = message.body.uri + message.body.content
+        else:
+            if node is not None:
+                node.logger.debug('Decrypting content')
+            ciphertext = message.body.content
+
+        peer_data = peer_plugin.parse_data(peer)
+        if 'pubkey' not in peer_data:
+            raise ValueError("peer pubkey not found")
+        pubkey = VerifyKey(peer_data['pubkey']).to_curve25519_public_key()
+        content = Box(self.key, pubkey).decrypt(ciphertext)
+
+        if self.encrypt_uri:
+            uri = content[:len(message.body.uri)]
+            content = content[len(message.body.uri):]
+        else:
+            uri = message.body.uri
+
+        message_type = message.header.message_type
+        body = message.body.prepare(content, uri)
+        return message.prepare(body, message_type, message.auth_data)
