@@ -167,6 +167,13 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
+    def local_peer(self) -> Peer|None:
+        """A class implementing this protocol must have a local_peer
+            property containing the local peer data.
+        """
+        ...
+
+    @property
     def header_class(self) -> type[HeaderProtocol]:
         """A class implementing this protocol must have a header_class
             property referencing the header class to use for parsing
