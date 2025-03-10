@@ -36,12 +36,12 @@ def not_found_handler(*_) -> MessageProtocol | None:
 
 class UDPNode:
     """UDP node class."""
-    peers: dict[bytes, Peer]
-    peer_addrs: dict[tuple[str, int], bytes]
     port: int
     interface: str
     multicast_group: str
     local_peer: Peer
+    peers: dict[bytes, Peer]
+    peer_addrs: dict[tuple[str, int], bytes]
     header_class: type[HeaderProtocol]
     message_type_class: type[IntEnum]
     auth_fields_class: type[AuthFieldsProtocol]
@@ -84,6 +84,7 @@ class UDPNode:
             `port` is the port to listen on.
             `interface` is the interface to listen on.
             `multicast_group` is the multicast group to join.
+            `local_peer` is the local peer information for this node.
             `header_class`, `auth_fields_class`, `body_class`, and
             `message_class` will be used for sending messages and
             parsing responses.
@@ -212,7 +213,7 @@ class UDPNode:
             try:
                 message = self.cipher_plugin.decrypt(message, self, peer, self.peer_plugin)
             except Exception as e:
-                self.logger.warning("Error decrypting message: %s; dropping", e)
+                self.logger.warning("Error decrypting message; dropping", exc_info=True)
                 return
 
         keys = self.extract_keys(message)
@@ -242,7 +243,7 @@ class UDPNode:
                     try:
                         message = cipher_plugin.decrypt(message, self, peer, self.peer_plugin)
                     except Exception as e:
-                        self.logger.warning("Error decrypting message: %s; dropping", e)
+                        self.logger.warning("Error decrypting message; dropping", exc_info=True)
                         return
 
                 self.logger.debug("Calling handler with message and addr for key=%s", key)

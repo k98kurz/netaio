@@ -10,10 +10,13 @@ from .common import (
     MessageProtocol,
     AuthPluginProtocol,
     CipherPluginProtocol,
+    PeerPluginProtocol,
+    Peer,
     keys_extractor,
     auth_error_handler,
     Handler,
     AuthErrorHandler,
+    DefaultPeerPlugin,
     default_client_logger
 )
 from enum import IntEnum
@@ -27,6 +30,9 @@ class TCPClient:
     hosts: dict[tuple[str, int], tuple[asyncio.StreamReader, asyncio.StreamWriter]]
     default_host: tuple[str, int]
     port: int
+    local_peer: Peer
+    peers: dict[bytes, Peer]
+    peer_addrs: dict[tuple[str, int], bytes]
     header_class: type[HeaderProtocol]
     message_type_class: type[IntEnum]
     auth_fields_class: type[AuthFieldsProtocol]
@@ -37,10 +43,12 @@ class TCPClient:
     logger: logging.Logger
     auth_plugin: AuthPluginProtocol
     cipher_plugin: CipherPluginProtocol
+    peer_plugin: PeerPluginProtocol
     handle_auth_error: AuthErrorHandler
 
     def __init__(
             self, host: str = "127.0.0.1", port: int = 8888,
+            local_peer: Peer = None,
             header_class: type[HeaderProtocol] = Header,
             message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
@@ -50,11 +58,13 @@ class TCPClient:
             logger: logging.Logger = default_client_logger,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None,
+            peer_plugin: PeerPluginProtocol = None,
             auth_error_handler: AuthErrorHandler = auth_error_handler,
         ):
         """Initialize the TCPClient.
             `host` is the default host IPv4 address to connect to.
             `port` is the default port to connect to.
+            `local_peer` is the local peer information for this client.
             `header_class`, `auth_fields_class`, `body_class`, and
             `message_class` will be used for sending messages and
             parsing responses.
@@ -67,6 +77,8 @@ class TCPClient:
             the auth_fields of every sent message.
             If `cipher_plugin` is provided, it will be used to encrypt
             and decrypt all messages.
+            If `peer_plugin` is provided, it will be used to encode and
+            decode peer data.
             `auth_error_handler` is a function that handles auth errors,
             i.e. when an auth check fails for a received message. If it
             returns a message, that message will be sent as a response
@@ -80,6 +92,9 @@ class TCPClient:
         self.hosts = {}
         self.default_host = (host, port)
         self.port = port
+        self.local_peer = local_peer
+        self.peers = {}
+        self.peer_addrs = {}
         self.header_class = header_class
         self.message_type_class = message_type_class
         self.auth_fields_class = auth_fields_class
@@ -90,6 +105,7 @@ class TCPClient:
         self.logger = logger
         self.auth_plugin = auth_plugin
         self.cipher_plugin = cipher_plugin
+        self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
 
     def add_handler(
@@ -162,27 +178,36 @@ class TCPClient:
             client will not be used.
         """
         server = server or self.default_host
-
+        peer_id = self.peer_addrs.get(server, None)
+        peer = self.peers.get(peer_id, None)
 
         # inner cipher
         if cipher_plugin is not None:
             self.logger.debug("Calling cipher_plugin.encrypt on message")
-            message = cipher_plugin.encrypt(message)
+            try:
+                message = cipher_plugin.encrypt(message, self, peer, self.peer_plugin)
+            except Exception as e:
+                self.logger.error("Error encrypting message", exc_info=True)
+                return
 
         # inner auth
         if auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.make on auth_data and body")
-            auth_plugin.make(message.auth_data, message.body)
+            auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
             self.logger.debug("Calling self.cipher_plugin.encrypt on message")
-            message = self.cipher_plugin.encrypt(message)
+            try:
+                message = self.cipher_plugin.encrypt(message, self, peer, self.peer_plugin)
+            except Exception as e:
+                self.logger.error("Error encrypting message", exc_info=True)
+                return
 
         # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on auth_data and body")
-            self.auth_plugin.make(message.auth_data, message.body)
+            self.auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
 
         self.logger.debug("Sending message of type=%s to server...", message.header.message_type)
         _, writer = self.hosts[server]
@@ -214,6 +239,8 @@ class TCPClient:
         """
         self.logger.debug("Receiving message from server...")
         server = server or self.default_host
+        peer_id = self.peer_addrs.get(server, None)
+        peer = self.peers.get(peer_id, None)
         reader, writer = self.hosts[server]
         data = await reader.readexactly(self.header_class.header_length())
         header: HeaderProtocol = self.header_class.decode(
@@ -241,26 +268,36 @@ class TCPClient:
         # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.check on auth and body")
-            if not self.auth_plugin.check(msg.auth_data, msg.body):
+            check = self.auth_plugin.check(msg.auth_data, msg.body, self, peer, self.peer_plugin)
+            if not check:
                 self.logger.warning("Message auth failed")
                 return self.handle_auth_error(self, self.auth_plugin, msg)
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
             self.logger.debug("Calling cipher_plugin.decrypt on message")
-            msg = self.cipher_plugin.decrypt(msg)
+            try:
+                msg = self.cipher_plugin.decrypt(msg, self, peer, self.peer_plugin)
+            except Exception as e:
+                self.logger.error("Error decrypting message; dropping", exc_info=True)
+                return
 
         # inner auth
         if auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.check on auth and body")
-            if not auth_plugin.check(msg.auth_data, msg.body):
+            check = auth_plugin.check(msg.auth_data, msg.body, self, peer, self.peer_plugin)
+            if not check:
                 self.logger.warning("Message auth failed")
                 return self.handle_auth_error(self, auth_plugin, msg)
 
         # inner cipher
         if cipher_plugin is not None:
             self.logger.debug("Calling cipher_plugin.decrypt on message")
-            msg = cipher_plugin.decrypt(msg)
+            try:
+                msg = cipher_plugin.decrypt(msg, self, peer, self.peer_plugin)
+            except Exception as e:
+                self.logger.error("Error decrypting message; dropping", exc_info=True)
+                return
 
         keys = self.extract_keys(msg)
         result = None
@@ -273,14 +310,19 @@ class TCPClient:
                 # inner auth
                 if auth_plugin is not None:
                     self.logger.debug("Calling auth_plugin.check on auth and body")
-                    if not auth_plugin.check(msg.auth_data, msg.body):
+                    check = auth_plugin.check(msg.auth_data, msg.body, self, peer, self.peer_plugin)
+                    if not check:
                         self.logger.warning("Message auth failed")
                         return self.handle_auth_error(self, auth_plugin, msg)
 
                 # inner cipher
                 if cipher_plugin is not None:
                     self.logger.debug("Calling cipher_plugin.decrypt on message")
-                    msg = cipher_plugin.decrypt(msg)
+                    try:
+                        msg = cipher_plugin.decrypt(msg, self, peer, self.peer_plugin)
+                    except Exception as e:
+                        self.logger.error("Error decrypting message; dropping", exc_info=True)
+                        return
 
                 self.logger.debug("Calling handler for key=%s", key)
                 result = handler(msg, writer)

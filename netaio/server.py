@@ -10,11 +10,14 @@ from .common import (
     MessageProtocol,
     AuthPluginProtocol,
     CipherPluginProtocol,
+    PeerPluginProtocol,
+    Peer,
     keys_extractor,
     make_error_response,
     auth_error_handler,
     Handler,
     AuthErrorHandler,
+    DefaultPeerPlugin,
     default_server_logger,
 )
 from enum import IntEnum
@@ -31,6 +34,9 @@ class TCPServer:
     """TCP server class."""
     port: int
     interface: str
+    local_peer: Peer
+    peers: dict[bytes, Peer]
+    peer_addrs: dict[tuple[str, int], bytes]
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     default_handler: Handler
     header_class: type[HeaderProtocol]
@@ -49,6 +55,7 @@ class TCPServer:
 
     def __init__(
             self, port: int = 8888, interface: str = "0.0.0.0",
+            local_peer: Peer = None,
             header_class: type[HeaderProtocol] = Header,
             message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
@@ -60,11 +67,13 @@ class TCPServer:
             logger: logging.Logger = default_server_logger,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None,
+            peer_plugin: PeerPluginProtocol = None,
             auth_error_handler: AuthErrorHandler = auth_error_handler,
         ):
         """Initialize the TCPServer.
             `interface` is the interface to listen on.
             `port` is the port to listen on.
+            `local_peer` is the local peer information for this server.
             `header_class`, `auth_fields_class`, `body_class`, and
             `message_class` will be used for sending messages and
             parsing responses.
@@ -81,6 +90,8 @@ class TCPServer:
             the auth_fields of every sent message.
             If `cipher_plugin` is provided, it will be used to encrypt
             and decrypt all messages.
+            If `peer_plugin` is provided, it will be used to encode and
+            decode peer data.
             `auth_error_handler` is a function that handles auth errors,
             i.e. when an auth check fails for a received message. If it
             returns a message, that message will be sent as a response
@@ -93,6 +104,9 @@ class TCPServer:
         """
         self.interface = interface
         self.port = port
+        self.local_peer = local_peer
+        self.peers = {}
+        self.peer_addrs = {}
         self.handlers = {}
         self.subscriptions = {}
         self.clients = set()
@@ -107,6 +121,7 @@ class TCPServer:
         self.logger = logger
         self.auth_plugin = auth_plugin
         self.cipher_plugin = cipher_plugin
+        self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
 
     def add_handler(
@@ -188,9 +203,12 @@ class TCPServer:
             If use_cipher is False, the cipher plugin set on the
             server will not be used.
         """
-        self.logger.info("Client connected from %s", writer.get_extra_info("peername"))
+        addr = writer.get_extra_info("peername")
+        self.logger.info("Client connected from %s", addr)
         self.clients.add(writer)
         header_length = self.header_class.header_length()
+        peer_id = self.peer_addrs.get(addr, None)
+        peer = self.peers.get(peer_id, None)
 
         try:
             while True:
@@ -215,33 +233,57 @@ class TCPServer:
                 )
                 self.logger.debug(
                     "Received message with checksum=%s from %s",
-                    message.header.checksum, writer.get_extra_info("peername")
+                    message.header.checksum, addr
                 )
 
                 if not message.check():
-                    self.logger.debug("Invalid message received from %s", writer.get_extra_info("peername"))
+                    self.logger.debug(
+                        "Invalid message received from %s",
+                        addr
+                    )
                     response = self.make_error("invalid message")
                 else:
                     # outer auth
                     if use_auth and self.auth_plugin is not None:
                         self.logger.debug("Calling self.auth_plugin.check on auth and body")
-                        if not self.auth_plugin.check(message.auth_data, message.body):
-                            self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
+                        check = self.auth_plugin.check(
+                            message.auth_data, message.body, self, peer,
+                            self.peer_plugin
+                        )
+                        if not check:
+                            self.logger.warning(
+                                "Invalid auth_fields received from %s", addr
+                            )
                             response = self.handle_auth_error(self, self.auth_plugin, message)
                             if response is not None:
                                 await self.send(writer, response, use_auth=False, use_cipher=False)
                                 response = None # prevent double sending
                             continue
                         else:
-                            self.logger.debug("Valid auth_fields received from %s", writer.get_extra_info("peername"))
+                            self.logger.debug(
+                                "Valid auth_fields received from %s", addr
+                            )
 
                     # outer cipher
                     if use_cipher and self.cipher_plugin is not None:
-                        self.logger.debug("Calling self.cipher_plugin.decrypt on message")
-                        message = self.cipher_plugin.decrypt(message)
+                        self.logger.debug(
+                            "Calling self.cipher_plugin.decrypt on message"
+                        )
+                        try:
+                            message = self.cipher_plugin.decrypt(
+                                message, self, peer, self.peer_plugin
+                            )
+                        except Exception as e:
+                            self.logger.warning(
+                                "Error decrypting message; dropping",
+                                exc_info=True
+                            )
+                            continue
 
                     keys = self.extract_keys(message)
-                    self.logger.debug("Message received from %s with keys=%s", writer.get_extra_info("peername"), keys)
+                    self.logger.debug(
+                        "Message received from %s with keys=%s", addr, keys
+                    )
 
                     for key in keys:
                         if key in self.handlers:
@@ -249,19 +291,44 @@ class TCPServer:
 
                             # inner auth
                             if auth_plugin is not None:
-                                self.logger.debug("Calling auth_plugin.check on auth and body")
-                                if not auth_plugin.check(message.auth_data, message.body):
-                                    self.logger.warning("Invalid auth_fields received from %s", writer.get_extra_info("peername"))
-                                    response = self.handle_auth_error(self, auth_plugin, message)
+                                self.logger.debug(
+                                    "Calling auth_plugin.check on auth and body"
+                                )
+                                check = auth_plugin.check(
+                                    message.auth_data, message.body, self, peer,
+                                    self.peer_plugin
+                                )
+                                if not check:
+                                    self.logger.warning(
+                                        "Invalid auth_fields received from %s",
+                                        addr
+                                    )
+                                    response = self.handle_auth_error(
+                                        self, auth_plugin, message
+                                    )
                                     if response is not None:
-                                        await self.send(writer, response, use_auth=False, use_cipher=False)
+                                        await self.send(
+                                            writer, response, use_auth=False,
+                                            use_cipher=False
+                                        )
                                         response = None # prevent double sending
                                         break
 
                             # inner cipher
                             if cipher_plugin is not None:
-                                self.logger.debug("Calling cipher_plugin.decrypt on message")
-                                message = cipher_plugin.decrypt(message)
+                                self.logger.debug(
+                                    "Calling cipher_plugin.decrypt on message"
+                                )
+                                try:
+                                    message = cipher_plugin.decrypt(
+                                        message, self, peer, self.peer_plugin
+                                    )
+                                except Exception as e:
+                                    self.logger.warning(
+                                        "Error decrypting message; dropping",
+                                        exc_info=True
+                                    )
+                                    continue
 
                             self.logger.debug("Calling handler for key=%s", key)
                             response = handler(message, writer)
@@ -269,41 +336,64 @@ class TCPServer:
                                 response = await response
                             break
                     else:
-                        self.logger.warning("No handler found for keys=%s, calling default handler", keys)
+                        self.logger.warning(
+                            "No handler found for keys=%s, calling default handler",
+                            keys
+                        )
                         response = self.default_handler(message, writer)
 
                 if response is not None:
                     # inner cipher
                     if cipher_plugin is not None:
-                        self.logger.debug("Calling cipher_plugin.encrypt on response (handler)")
-                        response = cipher_plugin.encrypt(response)
+                        self.logger.debug(
+                            "Calling cipher_plugin.encrypt on response (handler)"
+                        )
+                        response = cipher_plugin.encrypt(
+                            response, self, peer, self.peer_plugin
+                        )
 
                     # inner auth
                     if auth_plugin is not None:
-                        self.logger.debug("Calling auth_plugin.make on response.body (handler)")
-                        auth_plugin.make(response.auth_data, response.body)
+                        self.logger.debug(
+                            "Calling auth_plugin.make on response.body (handler)"
+                        )
+                        auth_plugin.make(
+                            response.auth_data, response.body, self, peer,
+                            self.peer_plugin
+                        )
 
                     # outer cipher
                     if use_cipher and self.cipher_plugin is not None:
-                        self.logger.debug("Calling cipher_plugin.encrypt on response")
-                        response = self.cipher_plugin.encrypt(response)
+                        self.logger.debug(
+                            "Calling cipher_plugin.encrypt on response"
+                        )
+                        response = self.cipher_plugin.encrypt(
+                            response, self, peer, self.peer_plugin
+                        )
 
                     # outer auth
                     if use_auth and self.auth_plugin is not None:
-                        self.logger.debug("Calling self.auth_plugin.make on response.body")
-                        self.auth_plugin.make(response.auth_data, response.body)
+                        self.logger.debug(
+                            "Calling self.auth_plugin.make on response.body"
+                        )
+                        self.auth_plugin.make(
+                            response.auth_data, response.body, self, peer,
+                            self.peer_plugin
+                        )
 
-                    await self.send(writer, response, use_auth=False, use_cipher=False)
+                    await self.send(
+                        writer, response, use_auth=False, use_cipher=False
+                    )
         except asyncio.IncompleteReadError:
-            self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
+            self.logger.info("Client disconnected from %s", addr)
             pass  # Client disconnected
         except ConnectionResetError:
-            self.logger.info("Client disconnected from %s", writer.get_extra_info("peername"))
+            self.logger.info("Client disconnected from %s", addr)
             pass  # Client disconnected
         except Exception as e:
             self.logger.error("Error handling client:", exc_info=True)
         finally:
-            self.logger.info("Removing closed client %s", writer.get_extra_info("peername"))
+            self.logger.info("Removing closed client %s", addr)
             self.clients.discard(writer)
             for key, subscribers in list(self.subscriptions.items()):
                 if writer in subscribers:
@@ -340,34 +430,74 @@ class TCPServer:
             If use_cipher is False, the cipher plugin set on the
             server will not be used.
         """
+        addr = client.get_extra_info("peername")
+        peer_id = self.peer_addrs.get(addr, None)
+        peer = self.peers.get(peer_id, None)
+
         # inner cipher
         if cipher_plugin is not None:
             self.logger.debug("Calling cipher_plugin.encrypt on message")
-            message = cipher_plugin.encrypt(message)
+            try:
+                message = cipher_plugin.encrypt(
+                    message, self, peer, self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error encrypting message; dropping", exc_info=True
+                )
+                return
 
         # inner auth
         if auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.make on auth_data and body")
-            auth_plugin.make(message.auth_data, message.body)
+            try:
+                auth_plugin.make(
+                    message.auth_data, message.body, self, peer,
+                    self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error making message; dropping", exc_info=True
+                )
+                return
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
             self.logger.debug("Calling self.cipher_plugin.encrypt on message")
-            message = self.cipher_plugin.encrypt(message)
+            try:
+                message = self.cipher_plugin.encrypt(
+                    message, self, peer, self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error encrypting message; dropping", exc_info=True
+                )
+                return
 
         # outer auth
         if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling self.auth_plugin.make on auth_data and body")
-            self.auth_plugin.make(message.auth_data, message.body)
+            self.logger.debug(
+                "Calling self.auth_plugin.make on auth_data and body"
+            )
+            try:
+                self.auth_plugin.make(
+                    message.auth_data, message.body, self, peer,
+                    self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error making message; dropping", exc_info=True
+                )
+                return
 
         try:
-            self.logger.debug("Sending message to %s", client.get_extra_info("peername"))
+            self.logger.debug("Sending message to %s", addr)
             client.write(message.encode())
             await client.drain()
         except Exception as e:
             self.logger.error("Error sending to client:", exc_info=True)
             if collection is not None:
-                self.logger.info("Removing client %s from collection", client.get_extra_info("peername"))
+                self.logger.info("Removing client %s from collection", addr)
                 collection.discard(client)
 
     async def broadcast(
@@ -387,27 +517,14 @@ class TCPServer:
         """
         self.logger.debug("Broadcasting message to all clients")
 
-        # inner cipher
-        if use_cipher and cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
-            message = cipher_plugin.encrypt(message)
-
-        # inner auth
-        if use_auth and auth_plugin is not None:
-            self.logger.debug("Calling auth_plugin.make on message.body (broadcast)")
-            auth_plugin.make(message.auth_data, message.body)
-
-        # outer cipher
-        if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
-            message = self.cipher_plugin.encrypt(message)
-
-        # outer auth
-        if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling self.auth_plugin.make on message.body (broadcast)")
-            self.auth_plugin.make(message.auth_data, message.body)
-
-        tasks = [self.send(client, message, self.clients, False, False) for client in self.clients]
+        tasks = [
+            self.send(
+                client, message.copy(), collection=self.clients,
+                use_auth=use_auth, use_cipher=use_cipher,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
+            for client in self.clients
+        ]
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def notify(
@@ -426,39 +543,32 @@ class TCPServer:
             cipher plugin set on the server will not be used.
         """
         if key not in self.subscriptions:
-            self.logger.debug("No subscribers found for key=%s, skipping notification", key)
+            self.logger.debug(
+                "No subscribers found for key=%s, skipping notification", key
+            )
             return
-
-        self.logger.debug("Notifying %d clients for key=%s", len(self.subscriptions[key]), key)
-
-        # inner cipher
-        if use_cipher and cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
-            message = cipher_plugin.encrypt(message)
-
-        # inner auth
-        if use_auth and auth_plugin is not None:
-            self.logger.debug("Calling auth_plugin.make on message.body (notify)")
-            auth_plugin.make(message.auth_data, message.body)
-
-        # outer cipher
-        if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
-            message = self.cipher_plugin.encrypt(message)
-
-        # outer auth
-        if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling self.auth_plugin.make on message.body (notify)")
-            self.auth_plugin.make(message.auth_data, message.body)
 
         subscribers = self.subscriptions.get(key, set())
         if not subscribers:
-            self.logger.debug("No subscribers found for key=%s, removing from subscriptions", key)
+            self.logger.debug(
+                "No subscribers found for key=%s, removing from subscriptions",
+                key
+            )
             del self.subscriptions[key]
             return
 
-        tasks = [self.send(client, message, subscribers, False, False) for client in subscribers]
+        self.logger.debug("Notifying %d clients for key=%s", len(subscribers), key)
+
+        tasks = [
+            self.send(
+                client, message.copy(), collection=self.clients,
+                use_auth=use_auth, use_cipher=use_cipher,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
+            for client in subscribers
+        ]
         await asyncio.gather(*tasks, return_exceptions=True)
+
         self.logger.debug("Notified %d clients for key=%s", len(subscribers), key)
 
     def set_logger(self, logger: logging.Logger):
