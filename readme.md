@@ -24,22 +24,6 @@ This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 
 Issues are tracked [here](https://github.com/k98kurz/netaio/issues).
 
-## Temporary experiment
-
-<details>
-<summary>Outer details</summary>
-
-Testing multiple layers of this spoiler hiding thing.
-
-<details>
-<summary>Inner details</summary>
-
-Inner layer.
-
-</details>
-
-</details>
-
 ## Usage
 
 Install with `pip install netaio`. To use the optional asymmetric cryptography
@@ -167,7 +151,7 @@ single machine by changing the `.port` property after one has started.)
 Note also that when a peer is removed from the node's peer list, it is also
 unsubscribed from all URIs.
 
-### Plugin system
+### Plugin System
 
 The plugin system is designed to be simple and easy to understand. Each plugin
 implements a specific protocol, and the `TCPServer`, `TCPClient`, and
