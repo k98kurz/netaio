@@ -1,3 +1,13 @@
+## 0.0.6
+
+- Added new PeerPluginProtocol and DefaultPeerPlugin implementing it
+- Refactor to pass Peer and peer plugin to auth and cipher plugin methods
+- Updated Sha256StreamCipherPlugin to encrypt URI length if encrypt_uri is True
+- Added new optional plugins in the netaio.asymmetric submodule:
+  - TapescriptAuthPlugin: auth plugin using tapescript
+  - X25519CipherPlugin: asymmetric cipher plugin using Curve25519 from PyNaCl
+- Updated Body.prepare to raise ValueError if content + uri is too long
+
 ## 0.0.5
 
 - Added automatic peer discovery/management to UDPNode
