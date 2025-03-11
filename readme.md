@@ -24,6 +24,22 @@ This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 
 Issues are tracked [here](https://github.com/k98kurz/netaio/issues).
 
+## Temporary experiment
+
+<details>
+<summary>Outer details</summary>
+
+Testing multiple layers of this spoiler hiding thing.
+
+<details>
+<summary>Inner details</summary>
+
+Inner layer.
+
+</details>
+
+</details>
+
 ## Usage
 
 Install with `pip install netaio`. To use the optional asymmetric cryptography
@@ -247,7 +263,9 @@ and URI).
 The `X25519CipherPlugin` is included in the optional `netaio.asymmetric`
 submodule, which requires [PyNaCl](https://pypi.org/project/PyNaCl) as a
 dependency and allows for asymmetric encryption using ECDHE (Elliptic Curve
-Diffie-Hellman Exchange).
+Diffie-Hellman Exchange). Note that this plugin should be used as an inner
+layer of encryption with automatic peer management and local peer data including
+`{'pubkey': SigningKey(seed).verify_key}`.
 
 <details>
 <summary>Example of additional encryption layer</summary>
@@ -396,20 +414,48 @@ cipher_plugin = X25519CipherPlugin({
 
 The encapsulation model for plugin interactions with messages is as follows:
 
-#### Send
+##### Send
 
 1. Per-handler/injected `cipher_plugin.encrypt`
 2. Per-handler/injected `auth_plugin.make`
 3. Instance `self.cipher_plugin.encrypt`
 4. Instance `self.auth_plugin.make`
 
-#### Receive
+##### Receive
 
 1. Instance `self.auth_plugin.check`
 2. Instance `self.cipher_plugin.decrypt`
 3. Per-handler/injected `auth_plugin.check`
 4. Per-handler/injected `cipher_plugin.decrypt`
 
+### Peer Management
+
+This package includes an optional automatic peer management system, which can be
+enabled on `TCPServer`, `TCPClient`, and `UDPNode` by awaiting a call to the
+`manage_peers_automatically()` method. For TCP, this will cause clients and
+servers to send `ADVERTISE_PEER`/`PEER_DISCOVERED` messages to each other upon
+connection or upon enabling of peer management for existing connections. For UDP,
+this will cause nodes to multicast `ADVERTISE_PEER` messages every 20 seconds by
+default, and any node that receives such a message will respond to that peer
+with a `PEER_DISCOVERED` message that includes its own information. This will
+populate the local peer lists on each server/client/node, enabling the
+`broadcast` method to send messages to all known peers.
+
+The `UDPNode.manage_peers_automatically` method can accept optional arguments
+`advertise_every: int = 20` and `peer_timeout: int = 60`. All three node types
+will accept the following optional arguments:
+
+- `app_id: bytes = b'netaio'`
+- `auth_plugin: AuthPluginProtocol|None = None`
+- `cipher_plugin: CipherPluginProtocol|None = None`
+
+The `auth_plugin` and `cipher_plugin` provided here will be used only for the
+peer advertisement and response traffic.
+
+Upon calling `await client_or_server_or_node.stop_peer_management()`, a
+`DISCONNECT` message will be sent by TCP nodes or multicast by UDP nodes; any
+node that receives a `DISCONNECT` message will remove that peer from the local
+peer lists and all subscriptions.
 
 ## Testing
 
