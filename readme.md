@@ -389,10 +389,14 @@ import os
 seed = os.urandom(32)
 cipher_plugin = X25519CipherPlugin({
     'seed': seed,
-    'encrypt_uri': True, # default; should be False for inner cipher plugins
+    'encrypt_uri': False, # default
+    # should not be True unless peers are set manually and this is the outer cipher
 })
 ```
 </details>
+
+More documentation on the asymmetric plugins can be found in
+[asymmetric.md](https://github.com/k98kurz/netaio/blob/master/asymmetric.md).
 
 #### Encapsulation Model
 
