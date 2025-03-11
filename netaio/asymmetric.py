@@ -18,6 +18,7 @@ from enum import IntEnum
 from nacl.public import PrivateKey, Box
 from nacl.signing import SigningKey, VerifyKey
 from os import urandom
+from random import randint
 from time import time
 from typing import Callable
 import tapescript
@@ -179,6 +180,7 @@ class X25519CipherPlugin(CipherPluginProtocol):
 
         plaintext = b''
         if self.encrypt_uri:
+            plaintext += message.body.uri_length.to_bytes(2, 'big')
             plaintext += message.body.uri
         plaintext += message.body.content
 
@@ -189,10 +191,11 @@ class X25519CipherPlugin(CipherPluginProtocol):
         ciphertext = Box(self.key, pubkey).encrypt(plaintext)
 
         if self.encrypt_uri:
+            uri_len = randint(1, len(ciphertext)-1)
             if node is not None:
                 node.logger.debug('Encrypting URI and content')
-            uri = ciphertext[:len(message.body.uri)]
-            content = ciphertext[len(message.body.uri):]
+            uri = ciphertext[:uri_len]
+            content = ciphertext[uri_len:]
         else:
             if node is not None:
                 node.logger.debug('Encrypting content')
@@ -230,8 +233,9 @@ class X25519CipherPlugin(CipherPluginProtocol):
         content = Box(self.key, pubkey).decrypt(ciphertext)
 
         if self.encrypt_uri:
-            uri = content[:len(message.body.uri)]
-            content = content[len(message.body.uri):]
+            uri_len = int.from_bytes(content[:2], 'big')
+            uri = content[2:uri_len+2]
+            content = content[uri_len+2:]
         else:
             uri = message.body.uri
 

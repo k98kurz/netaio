@@ -269,7 +269,8 @@ class TestPlugins(unittest.TestCase):
 
         msg = local_cipher_plugin.encrypt(msg, peer=remote_peer, peer_plugin=peer_plugin)
         assert msg.body.encode() != message.body.encode()
-        assert len(msg.body.encode()) == len(message.body.encode()) + 40
+        assert len(msg.body.encode()) == len(message.body.encode()) + 42, \
+            len(msg.body.encode()) - len(message.body.encode())
 
         with self.assertRaises(ValueError) as e:
             remote_cipher_plugin.decrypt(msg)
