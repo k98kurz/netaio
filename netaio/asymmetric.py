@@ -159,11 +159,11 @@ class X25519CipherPlugin(CipherPluginProtocol):
         """Initialize the cipher plugin with a config. The config
             must contain {"seed": <bytes>}.
             It can contain {"encrypt_uri": <bool>} to specify whether to
-            encrypt the uri; the default is True.
+            encrypt the uri; the default is False.
         """
         seed = config['seed']
         self.key = SigningKey(seed).to_curve25519_private_key()
-        self.encrypt_uri = config.get('encrypt_uri', True)
+        self.encrypt_uri = config.get('encrypt_uri', False)
 
     def encrypt(
             self, message: MessageProtocol,
