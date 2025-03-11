@@ -196,12 +196,13 @@ class TCPServer:
             use_auth: bool = True, use_cipher: bool = True
         ):
         """Handle a client connection. When a client connects, it is
-            added to the clients set. The client is then read from until
-            the connection is lost, and the proper handlers are called
-            if they are defined and the message is valid. If use_auth is
-            False, the auth plugin set on the server will not be used.
-            If use_cipher is False, the cipher plugin set on the
-            server will not be used.
+            added to the clients set. The client is then read from using
+            the receive method coroutine until the connection is lost.
+            The receive method calls the proper handlers if they are
+            defined and the message is valid. If use_auth is False, the
+            auth plugin set on the server will not be used. If
+            use_cipher is False, the cipher plugin set on the server
+            will not be used.
         """
         addr = writer.get_extra_info("peername")
         self.logger.info("Client connected from %s", addr)
@@ -234,7 +235,11 @@ class TCPServer:
             use_auth: bool = True, use_cipher: bool = True,
         ):
         """Receive and process a message from a client. Used by the
-            handle_client coroutine.
+            handle_client coroutine. Calls the proper handlers if they
+            are defined and the message is valid. If use_auth is False,
+            the auth plugin set on the server will not be used. If
+            use_cipher is False, the cipher plugin set on the server
+            will not be used.
         """
         addr = writer.get_extra_info("peername")
         self.logger.info("Client connected from %s", addr)

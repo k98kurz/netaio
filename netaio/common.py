@@ -116,7 +116,7 @@ class BodyProtocol(Protocol):
         ...
 
     @classmethod
-    def prepare(cls, content: bytes, uri: bytes = b'1', *args, **kwargs) -> BodyProtocol:
+    def prepare(cls, content: bytes, uri: bytes = b'', overhead: int = 0, *args, **kwargs) -> BodyProtocol:
         """Prepare a body from content and optional arguments."""
         ...
 
@@ -467,11 +467,14 @@ class Body:
         )
 
     @classmethod
-    def prepare(cls, content: bytes, uri: bytes = b'', *args, **kwargs) -> Body:
+    def prepare(cls, content: bytes, uri: bytes = b'', overhead: int = 0) -> Body:
         """Prepare a body from content and optional arguments. Raises
-            ValueError if the content + uri is too long.
+            ValueError if the content + uri is too long. (Calculated by
+            subtracting the header length, overhead, and 104 from 2**16.
+            The 104 value is for IP encapsulation and other known
+            sources of overhead.)
         """
-        if len(content) + len(uri) >= 2**16 - Header.header_length() - 104:
+        if len(content) + len(uri) >= 2**16 - Header.header_length() - overhead - 104:
             raise ValueError("Content + uri is too long for encapsulation")
 
         return cls(

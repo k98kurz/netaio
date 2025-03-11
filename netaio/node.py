@@ -213,7 +213,7 @@ class UDPNode:
             try:
                 message = self.cipher_plugin.decrypt(message, self, peer, self.peer_plugin)
             except Exception as e:
-                self.logger.warning("Error decrypting message; dropping", exc_info=True)
+                self.logger.warning("Error decrypting message: %s; dropping", e)
                 return
 
         keys = self.extract_keys(message)
