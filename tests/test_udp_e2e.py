@@ -4,6 +4,7 @@ from os import urandom
 from random import randint
 import asyncio
 import logging
+import platform
 import tapescript
 import unittest
 
@@ -15,7 +16,7 @@ class TestUDPE2E(unittest.TestCase):
     def setUpClass(cls):
         netaio.default_client_logger.setLevel(logging.INFO)
         netaio.default_server_logger.setLevel(logging.INFO)
-        cls.local_ip = netaio.node.get_ip()
+        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' else '0.0.0.0'
 
     def test_e2e(self):
         async def run_test():
@@ -643,7 +644,7 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.local_ip = netaio.node.get_ip()
+        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' else '0.0.0.0'
         netaio.default_server_logger.setLevel(logging.INFO)
         netaio.default_client_logger.setLevel(logging.INFO)
 
@@ -738,7 +739,7 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.local_ip = netaio.node.get_ip()
+        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' else '0.0.0.0'
         netaio.default_server_logger.setLevel(logging.INFO)
         netaio.default_client_logger.setLevel(logging.INFO)
 
