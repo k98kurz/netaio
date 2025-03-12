@@ -15,6 +15,7 @@ class TestUDPE2E(unittest.TestCase):
     def setUpClass(cls):
         netaio.default_client_logger.setLevel(logging.INFO)
         netaio.default_server_logger.setLevel(logging.INFO)
+        cls.local_ip = netaio.node.get_ip()
 
     def test_e2e(self):
         async def run_test():
@@ -26,16 +27,18 @@ class TestUDPE2E(unittest.TestCase):
             default_client_handler = lambda msg, addr: client_log.append(msg)
 
             server = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT, auth_plugin=auth_plugin,
                 cipher_plugin=cipher_plugin, logger=netaio.default_server_logger,
                 default_handler=default_server_handler, ignore_own_ip=False
             )
             client = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT+1, auth_plugin=auth_plugin,
                 cipher_plugin=cipher_plugin, logger=netaio.default_client_logger,
                 default_handler=default_client_handler, ignore_own_ip=False
             )
-            server_addr = ('0.0.0.0', self.PORT)
+            server_addr = (self.local_ip, self.PORT)
 
             client_msg = netaio.Message.prepare(
                 netaio.Body.prepare(b'hello', uri=b'echo'),
@@ -224,24 +227,26 @@ class TestUDPE2E(unittest.TestCase):
             default_client_handler = lambda msg, addr: client_log.append(msg)
 
             server_peer = netaio.Peer(
-                addrs={('127.0.0.1', self.PORT)}, id=b'server',
+                addrs={(self.local_ip, self.PORT)}, id=b'server',
                 data=netaio.DefaultPeerPlugin().encode_data({
                     "name": "server",
                 })
             )
             client_peer = netaio.Peer(
-                addrs={('127.0.0.1', self.PORT+1)}, id=b'client',
+                addrs={(self.local_ip, self.PORT+1)}, id=b'client',
                 data=netaio.DefaultPeerPlugin().encode_data({
                     "name": "client",
                 })
             )
             server = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
                 local_peer=server_peer,
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
                 local_peer=client_peer,
@@ -421,16 +426,18 @@ class TestUDPE2E(unittest.TestCase):
             })
 
             server = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT)}, id=b'server', data=b'abc'),
+                local_peer=netaio.Peer(addrs={(self.local_ip, self.PORT)}, id=b'server', data=b'abc'),
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
-                local_peer=netaio.Peer(addrs={('127.0.0.1', self.PORT+1)}, id=b'client', data=b'def'),
+                local_peer=netaio.Peer(addrs={(self.local_ip, self.PORT+1)}, id=b'client', data=b'def'),
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 ignore_own_ip=False
             )
@@ -534,8 +541,8 @@ class TestUDPE2E(unittest.TestCase):
             })
             server_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": server_seed})
             client_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": client_seed})
-            server_addr = ('127.0.0.1', self.PORT)
-            client_addr = ('127.0.0.1', self.PORT+1)
+            server_addr = (self.local_ip, self.PORT)
+            client_addr = (self.local_ip, self.PORT+1)
             server_peer = netaio.Peer(
                 addrs={server_addr}, id=b'server',
                 data=netaio.DefaultPeerPlugin().encode_data({
@@ -550,10 +557,12 @@ class TestUDPE2E(unittest.TestCase):
             )
 
             server = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT, local_peer=server_peer, ignore_own_ip=False,
                 logger=netaio.default_server_logger
             )
             client = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT+1, local_peer=client_peer, ignore_own_ip=False,
                 logger=netaio.default_client_logger
             )
@@ -634,6 +643,7 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.local_ip = netaio.node.get_ip()
         netaio.default_server_logger.setLevel(logging.INFO)
         netaio.default_client_logger.setLevel(logging.INFO)
 
@@ -647,16 +657,18 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
             default_client_handler = lambda msg, addr: client_log.append(msg)
 
             server = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
                 ignore_own_ip=False
             )
-            server_addr = ('0.0.0.0', self.PORT)
+            server_addr = (self.local_ip, self.PORT)
 
             @server.on(netaio.MessageType.REQUEST_URI)
             def server_request(message: netaio.Message, _: tuple[str, int]):
@@ -726,6 +738,7 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.local_ip = netaio.node.get_ip()
         netaio.default_server_logger.setLevel(logging.INFO)
         netaio.default_client_logger.setLevel(logging.INFO)
 
@@ -748,16 +761,18 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
             })
 
             server = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 default_handler=default_server_handler, logger=netaio.default_server_logger,
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
+                interface=self.local_ip,
                 port=self.PORT+1, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 default_handler=default_client_handler, logger=netaio.default_client_logger,
                 ignore_own_ip=False
             )
-            server_addr = ('0.0.0.0', self.PORT)
+            server_addr = (self.local_ip, self.PORT)
 
             @server.on(netaio.MessageType.REQUEST_URI)
             def server_request(message: netaio.Message, _: tuple[str, int]):
