@@ -51,9 +51,9 @@ def hmac(key: bytes, message: bytes) -> bytes:
     # set up variables
     B, L = 136 , len(message)
     L = L if L < 32 else 32
-    ipad_byte = 0x36.to_bytes(1, 'big')
-    opad_byte = 0x5c.to_bytes(1, 'big')
-    null_byte = 0x00.to_bytes(1, 'big')
+    ipad_byte = bytes.fromhex('36')
+    opad_byte = bytes.fromhex('5c')
+    null_byte = bytes.fromhex('00')
     ipad = b''.join([ipad_byte for i in range(B)])
     opad = b''.join([opad_byte for i in range(B)])
 
