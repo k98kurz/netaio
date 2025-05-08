@@ -1,3 +1,7 @@
+## 0.0.7
+
+- Updated tapescript dependency and plugin
+
 ## 0.0.6
 
 - Added new PeerPluginProtocol and DefaultPeerPlugin implementing it
