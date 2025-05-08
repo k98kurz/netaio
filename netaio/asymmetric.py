@@ -122,8 +122,8 @@ class TapescriptAuthPlugin:
             if 'lock' in peer_data:
                 lock = peer_data['lock']
 
-        return tapescript.run_auth_script(
-            bytes(witness) + bytes(lock),
+        return tapescript.run_auth_scripts(
+            [bytes(witness), bytes(lock)],
             {
                 'sigfield1': body.encode(),
                 'sigfield2': nonce,
