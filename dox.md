@@ -38,7 +38,7 @@ netaio.common.MessageProtocol | None]
 
 #### Methods
 
-##### `__init__(host: str = '127.0.0.1', port: int = 8888, local_peer: Peer = None, header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, extract_keys: Callable = <function keys_extractor at 0x7c5141f26b90>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, peer_plugin: PeerPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x7c5141d049d0>):`
+##### `__init__(host: str = '127.0.0.1', port: int = 8888, local_peer: Peer = None, header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, extract_keys: Callable = <function keys_extractor at 0x79d6fbdda9e0>, logger: Logger = <Logger netaio.client (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, peer_plugin: PeerPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x79d6fbbc4940>):`
 
 Initialize the TCPClient. `host` is the default host IPv4 address to connect to.
 `port` is the default port to connect to. `local_peer` is the local peer
@@ -201,7 +201,7 @@ netaio.common.MessageProtocol | None]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', local_peer: Peer = None, header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x7c5141f26b90>, make_error_response: Callable = <function make_error_response at 0x7c5141d04940>, default_handler: Callable = <function not_found_handler at 0x7c5141d05240>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, peer_plugin: PeerPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x7c5141d049d0>):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', local_peer: Peer = None, header_class: type = Header, message_type_class: type = <enum 'MessageType'>, auth_fields_class: type = AuthFields, body_class: type = Body, message_class: type = Message, keys_extractor: Callable = <function keys_extractor at 0x79d6fbdda9e0>, make_error_response: Callable = <function make_error_response at 0x79d6fbbc48b0>, default_handler: Callable = <function not_found_handler at 0x79d6fbbc5240>, logger: Logger = <Logger netaio.server (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, peer_plugin: PeerPluginProtocol = None, auth_error_handler: Callable = <function auth_error_handler at 0x79d6fbbc4940>):`
 
 Initialize the TCPServer. `interface` is the interface to listen on. `port` is
 the port to listen on. `local_peer` is the local peer information for this
@@ -276,6 +276,10 @@ If use_cipher is False, the cipher plugin set on the server will not be used.
 ##### `async start(use_auth: bool = True, use_cipher: bool = True):`
 
 Start the server.
+
+##### `prepare_message(message: MessageProtocol, use_auth: bool = True, use_cipher: bool = True, auth_plugin: netaio.common.AuthPluginProtocol | None = None, cipher_plugin: netaio.common.CipherPluginProtocol | None = None, peer: netaio.common.Peer | None = None) -> netaio.common.MessageProtocol | None:`
+
+Prepares a message for transmission by invoking all necessary plugins.
 
 ##### `async send(client: StreamWriter, message: MessageProtocol, collection: set = None, use_auth: bool = True, use_cipher: bool = True, auth_plugin: netaio.common.AuthPluginProtocol | None = None, cipher_plugin: netaio.common.CipherPluginProtocol | None = None):`
 
@@ -377,7 +381,7 @@ CipherPluginProtocol | None]]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: UDPHandler = <function not_found_handler at 0x7c5141d06200>, extract_keys: Callable[[MessageProtocol], list[Hashable]] = <function keys_extractor at 0x7c5141f26b90>, make_error_response: Callable[[str], MessageProtocol] = <function make_error_response at 0x7c5141d04940>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, peer_plugin: PeerPluginProtocol = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x7c5141d049d0>, ignore_own_ip: bool = True):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: UDPHandler = <function not_found_handler at 0x79d6fbbc64d0>, extract_keys: Callable[[MessageProtocol], list[Hashable]] = <function keys_extractor at 0x79d6fbdda9e0>, make_error_response: Callable[[str], MessageProtocol] = <function make_error_response at 0x79d6fbbc48b0>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol = None, cipher_plugin: CipherPluginProtocol = None, peer_plugin: PeerPluginProtocol = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x79d6fbbc4940>, ignore_own_ip: bool = True):`
 
 Initialize the UDPNode. `port` is the port to listen on. `interface` is the
 interface to listen on. `multicast_group` is the multicast group to join.
@@ -456,6 +460,10 @@ Subscribe a peer to a specific key. The key must be a Hashable object.
 
 Unsubscribe a peer from a specific key. If no subscribers are left, the key will
 be removed from the subscriptions dictionary.
+
+##### `prepare_message(message: MessageProtocol, use_auth: bool = True, use_cipher: bool = True, auth_plugin: AuthPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, peer: Peer | None = None) -> MessageProtocol | None:`
+
+Prepares a message for transmission by invoking all necessary plugins.
 
 ##### `async start():`
 
@@ -811,6 +819,11 @@ False.
 
 Make an error message.
 
+##### `@staticmethod is_peer_specific() -> bool:`
+
+A cipher plugin must report if it is a peer-specific plugin; i.e. whether or not
+it requires peer information to function.
+
 ### `CipherPluginProtocol(Protocol)`
 
 Shows what a cipher plugin should do.
@@ -836,6 +849,11 @@ are available. The local peer information will be stored in node.local_peer if
 it exists. If peer and peer_plugin are required for functionality but are not
 provided, or in the case of a decryption failure, this method should raise an
 exception.
+
+##### `@staticmethod is_peer_specific() -> bool:`
+
+A cipher plugin must report if it is a peer-specific plugin; i.e. whether or not
+it requires peer information to function.
 
 ### `PeerPluginProtocol(Protocol)`
 
@@ -1033,6 +1051,10 @@ the hmac check fails.
 
 Make an error message that says "HMAC auth failed".
 
+##### `@staticmethod is_peer_specific() -> bool:`
+
+Used for optimization. Returns `False`.
+
 ### `Sha256StreamCipherPlugin`
 
 SHA-256 stream cipher plugin.
@@ -1062,6 +1084,10 @@ True, the uri will be encrypted as well as the content.
 
 Decrypt the message body, reading the self.iv_field from the auth_data. Returns
 a new message with the decrypted body.
+
+##### `@staticmethod is_peer_specific() -> bool:`
+
+Used for optimization. Returns `False`.
 
 ## Functions
 

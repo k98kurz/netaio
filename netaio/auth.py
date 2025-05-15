@@ -104,6 +104,7 @@ class HMACAuthPlugin:
 
     @staticmethod
     def is_peer_specific() -> bool:
+        """Used for optimization. Returns `False`."""
         return False
 
 

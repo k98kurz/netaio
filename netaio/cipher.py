@@ -91,5 +91,6 @@ class Sha256StreamCipherPlugin:
 
     @staticmethod
     def is_peer_specific() -> bool:
+        """Used for optimization. Returns `False`."""
         return False
 
