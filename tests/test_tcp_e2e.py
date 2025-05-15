@@ -20,11 +20,13 @@ class TestTCPE2E(unittest.TestCase):
         async def run_test():
             server_log: list[netaio.Message] = []
             client_log: list[netaio.Message] = []
+            second_client_log: list[netaio.Message] = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
             cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
             server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
             client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            second_client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
 
             client_msg = netaio.Message.prepare(
                 netaio.Body.prepare(b'hello', uri=b'echo'),
@@ -86,8 +88,14 @@ class TestTCPE2E(unittest.TestCase):
                 client_log.append(message)
                 return message
 
+            @second_client.on(netaio.MessageType.NOTIFY_URI)
+            def second_client_notify(message: netaio.Message, writer: asyncio.StreamWriter):
+                second_client_log.append(message)
+                return message
+
             assert len(server_log) == 0
             assert len(client_log) == 0
+            assert len(second_client_log) == 0
 
             # Start the server as a background task.
             server_task = asyncio.create_task(server.start())
@@ -95,14 +103,16 @@ class TestTCPE2E(unittest.TestCase):
             # Wait briefly to allow the server time to bind and listen.
             await asyncio.sleep(0.1)
 
-            # connect client
+            # connect clients
             await client.connect()
+            await second_client.connect()
 
             await client.send(client_msg)
             response = await client.receive_once()
             assert response.encode() == expected_response.encode(), \
                 (response.encode().hex(), expected_response.encode().hex())
 
+            # subscribe first client
             await client.send(client_subscribe_msg)
             response = await client.receive_once()
             assert response.header.message_type == expected_subscribe_response.header.message_type, \
@@ -112,8 +122,30 @@ class TestTCPE2E(unittest.TestCase):
             assert response.body.content == expected_subscribe_response.body.content, \
                 (response.body.content, expected_subscribe_response.body.content)
 
+            # subscribe second client
+            await second_client.send(client_subscribe_msg)
+            response = await second_client.receive_once()
+            assert response.header.message_type == expected_subscribe_response.header.message_type, \
+                (response.header.message_type, expected_subscribe_response.header.message_type)
+            assert response.body.uri == expected_subscribe_response.body.uri, \
+                (response.body.uri, expected_subscribe_response.body.uri)
+            assert response.body.content == expected_subscribe_response.body.content, \
+                (response.body.content, expected_subscribe_response.body.content)
+
+            # notify both clients
             await server.notify(b'subscribe/test', server_notify_msg)
+
+            # get notification from first client
             response = await client.receive_once(use_auth=False)
+            assert response.header.message_type == server_notify_msg.header.message_type, \
+                (response.header.message_type, server_notify_msg.header.message_type)
+            assert response.body.uri == server_notify_msg.body.uri, \
+                (response.body.uri, server_notify_msg.body.uri)
+            assert response.body.content == server_notify_msg.body.content, \
+                (response.body.content, server_notify_msg.body.content)
+
+            # get notification from second client
+            response = await second_client.receive_once(use_auth=False)
             assert response.header.message_type == server_notify_msg.header.message_type, \
                 (response.header.message_type, server_notify_msg.header.message_type)
             assert response.body.uri == server_notify_msg.body.uri, \
@@ -130,8 +162,9 @@ class TestTCPE2E(unittest.TestCase):
             assert response.body.content == expected_unsubscribe_response.body.content, \
                 (response.body.content, expected_unsubscribe_response.body.content)
 
-            assert len(server_log) == 3, len(server_log)
+            assert len(server_log) == 4, len(server_log)
             assert len(client_log) == 2, len(client_log)
+            assert len(second_client_log) == 1, len(second_client_log)
 
             # test auth failure with mismatchedauth plugin config
             client.auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test2"})
