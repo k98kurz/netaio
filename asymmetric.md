@@ -54,13 +54,22 @@ locking script will be used instead of the plugin's locking script.
 
 Make an error message that says "HMAC auth failed".
 
+##### `@staticmethod is_peer_specific() -> bool:`
+
+Used for optimization. Returns `True`.
+
 ### `X25519CipherPlugin(CipherPluginProtocol)`
 
-X25519 cipher plugin.
+X25519 cipher plugin. For use with automatic peer management, peer data must
+include `{"pubkey": bytes(cipher_plugin.pubk)}`. Including `{"vkey":
+bytes(cipher_plugin.vkey)}` is optional and may be useful, e.g. for establishing automatic tapescript locks for per-peer message authorization.
 
 #### Annotations
 
 - key: <class 'nacl.public.PrivateKey'>
+- skey: <class 'nacl.signing.SigningKey'>
+- pubk: <class 'nacl.public.PublicKey'>
+- vkey: <class 'nacl.signing.VerifyKey'>
 - encrypt_uri: <class 'bool'>
 
 #### Methods
@@ -81,3 +90,9 @@ True, the uri will be encrypted as well as the content.
 
 Decrypt the message body, reading the self.iv_field from the auth_data. Returns
 a new message with the decrypted body.
+
+##### `@staticmethod is_peer_specific() -> bool:`
+
+Used for optimization. Returns `True`.
+
+

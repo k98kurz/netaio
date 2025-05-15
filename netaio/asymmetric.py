@@ -151,6 +151,7 @@ class TapescriptAuthPlugin:
 
     @staticmethod
     def is_peer_specific() -> bool:
+        """Used for optimization. Returns `True`."""
         return True
 
 
@@ -260,5 +261,6 @@ class X25519CipherPlugin(CipherPluginProtocol):
 
     @staticmethod
     def is_peer_specific() -> bool:
+        """Used for optimization. Returns `True`."""
         return True
 
