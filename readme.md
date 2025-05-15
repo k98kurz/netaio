@@ -143,7 +143,8 @@ the remote address must be set to the first node's address, e.g.
 `remote_addr = ("127.0.0.1", 8888)`. Multicast will not work locally because of
 the different ports. If the interface is set to "0.0.0.0", multicast will work
 across the LAN, but this will result in the node hearing its own multicast
-messages; hence, the request_uri handler ignores messages from the local machine.
+messages; hence, the `request_uri` handler ignores messages from the local
+machine.
 
 (It is technically possible to get multicast to work in one direction on a
 single machine by changing the `.port` property after one has started.)
@@ -383,7 +384,7 @@ auth_plugin = TapescriptAuthPlugin({
 <summary>Example instantiation of X25519CipherPlugin</summary>
 
 ```python
-from netaio.asymmetric import X25519CipherPlugin
+from netaio.asymmetric import X25519CipherPlugin, Peer, DefaultPeerPlugin
 import os
 
 seed = os.urandom(32)
@@ -392,6 +393,16 @@ cipher_plugin = X25519CipherPlugin({
     'encrypt_uri': False, # default
     # should not be True unless peers are set manually and this is the outer cipher
 })
+
+# for use with peer management, the pubkey should be sent to peers
+local_peer = Peer(
+    addrs={('0.0.0.0', 8888)},
+    id=bytes(cipher_plugin.pubk),
+    data=DefaultPeerPlugin().encode_data({
+        "pubkey": bytes(cipher_plugin.pubk),
+        "vkey": bytes(cipher_plugin.vkey),
+    }),
+)
 ```
 </details>
 
@@ -455,11 +466,12 @@ the output separated by test file, instead run
 
 Currently, there are 13 unit tests and 12 e2e tests. The unit tests cover the
 bundled plugins and miscellaneous features. The e2e tests start a server and
-client, then send messages from the client to the server and receive responses;
-the UDP e2e test suite starts 2 nodes and treats them like a server and client
-to make testing a bit simpler and easier to follow. The automatic peer
-management system is also tested in both TCP and UDP. The bundled plugins are
-used for the e2e tests, and authentication failure cases are also tested.
+client (or 2 clients), then send messages from the client to the server and
+receive responses; the UDP e2e test suite starts 2 nodes and treats them like a
+server and client to make testing a bit simpler and easier to follow. The
+automatic peer management system is also tested in both TCP and UDP. The bundled
+plugins are used for the e2e tests, and authentication failure cases are also
+tested.
 
 ## License
 
