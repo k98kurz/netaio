@@ -400,7 +400,7 @@ local_peer = Peer(
     id=bytes(cipher_plugin.pubk),
     data=DefaultPeerPlugin().encode_data({
         "pubkey": bytes(cipher_plugin.pubk),
-        "vkey": bytes(cipher_plugin.vkey),
+        "vkey": bytes(cipher_plugin.vkey), # optional
     }),
 )
 ```
