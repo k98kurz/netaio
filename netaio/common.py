@@ -621,6 +621,14 @@ class AuthPluginProtocol(Protocol):
         """Make an error message."""
         ...
 
+    @staticmethod
+    def is_peer_specific() -> bool:
+        """A cipher plugin must report if it is a peer-specific plugin;
+            i.e. whether or not it requires peer information to
+            function.
+        """
+        ...
+
 
 @runtime_checkable
 class CipherPluginProtocol(Protocol):
@@ -660,6 +668,14 @@ class CipherPluginProtocol(Protocol):
             required for functionality but are not provided, or in the
             case of a decryption failure, this method should raise an
             exception.
+        """
+        ...
+
+    @staticmethod
+    def is_peer_specific() -> bool:
+        """A cipher plugin must report if it is a peer-specific plugin;
+            i.e. whether or not it requires peer information to
+            function.
         """
         ...
 

@@ -149,6 +149,10 @@ class TapescriptAuthPlugin:
             body_class=body_class
         )
 
+    @staticmethod
+    def is_peer_specific() -> bool:
+        return True
+
 
 class X25519CipherPlugin(CipherPluginProtocol):
     """X25519 cipher plugin. For use with automatic peer management,
@@ -253,4 +257,8 @@ class X25519CipherPlugin(CipherPluginProtocol):
         message_type = message.header.message_type
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, message.auth_data)
+
+    @staticmethod
+    def is_peer_specific() -> bool:
+        return True
 

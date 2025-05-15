@@ -11,6 +11,7 @@ class TestPlugins(unittest.TestCase):
         body = netaio.Body.prepare(b'hello world, caesar is dead', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         auth_plugin = netaio.HMACAuthPlugin({"secret": "test"})
+        assert isinstance(auth_plugin, netaio.AuthPluginProtocol)
         before = {**message.auth_data.fields}
         auth_plugin.make(message.auth_data, message.body)
         after = {**message.auth_data.fields}
@@ -29,6 +30,7 @@ class TestPlugins(unittest.TestCase):
         body = netaio.Body.prepare(b'brutus is plotting something sus', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         cipher_plugin = netaio.Sha256StreamCipherPlugin({"key": "test"})
+        assert isinstance(cipher_plugin, netaio.CipherPluginProtocol)
         before = message.body.encode()
         assert 'iv' not in message.auth_data.fields
         message = cipher_plugin.encrypt(message)
@@ -61,7 +63,9 @@ class TestPlugins(unittest.TestCase):
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         before = message.body.encode()
         auth_plugin = netaio.HMACAuthPlugin({"secret": "test"})
+        assert isinstance(auth_plugin, netaio.AuthPluginProtocol)
         cipher_plugin = netaio.Sha256StreamCipherPlugin({"key": "test"})
+        assert isinstance(cipher_plugin, netaio.CipherPluginProtocol)
 
         # encrypt and authenticate
         msg = cipher_plugin.encrypt(message)
@@ -148,6 +152,7 @@ class TestPlugins(unittest.TestCase):
             "lock": tapescript.make_single_sig_lock(SigningKey(seed).verify_key),
             "seed": seed,
         })
+        assert isinstance(auth_plugin, netaio.AuthPluginProtocol)
         message = netaio.Message.prepare(
             netaio.Body.prepare(b'hello world', b'123'),
             netaio.MessageType.PUBLISH_URI,
@@ -240,9 +245,11 @@ class TestPlugins(unittest.TestCase):
         local_cipher_plugin = asymmetric.X25519CipherPlugin({
             "seed": seed1,
         })
+        assert isinstance(local_cipher_plugin, netaio.CipherPluginProtocol)
         remote_cipher_plugin = asymmetric.X25519CipherPlugin({
             "seed": seed2,
         })
+        assert isinstance(remote_cipher_plugin, netaio.CipherPluginProtocol)
         peer_plugin = netaio.DefaultPeerPlugin()
         local_peer = netaio.Peer(
             addrs=set(), id=b'local', data=peer_plugin.encode_data({

@@ -101,3 +101,9 @@ class HMACAuthPlugin:
             message_type_class=message_type_class,
             body_class=body_class
         )
+
+    @staticmethod
+    def is_peer_specific() -> bool:
+        return False
+
+

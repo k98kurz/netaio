@@ -88,3 +88,8 @@ class Sha256StreamCipherPlugin:
         auth_data = message.auth_data.__class__(auth_data)
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, auth_data)
+
+    @staticmethod
+    def is_peer_specific() -> bool:
+        return False
+
