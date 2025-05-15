@@ -371,6 +371,72 @@ class UDPNode:
             if not self.subscriptions[key]:
                 del self.subscriptions[key]
 
+    def prepare_message(
+        self, message: MessageProtocol, use_auth: bool = True,
+        use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+        cipher_plugin: CipherPluginProtocol|None = None, peer: Peer|None = None,
+    ) -> MessageProtocol|None:
+        """Prepares a message for transmission by invoking all necessary
+            plugins.
+        """
+        # inner cipher
+        if cipher_plugin is not None:
+            self.logger.debug("Calling cipher_plugin.encrypt on message")
+            try:
+                message = cipher_plugin.encrypt(
+                    message, self, peer, self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error encrypting message; dropping", exc_info=True
+                )
+                return
+
+        # inner auth
+        if auth_plugin is not None:
+            self.logger.debug("Calling auth_plugin.make on auth_data and body")
+            try:
+                auth_plugin.make(
+                    message.auth_data, message.body, self, peer,
+                    self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error making message; dropping", exc_info=True
+                )
+                return
+
+        # outer cipher
+        if use_cipher and self.cipher_plugin is not None:
+            self.logger.debug("Calling self.cipher_plugin.encrypt on message")
+            try:
+                message = self.cipher_plugin.encrypt(
+                    message, self, peer, self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error encrypting message; dropping", exc_info=True
+                )
+                return
+
+        # outer auth
+        if use_auth and self.auth_plugin is not None:
+            self.logger.debug(
+                "Calling self.auth_plugin.make on auth_data and body"
+            )
+            try:
+                self.auth_plugin.make(
+                    message.auth_data, message.body, self, peer,
+                    self.peer_plugin
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Error making message; dropping", exc_info=True
+                )
+                return
+
+        return message
+
     async def start(self):
         """Start the UDPNode. When a datagram is received, the
             datagram_received method is called.
@@ -400,35 +466,11 @@ class UDPNode:
         """
         peer_id = self.peer_addrs.get(addr, None)
         peer = self.peers.get(peer_id, None)
-
-        # inner cipher
-        if cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message")
-            try:
-                message = cipher_plugin.encrypt(message, self, peer, self.peer_plugin)
-            except Exception as e:
-                self.logger.warning("Error encrypting message: %s; dropping", e)
-                return
-
-        # inner auth
-        if auth_plugin is not None:
-            self.logger.debug("Calling auth_plugin.make on message.body")
-            auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
-
-        # outer cipher
-        if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling self.cipher_plugin.encrypt on message")
-            try:
-                message = self.cipher_plugin.encrypt(message, self, peer, self.peer_plugin)
-            except Exception as e:
-                self.logger.warning("Error encrypting message: %s; dropping", e)
-                return
-
-        # outer auth
-        if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling self.auth_plugin.make on message.body")
-            self.auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
-
+        message = self.prepare_message(
+            message, use_auth=use_auth, use_cipher=use_cipher,
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+            peer=peer,
+        )
         data = message.encode()
         self.transport.sendto(data, addr)
         self.logger.debug(f"Sent message with checksum={message.header.checksum} to {addr}")
@@ -451,43 +493,41 @@ class UDPNode:
         messages = []
         peer_ids = set()
 
+        # check if any plugin is peer-specific
+        peer_specific = False
+        if use_auth and self.auth_plugin and self.auth_plugin.is_peer_specific():
+            peer_specific = True
+        if use_cipher and self.cipher_plugin and self.cipher_plugin.is_peer_specific():
+            peer_specific = True
+        if auth_plugin and auth_plugin.is_peer_specific():
+            peer_specific = True
+        if cipher_plugin and cipher_plugin.is_peer_specific():
+            peer_specific = True
+
+        if not peer_specific:
+            message = self.prepare_message(
+                message, use_auth=use_auth, use_cipher=use_cipher,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+            )
+            if not message:
+                return
+
         for addr, peer_id in self.peer_addrs.items():
             # only send to each peer once, regardless of how many addrs it has
             if peer_id in peer_ids:
                 continue
             peer_ids.add(peer_id)
             peer = self.peers.get(peer_id, None)
-            msg = message.copy()
-
-            # inner cipher
-            if use_cipher and cipher_plugin is not None:
-                self.logger.debug("Calling cipher_plugin.encrypt on message (broadcast)")
-                try:
-                    msg = cipher_plugin.encrypt(msg, self, peer, self.peer_plugin)
-                except Exception as e:
-                    self.logger.warning("Error encrypting message: %s for peer %s; dropping", e, peer_id)
-                    continue
-
-            # inner auth
-            if use_auth and auth_plugin is not None:
-                self.logger.debug("Calling auth_plugin.make on message.body (broadcast)")
-                auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
-
-            # outer cipher
-            if use_cipher and self.cipher_plugin is not None:
-                self.logger.debug("Calling self.cipher_plugin.encrypt on message (broadcast)")
-                try:
-                    msg = self.cipher_plugin.encrypt(msg, self, peer, self.peer_plugin)
-                except Exception as e:
-                    self.logger.warning("Error encrypting message: %s for peer %s; dropping", e, peer_id)
-                    continue
-
-            # outer auth
-            if use_auth and self.auth_plugin is not None:
-                self.logger.debug("Calling self.auth_plugin.make on message.body (broadcast)")
-                self.auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
-
-            messages.append((addr, msg))
+            if peer_specific:
+                msg = self.prepare_message(
+                    message.copy(), use_auth=use_auth, use_cipher=use_cipher,
+                    auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+                    peer=peer,
+                )
+            else:
+                msg = message
+            if msg:
+                messages.append((addr, msg))
 
         for addr, msg in messages:
             self.send(msg, addr, use_auth=False, use_cipher=False)
@@ -508,35 +548,12 @@ class UDPNode:
             plugin set on the node will not be used.
         """
         self.logger.debug("Multicasting message to the multicast group")
-
-        # inner cipher
-        if use_cipher and cipher_plugin is not None:
-            self.logger.debug("Calling cipher_plugin.encrypt on message (multicast)")
-            try:
-                message = cipher_plugin.encrypt(message, self, None, self.peer_plugin)
-            except Exception as e:
-                self.logger.warning("Error encrypting message: %s; dropping", e)
-                return
-
-        # inner auth
-        if use_auth and auth_plugin is not None:
-            self.logger.debug("Calling auth_plugin.make on message.body (multicast)")
-            auth_plugin.make(message.auth_data, message.body, self, None, self.peer_plugin)
-
-        # outer cipher
-        if use_cipher and self.cipher_plugin is not None:
-            self.logger.debug("Calling self.cipher_plugin.encrypt on message (multicast)")
-            try:
-                message = self.cipher_plugin.encrypt(message, self, None, self.peer_plugin)
-            except Exception as e:
-                self.logger.warning("Error encrypting message: %s; dropping", e)
-                return
-
-        # outer auth
-        if use_auth and self.auth_plugin is not None:
-            self.logger.debug("Calling self.auth_plugin.make on message.body (multicast)")
-            self.auth_plugin.make(message.auth_data, message.body, self, None, self.peer_plugin)
-
+        message = self.prepare_message(
+            message, use_auth=use_auth, use_cipher=use_cipher,
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+        )
+        if not message:
+            return
         addr = (self.multicast_group, port or self.port)
         self.send(message, addr, use_auth=False, use_cipher=False)
 
@@ -567,40 +584,39 @@ class UDPNode:
             del self.subscriptions[key]
             return
 
+        # check if any plugin is peer-specific
+        peer_specific = False
+        if use_auth and self.auth_plugin and self.auth_plugin.is_peer_specific():
+            peer_specific = True
+        if use_cipher and self.cipher_plugin and self.cipher_plugin.is_peer_specific():
+            peer_specific = True
+        if auth_plugin and auth_plugin.is_peer_specific():
+            peer_specific = True
+        if cipher_plugin and cipher_plugin.is_peer_specific():
+            peer_specific = True
+
+        if not peer_specific:
+            message = self.prepare_message(
+                message, use_auth=use_auth, use_cipher=use_cipher,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
+            if not message:
+                return
+
         for addr in subscribers:
             peer_id = self.peer_addrs.get(addr, None)
             peer = self.peers.get(peer_id, None)
-            msg = message.copy()
+            if peer_specific:
+                msg = self.prepare_message(
+                    message.copy(), use_auth=use_auth, use_cipher=use_cipher,
+                    auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+                    peer=peer
+                )
+            else:
+                msg = message
 
-            # inner cipher
-            if use_cipher and cipher_plugin is not None:
-                self.logger.debug("Calling cipher_plugin.encrypt on message (notify)")
-                try:
-                    msg = cipher_plugin.encrypt(msg, self, peer, self.peer_plugin)
-                except Exception as e:
-                    self.logger.warning("Error encrypting message: %s for addr %s; dropping", e, addr)
-                    continue
-
-            # inner auth
-            if use_auth and auth_plugin is not None:
-                self.logger.debug("Calling auth_plugin.make on message.body (notify)")
-                auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
-
-            # outer cipher
-            if use_cipher and self.cipher_plugin is not None:
-                self.logger.debug("Calling self.cipher_plugin.encrypt on message(notify)")
-                try:
-                    msg = self.cipher_plugin.encrypt(msg, self, peer, self.peer_plugin)
-                except Exception as e:
-                    self.logger.warning("Error encrypting message: %s for addr %s; dropping", e, addr)
-                    continue
-
-            # outer auth
-            if use_auth and self.auth_plugin is not None:
-                self.logger.debug("Calling self.auth_plugin.make on message.body (notify)")
-                self.auth_plugin.make(msg.auth_data, msg.body, self, peer, self.peer_plugin)
-
-            self.send(msg, addr, use_auth=False, use_cipher=False)
+            if msg:
+                self.send(msg, addr, use_auth=False, use_cipher=False)
 
         self.logger.debug("Notified %d peers for key=%s", len(subscribers), key)
 
