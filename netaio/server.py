@@ -553,9 +553,9 @@ class TCPServer:
 
         # check if any plugin is peer-specific
         peer_specific = False
-        if use_auth and self.auth_plugin.is_peer_specific():
+        if use_auth and self.auth_plugin and self.auth_plugin.is_peer_specific():
             peer_specific = True
-        if use_cipher and self.cipher_plugin.is_peer_specific():
+        if use_cipher and self.cipher_plugin and self.cipher_plugin.is_peer_specific():
             peer_specific = True
         if auth_plugin and auth_plugin.is_peer_specific():
             peer_specific = True
