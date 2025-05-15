@@ -316,10 +316,10 @@ class TestTCPE2E(unittest.TestCase):
             server_log: list[netaio.Message] = []
             client_log: list[netaio.Message] = []
             server_seed = urandom(32)
-            server_pubkey = SigningKey(server_seed).verify_key
+            server_vkey = SigningKey(server_seed).verify_key
             client_seed = urandom(32)
-            client_pubkey = SigningKey(client_seed).verify_key
-            lock = tapescript.make_multisig_lock([server_pubkey, client_pubkey], 1)
+            client_vkey = SigningKey(client_seed).verify_key
+            lock = tapescript.make_multisig_lock([server_vkey, client_vkey], 1)
             server_auth_plugin = asymmetric.TapescriptAuthPlugin({
                 "lock": lock,
                 "seed": server_seed,
@@ -333,13 +333,13 @@ class TestTCPE2E(unittest.TestCase):
             server_peer = netaio.Peer(
                 addrs=set(), id=b'server',
                 data=netaio.DefaultPeerPlugin().encode_data({
-                    "pubkey": bytes(server_pubkey),
+                    "pubkey": bytes(server_cipher_plugin.pubk),
                 })
             )
             client_peer = netaio.Peer(
                 addrs=set(), id=b'client',
                 data=netaio.DefaultPeerPlugin().encode_data({
-                    "pubkey": bytes(client_pubkey),
+                    "pubkey": bytes(client_cipher_plugin.pubk),
                 })
             )
 

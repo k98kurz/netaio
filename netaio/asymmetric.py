@@ -15,7 +15,7 @@ from .common import (
     Peer,
 )
 from enum import IntEnum
-from nacl.public import PrivateKey, Box
+from nacl.public import PrivateKey, PublicKey, Box
 from nacl.signing import SigningKey, VerifyKey
 from os import urandom
 from random import randint
@@ -151,8 +151,16 @@ class TapescriptAuthPlugin:
 
 
 class X25519CipherPlugin(CipherPluginProtocol):
-    """X25519 cipher plugin."""
+    """X25519 cipher plugin. For use with automatic peer management,
+        peer data must include `{"pubkey": bytes(cipher_plugin.pubk)}`.
+        Including `{"vkey": bytes(cipher_plugin.vkey)}` is optional and
+        may be useful, e.g. for establishing automatic tapescript locks
+        for per-peer message authorization.
+    """
     key: PrivateKey
+    skey: SigningKey
+    pubk: PublicKey
+    vkey: VerifyKey
     encrypt_uri: bool
 
     def __init__(self, config: dict):
@@ -162,7 +170,10 @@ class X25519CipherPlugin(CipherPluginProtocol):
             encrypt the uri; the default is False.
         """
         seed = config['seed']
-        self.key = SigningKey(seed).to_curve25519_private_key()
+        self.skey = SigningKey(seed)
+        self.vkey = self.skey.verify_key
+        self.key = self.skey.to_curve25519_private_key()
+        self.pubk = self.key.public_key
         self.encrypt_uri = config.get('encrypt_uri', False)
 
     def encrypt(
@@ -187,7 +198,7 @@ class X25519CipherPlugin(CipherPluginProtocol):
         peer_data = peer_plugin.parse_data(peer)
         if 'pubkey' not in peer_data:
             raise ValueError("peer pubkey not found")
-        pubkey = VerifyKey(peer_data['pubkey']).to_curve25519_public_key()
+        pubkey = PublicKey(peer_data['pubkey'])
         ciphertext = Box(self.key, pubkey).encrypt(plaintext)
 
         if self.encrypt_uri:
@@ -229,7 +240,7 @@ class X25519CipherPlugin(CipherPluginProtocol):
         peer_data = peer_plugin.parse_data(peer)
         if 'pubkey' not in peer_data:
             raise ValueError("peer pubkey not found")
-        pubkey = VerifyKey(peer_data['pubkey']).to_curve25519_public_key()
+        pubkey = PublicKey(peer_data['pubkey'])
         content = Box(self.key, pubkey).decrypt(ciphertext)
 
         if self.encrypt_uri:
@@ -242,3 +253,4 @@ class X25519CipherPlugin(CipherPluginProtocol):
         message_type = message.header.message_type
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, message.auth_data)
+

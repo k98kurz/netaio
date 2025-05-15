@@ -237,8 +237,6 @@ class TestPlugins(unittest.TestCase):
     def test_x25519_cipher_plugin(self):
         seed1 = urandom(32)
         seed2 = urandom(32)
-        pubkey1 = SigningKey(seed1).verify_key
-        pubkey2 = SigningKey(seed2).verify_key
         local_cipher_plugin = asymmetric.X25519CipherPlugin({
             "seed": seed1,
         })
@@ -248,12 +246,12 @@ class TestPlugins(unittest.TestCase):
         peer_plugin = netaio.DefaultPeerPlugin()
         local_peer = netaio.Peer(
             addrs=set(), id=b'local', data=peer_plugin.encode_data({
-                'pubkey': bytes(pubkey1),
+                'pubkey': bytes(local_cipher_plugin.pubk),
             })
         )
         remote_peer = netaio.Peer(
             addrs=set(), id=b'remote', data=peer_plugin.encode_data({
-                'pubkey': bytes(pubkey2),
+                'pubkey': bytes(remote_cipher_plugin.pubk),
             })
         )
         message = netaio.Message.prepare(
@@ -284,9 +282,9 @@ class TestPlugins(unittest.TestCase):
     def test_tapescript_auth_with_x25519_cipher(self):
         seed1 = urandom(32)
         seed2 = urandom(32)
-        pubkey1 = SigningKey(seed1).verify_key
-        pubkey2 = SigningKey(seed2).verify_key
-        lock = tapescript.make_multisig_lock([pubkey1, pubkey2], 1)
+        vkey1 = SigningKey(seed1).verify_key
+        vkey2 = SigningKey(seed2).verify_key
+        lock = tapescript.make_multisig_lock([vkey1, vkey2], 1)
         local_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": seed1})
         remote_cipher_plugin = asymmetric.X25519CipherPlugin({"seed": seed2})
         local_auth_plugin = asymmetric.TapescriptAuthPlugin({
@@ -300,12 +298,12 @@ class TestPlugins(unittest.TestCase):
         peer_plugin = netaio.DefaultPeerPlugin()
         local_peer = netaio.Peer(
             addrs=set(), id=b'local', data=peer_plugin.encode_data({
-                'pubkey': bytes(pubkey1),
+                'pubkey': bytes(local_cipher_plugin.pubk),
             })
         )
         remote_peer = netaio.Peer(
             addrs=set(), id=b'remote', data=peer_plugin.encode_data({
-                'pubkey': bytes(pubkey2),
+                'pubkey': bytes(remote_cipher_plugin.pubk),
             })
         )
         message = netaio.Message.prepare(
@@ -327,3 +325,4 @@ class TestPlugins(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
