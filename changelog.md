@@ -1,3 +1,10 @@
+## 0.0.8
+
+- Optimized `TCPServer` and `UDPNode`:
+  - `broadcast`, `notify`, and `multicast` now invoke plugins only once if they
+    are not peer-specific
+- Slightly improved usability of `X25519CipherPlugin`
+
 ## 0.0.7
 
 - Updated tapescript dependency and plugin
@@ -6,8 +13,8 @@
 
 - Added new PeerPluginProtocol and DefaultPeerPlugin implementing it
 - Refactor to pass Peer and peer plugin to auth and cipher plugin methods
-- Updated Sha256StreamCipherPlugin to encrypt URI length if encrypt_uri is True
-- Added new optional plugins in the netaio.asymmetric submodule:
+- Updated Sha256StreamCipherPlugin to encrypt URI length if `encrypt_uri` is True
+- Added new optional plugins in the `netaio.asymmetric` submodule:
   - TapescriptAuthPlugin: auth plugin using tapescript
   - X25519CipherPlugin: asymmetric cipher plugin using Curve25519 from PyNaCl
 - Updated Body.prepare to raise ValueError if content + uri is too long
