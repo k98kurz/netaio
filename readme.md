@@ -22,7 +22,9 @@ This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 - [ ] Core daemon to proxy traffic for local apps
 - [ ] E2e encrypted chat app example
 
-Issues are tracked [here](https://github.com/k98kurz/netaio/issues).
+Issues are tracked [here](https://github.com/k98kurz/netaio/issues). Historical
+changes can be found in the
+[changelog](https://github.com/k98kurz/netaio/blob/master/changelog.md).
 
 ## Usage
 
