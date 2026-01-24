@@ -417,9 +417,10 @@ class TCPClient:
         self.logger.info("Closing connection to server...")
         _, writer = self.hosts[server]
         if self._enable_automatic_peer_management and self._disconnect_msg:
+            self.logger.debug("Sending disconnect message")
             await self.send(self._disconnect_msg.copy(), server)
+        self.logger.debug("Closing writer")
         writer.close()
-        await writer.wait_closed()
         self.logger.info("Connection to server closed")
 
     def add_or_update_peer(
