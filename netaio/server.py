@@ -471,14 +471,17 @@ class TCPServer:
             lambda r, w: self.handle_client(r, w, use_auth, use_cipher),
             self.interface, self.port
         )
-        async with self.server:
-            self.logger.info(f"Server started on {self.interface}:{self.port}")
+        self.logger.info(f"Server started on {self.interface}:{self.port}")
+        try:
             await self.server.serve_forever()
+            self.logger.info("serve_forever() exited normally")
+        except asyncio.CancelledError:
+            self.logger.info("serve_forever() received CancelledError")
+            raise
 
     async def stop(self):
         self.server.close()
         await self.server.wait_closed()
-
     def prepare_message(
         self, message: MessageProtocol, use_auth: bool = True,
         use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,

@@ -204,11 +204,10 @@ class TestTCPE2E(unittest.TestCase):
             assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
             assert len(client_log) == 0, len(client_log)
 
-            # close client and stop server
+            # Cancel server task and close client - proper shutdown pattern
             await client.close()
-            await server.stop()
+            await second_client.close()
             server_task.cancel()
-
             try:
                 print('DEBUG 1')
                 await server_task
@@ -285,8 +284,8 @@ class TestTCPE2E(unittest.TestCase):
             assert len([log for log in client_log if log[0] == 'resource1']) == 1
             assert len([log for log in client_log if log[0] == 'resource2']) == 1
 
+            # close client and cancel server
             await client.close()
-            await server.stop()
             server_task.cancel()
 
             try:
@@ -392,8 +391,8 @@ class TestTCPE2E(unittest.TestCase):
             assert netaio.MessageType.OK not in client.ephemeral_handlers
 
 
+            # close client and cancel server
             await client.close()
-            await server.stop()
             server_task.cancel()
 
             try:
