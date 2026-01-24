@@ -206,6 +206,87 @@ class TestTCPE2E(unittest.TestCase):
 
             # close client and stop server
             await client.close()
+            await server.stop()
+            server_task.cancel()
+
+            try:
+                print('DEBUG 1')
+                await server_task
+                print('DEBUG 2')
+            except asyncio.CancelledError:
+                print('DEBUG 3')
+                pass
+
+        print()
+        print(f'{self.__class__.__name__}.test_e2e')
+        asyncio.run(run_test())
+
+    def test_ephemeral_handler_request_response_pattern(self):
+        async def run_test():
+            server_log: list[netaio.Message] = []
+            client_log: list[netaio.Message] = []
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
+
+            server = netaio.TCPServer(
+                port=self.PORT,
+                auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            client = netaio.TCPClient(
+                port=self.PORT,
+                auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+
+            resources = {b'/resource1': b'content1', b'/resource2': b'content2'}
+
+            @server.on(netaio.MessageType.REQUEST_URI)
+            def server_handle_request(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                uri = message.body.uri
+                if uri in resources:
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(resources[uri], uri=uri),
+                        netaio.MessageType.RESPOND_URI
+                    )
+                return None
+
+            server_task = asyncio.create_task(server.start())
+            await asyncio.sleep(0.1)
+
+            await client.connect()
+
+            @client.once((netaio.MessageType.RESPOND_URI, b'/resource1'))
+            def client_handle_response1(message: netaio.Message, _: asyncio.StreamWriter):
+                client_log.append(('resource1', message))
+
+            await client.send(netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'/resource1'),
+                netaio.MessageType.REQUEST_URI
+            ))
+            response = await client.receive_once()
+            assert response is not None
+            assert response.body.content == b'content1'
+            assert (netaio.MessageType.RESPOND_URI, b'/resource1') not in client.ephemeral_handlers
+
+            @client.once((netaio.MessageType.RESPOND_URI, b'/resource2'))
+            def client_handle_response2(message: netaio.Message, _: asyncio.StreamWriter):
+                client_log.append(('resource2', message))
+
+            await client.send(netaio.Message.prepare(
+                netaio.Body.prepare(b'', uri=b'/resource2'),
+                netaio.MessageType.REQUEST_URI
+            ))
+            response = await client.receive_once()
+            assert response is not None
+            assert response.body.content == b'content2'
+
+            assert len([log for log in client_log if log[0] == 'resource1']) == 1
+            assert len([log for log in client_log if log[0] == 'resource2']) == 1
+
+            await client.close()
+            await server.stop()
             server_task.cancel()
 
             try:
@@ -214,6 +295,114 @@ class TestTCPE2E(unittest.TestCase):
                 pass
 
         print()
+        print(f'{self.__class__.__name__}.test_ephemeral_handler_request_response_pattern')
+        asyncio.run(run_test())
+
+    def test_ephemeral_handler_server_side(self):
+        async def run_test():
+            server_log: list[netaio.Message] = []
+            client_log: list[netaio.Message] = []
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
+
+            server = netaio.TCPServer(
+                port=self.PORT,
+                auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            client = netaio.TCPClient(
+                port=self.PORT,
+                auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+
+            call_count = {'value': 0}
+            call_count2 = {'value': 0}
+
+            @server.once((netaio.MessageType.PUBLISH_URI, b'ephemeral_test'))
+            def server_ephemeral_handler(message: netaio.Message, _: asyncio.StreamWriter):
+                call_count['value'] += 1
+                server_log.append(message)
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'once_response', uri=message.body.uri),
+                    netaio.MessageType.OK
+                )
+
+            @server.on((netaio.MessageType.PUBLISH_URI, b'ephemeral_test'))
+            def server_regular_handler(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'regular_response', uri=message.body.uri),
+                    netaio.MessageType.OK
+                )
+
+            @client.on(netaio.MessageType.OK)
+            def client_ok_handler(message: netaio.Message, _: asyncio.StreamWriter):
+                client_log.append(message)
+
+            server_task = asyncio.create_task(server.start())
+            await asyncio.sleep(0.1)
+
+            await client.connect()
+
+            msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'test', uri=b'ephemeral_test'),
+                netaio.MessageType.PUBLISH_URI
+            )
+            await client.send(msg)
+            response = await client.receive_once()
+            assert response.body.content == b'once_response'
+            assert call_count['value'] == 1
+            assert (netaio.MessageType.PUBLISH_URI, b'ephemeral_test') not in server.ephemeral_handlers
+
+            await client.send(msg)
+            response = await client.receive_once()
+            assert response.body.content == b'regular_response'
+            assert call_count['value'] == 1
+
+            auth_plugin2 = netaio.HMACAuthPlugin(config={"secret": "test2", "hmac_field": "hmac2"})
+            cipher_plugin2 = netaio.Sha256StreamCipherPlugin(config={"key": "test2", "iv_field": "iv2", "encrypt_uri": False})
+
+            @server.once((netaio.MessageType.PUBLISH_URI, b'ephemeral_test2'), auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            def server_ephemeral_handler_layer2(message: netaio.Message, _: asyncio.StreamWriter):
+                call_count2['value'] += 1
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'layer2_response', uri=message.body.uri),
+                    netaio.MessageType.OK
+                )
+
+            msg2 = netaio.Message.prepare(
+                netaio.Body.prepare(b'test2', uri=b'ephemeral_test2'),
+                netaio.MessageType.PUBLISH_URI
+            )
+            await client.send(msg2, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            response = await client.receive_once(auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            assert response.body.content == b'layer2_response'
+            assert call_count2['value'] == 1
+
+            # test remove ephemeral handler
+            assert netaio.MessageType.OK not in client.ephemeral_handlers
+            @client.once(netaio.MessageType.OK)
+            def client_ephemeral_handler(message: netaio.Message, _: asyncio.StreamWriter):
+                call_count['value'] += 1
+                client_log.append(message)
+                return None
+            assert netaio.MessageType.OK in client.ephemeral_handlers
+            client.remove_ephemeral_handler(netaio.MessageType.OK)
+            assert netaio.MessageType.OK not in client.ephemeral_handlers
+
+
+            await client.close()
+            await server.stop()
+            server_task.cancel()
+
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+        print()
+        print(f'{self.__class__.__name__}.test_ephemeral_handler_server_side')
         asyncio.run(run_test())
 
     def test_peer_management_e2e(self):
@@ -342,6 +531,7 @@ class TestTCPE2E(unittest.TestCase):
                 pass
 
         print()
+        print(f'{self.__class__.__name__}.test_peer_management_e2e')
         asyncio.run(run_test())
 
     def test_peer_management_with_asymmetric_plugins(self):
@@ -456,6 +646,7 @@ class TestTCPE2E(unittest.TestCase):
                 pass
 
         print()
+        print(f'{self.__class__.__name__}.test_peer_management_with_asymmetric_plugins')
         asyncio.run(run_test())
 
 
@@ -534,6 +725,7 @@ class TestTCPE2EWithoutDefaultPlugins(unittest.TestCase):
                 pass
 
         print()
+        print(f'{self.__class__.__name__}.test_e2e_without_default_plugins')
         asyncio.run(run_test())
 
     def test_e2e_without_default_plugins_method_2(self):
@@ -603,6 +795,7 @@ class TestTCPE2EWithoutDefaultPlugins(unittest.TestCase):
                 pass
 
         print()
+        print(f'{self.__class__.__name__}.test_e2e_without_default_plugins_method_2')
         asyncio.run(run_test())
 
 
@@ -717,6 +910,7 @@ class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
                 pass
 
         print()
+        print(f'{self.__class__.__name__}.test_e2e_two_layers_of_plugins')
         asyncio.run(run_test())
 
 

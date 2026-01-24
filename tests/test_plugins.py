@@ -10,6 +10,7 @@ class TestPlugins(unittest.TestCase):
     def test_hmac_auth_plugin(self):
         body = netaio.Body.prepare(b'hello world, caesar is dead', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
+        before_len = len(message.encode())
         auth_plugin = netaio.HMACAuthPlugin({"secret": "test"})
         assert isinstance(auth_plugin, netaio.AuthPluginProtocol)
         before = {**message.auth_data.fields}
@@ -20,6 +21,8 @@ class TestPlugins(unittest.TestCase):
         assert 'hmac' in after
         assert after['hmac'] is not None
         assert auth_plugin.check(message.auth_data, message.body)
+        after_len = len(message.encode())
+        print(f'hmac plugin overhead: {after_len-before_len}')
 
         # tamper with the message
         message.body.content = b'hello world, caesar is alive'
@@ -32,6 +35,7 @@ class TestPlugins(unittest.TestCase):
         cipher_plugin = netaio.Sha256StreamCipherPlugin({"key": "test"})
         assert isinstance(cipher_plugin, netaio.CipherPluginProtocol)
         before = message.body.encode()
+        before_len = len(message.encode())
         assert 'iv' not in message.auth_data.fields
         message = cipher_plugin.encrypt(message)
         assert 'iv' in message.auth_data.fields
@@ -40,6 +44,8 @@ class TestPlugins(unittest.TestCase):
         msg = cipher_plugin.decrypt(message)
         assert msg is not None
         assert msg.body.encode() == before
+        after_len = len(message.encode())
+        print(f'sha256streamcipher plugin overhead: {after_len-before_len}')
 
         # without uri cipher
         cipher_plugin = netaio.Sha256StreamCipherPlugin({
@@ -62,6 +68,7 @@ class TestPlugins(unittest.TestCase):
         body = netaio.Body.prepare(b'brutus attacks, pls send backup', b'123')
         message = netaio.Message.prepare(body, netaio.MessageType.PUBLISH_URI)
         before = message.body.encode()
+        before_len = len(message.encode())
         auth_plugin = netaio.HMACAuthPlugin({"secret": "test"})
         assert isinstance(auth_plugin, netaio.AuthPluginProtocol)
         cipher_plugin = netaio.Sha256StreamCipherPlugin({"key": "test"})
@@ -74,11 +81,13 @@ class TestPlugins(unittest.TestCase):
         assert before != after
         assert msg.auth_data.fields['hmac'] is not None
         assert msg.auth_data.fields['iv'] is not None
+        after_len = len(msg.encode())
         # authenticate and decrypt
         auth_plugin.check(msg.auth_data, msg.body)
         msg = cipher_plugin.decrypt(msg)
         assert msg is not None
         assert msg.body.encode() == before
+        print(f'hmac+sha256sc overhead: {after_len-before_len}')
 
         # tamper with the message, then re-encrypt but don't re-authenticate
         msg.body.content = b'everything is fine'
@@ -254,6 +263,7 @@ class TestPlugins(unittest.TestCase):
         local_peer = netaio.Peer(
             addrs=set(), id=b'local', data=peer_plugin.encode_data({
                 'pubkey': bytes(local_cipher_plugin.pubk),
+                'vkey': bytes(local_cipher_plugin.vkey),
             })
         )
         remote_peer = netaio.Peer(

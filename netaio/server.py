@@ -38,6 +38,7 @@ class TCPServer:
     peers: dict[bytes, Peer]
     peer_addrs: dict[tuple[str, int], bytes]
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
+    ephemeral_handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     default_handler: Handler
     header_class: type[HeaderProtocol]
     message_type_class: type[IntEnum]
@@ -108,6 +109,7 @@ class TCPServer:
         self.peers = {}
         self.peer_addrs = {}
         self.handlers = {}
+        self.ephemeral_handlers = {}
         self.subscriptions = {}
         self.clients = set()
         self.header_class = header_class
@@ -144,6 +146,19 @@ class TCPServer:
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
 
+    def add_ephemeral_handler(
+            self, key: Hashable,
+            handler: Handler,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Register an ephemeral handler for a specific key. The handler
+            will be removed either after it is called the first time.
+            Otherwise identical to `add_handler`.
+        """
+        self.logger.debug("Adding ephemeral handler for key=%s", key)
+        self.ephemeral_handlers[key] = (handler, auth_plugin, cipher_plugin)
+
     def on(
             self, key: Hashable,
             auth_plugin: AuthPluginProtocol = None,
@@ -165,11 +180,38 @@ class TCPServer:
             return func
         return decorator
 
+    def once(
+            self, key: Hashable,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Decorator to register a one-time handler for a specific key.
+            The handler must accept a MessageProtocol object as an
+            argument and return a MessageProtocol, None, or a Coroutine
+            that resolves to a MessageProtocol or None. If an auth
+            plugin is provided, it will be used to check the message in
+            addition to any auth plugin that is set on the server. If a
+            cipher plugin is provided, it will be used to decrypt the
+            message in addition to any cipher plugin that is set on the
+            server. These plugins will also be used for preparing any
+            response message sent by the handler.
+        """
+        def decorator(func: Handler):
+            self.add_ephemeral_handler(key, func, auth_plugin, cipher_plugin)
+            return func
+        return decorator
+
     def remove_handler(self, key: Hashable):
         """Remove a handler for a specific key."""
         self.logger.debug("Removing handler for key=%s", key)
         if key in self.handlers:
             del self.handlers[key]
+
+    def remove_ephemeral_handler(self, key: Hashable):
+        """Remove an ephemeral handler for a specific key."""
+        self.logger.debug("Removing ephemeral handler for key=%s", key)
+        if key in self.ephemeral_handlers:
+            del self.ephemeral_handlers[key]
 
     def subscribe(self, key: Hashable, writer: asyncio.StreamWriter):
         """Subscribe a client to a specific key. The key must be a
@@ -209,7 +251,7 @@ class TCPServer:
         self.clients.add(writer)
 
         try:
-            while True:
+            while writer and not writer.is_closing():
                 await self.receive(reader, writer, use_auth, use_cipher)
         except asyncio.IncompleteReadError:
             self.logger.info("Client disconnected from %s", addr)
@@ -321,8 +363,11 @@ class TCPServer:
             )
 
             for key in keys:
-                if key in self.handlers:
-                    handler, auth_plugin, cipher_plugin = self.handlers[key]
+                if key in self.handlers or key in self.ephemeral_handlers:
+                    if key in self.ephemeral_handlers:
+                        handler, auth_plugin, cipher_plugin = self.ephemeral_handlers.pop(key)
+                    else:
+                        handler, auth_plugin, cipher_plugin = self.handlers[key]
 
                     # inner auth
                     if auth_plugin is not None:
@@ -422,13 +467,17 @@ class TCPServer:
 
     async def start(self, use_auth: bool = True, use_cipher: bool = True):
         """Start the server."""
-        server = await asyncio.start_server(
+        self.server: asyncio.Server = await asyncio.start_server(
             lambda r, w: self.handle_client(r, w, use_auth, use_cipher),
             self.interface, self.port
         )
-        async with server:
+        async with self.server:
             self.logger.info(f"Server started on {self.interface}:{self.port}")
-            await server.serve_forever()
+            await self.server.serve_forever()
+
+    async def stop(self):
+        self.server.close()
+        await self.server.wait_closed()
 
     def prepare_message(
         self, message: MessageProtocol, use_auth: bool = True,

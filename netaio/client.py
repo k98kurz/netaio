@@ -39,6 +39,7 @@ class TCPClient:
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
+    ephemeral_handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     extract_keys: Callable[[MessageProtocol], list[Hashable]]
     logger: logging.Logger
     auth_plugin: AuthPluginProtocol
@@ -101,6 +102,7 @@ class TCPClient:
         self.body_class = body_class
         self.message_class = message_class
         self.handlers = {}
+        self.ephemeral_handlers = {}
         self.extract_keys = extract_keys
         self.logger = logger
         self.auth_plugin = auth_plugin
@@ -129,6 +131,19 @@ class TCPClient:
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
 
+    def add_ephemeral_handler(
+            self, key: Hashable,
+            handler: Handler,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Register an ephemeral handler for a specific key. The handler
+            will be removed either after it is called the first time.
+            Otherwise identical to `add_handler`.
+        """
+        self.logger.debug("Adding ephemeral handler for key=%s", key)
+        self.ephemeral_handlers[key] = (handler, auth_plugin, cipher_plugin)
+
     def on(
             self, key: Hashable,
             auth_plugin: AuthPluginProtocol = None,
@@ -149,11 +164,37 @@ class TCPClient:
             return func
         return decorator
 
+    def once(
+            self, key: Hashable,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Decorator to register a one-time handler for a specific key.
+            The handler must accept a MessageProtocol object as an
+            argument and return a MessageProtocol, None, or a Coroutine
+            that resolves to a MessageProtocol or None. If an auth
+            plugin is provided, it will be used to check the message in
+            addition to any auth plugin that is set on the client. If a
+            cipher plugin is provided, it will be used to decrypt the
+            message in addition to any cipher plugin that is set on the
+            client.
+        """
+        def decorator(func: Handler):
+            self.add_ephemeral_handler(key, func, auth_plugin, cipher_plugin)
+            return func
+        return decorator
+
     def remove_handler(self, key: Hashable):
         """Remove a handler for a specific key."""
         self.logger.debug("Removing handler for key=%s", key)
         if key in self.handlers:
             del self.handlers[key]
+
+    def remove_ephemeral_handler(self, key: Hashable):
+        """Remove an ephemeral handler for a specific key."""
+        self.logger.debug("Removing ephemeral handler for key=%s", key)
+        if key in self.ephemeral_handlers:
+            del self.ephemeral_handlers[key]
 
     async def connect(self, host: str = None, port: int = None):
         """Connect to a server."""
@@ -309,8 +350,11 @@ class TCPClient:
 
         self.logger.debug("Message received from server")
         for key in keys:
-            if key in self.handlers:
-                handler, auth_plugin, cipher_plugin = self.handlers[key]
+            if key in self.handlers or key in self.ephemeral_handlers:
+                if key in self.ephemeral_handlers:
+                    handler, auth_plugin, cipher_plugin = self.ephemeral_handlers.pop(key)
+                else:
+                    handler, auth_plugin, cipher_plugin = self.handlers[key]
 
                 # inner auth
                 if auth_plugin is not None:

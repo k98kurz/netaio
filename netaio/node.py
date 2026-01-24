@@ -48,6 +48,7 @@ class UDPNode:
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
+    ephemeral_handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     default_handler: UDPHandler
     extract_keys: Callable[[MessageProtocol], list[Hashable]]
     make_error: Callable[[str], MessageProtocol]
@@ -127,6 +128,7 @@ class UDPNode:
         self.body_class = body_class
         self.message_class = message_class
         self.handlers = {}
+        self.ephemeral_handlers = {}
         self.default_handler = default_handler
         self.extract_keys = extract_keys
         self.make_error = make_error_response
@@ -220,8 +222,11 @@ class UDPNode:
         self.logger.debug("Message received from %s with keys=%s", addr, keys)
 
         for key in keys:
-            if key in self.handlers:
-                handler, auth_plugin, cipher_plugin = self.handlers[key]
+            if key in self.handlers or key in self.ephemeral_handlers:
+                if key in self.ephemeral_handlers:
+                    handler, auth_plugin, cipher_plugin = self.ephemeral_handlers.pop(key)
+                else:
+                    handler, auth_plugin, cipher_plugin = self.handlers[key]
 
                 # inner auth
                 if auth_plugin is not None:
@@ -307,7 +312,7 @@ class UDPNode:
     def add_handler(
             self,
             key: Hashable,
-            handler: Callable[[Any, Any], Any],
+            handler: UDPHandler,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -323,6 +328,19 @@ class UDPNode:
         """
         self.logger.debug("Adding handler for key=%s", key)
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
+
+    def add_ephemeral_handler(
+            self, key: Hashable,
+            handler: UDPHandler,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Register an ephemeral handler for a specific key. The handler
+            will be removed either after it is called the first time.
+            Otherwise identical to `add_handler`.
+        """
+        self.logger.debug("Adding ephemeral handler for key=%s", key)
+        self.ephemeral_handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def on(
             self,
@@ -340,8 +358,29 @@ class UDPNode:
             plugins will also be used for preparing any response
             message sent by the handler.
         """
-        def decorator(func: Callable[[Any, Any], Any]):
+        def decorator(func: UDPHandler):
             self.add_handler(key, func, auth_plugin, cipher_plugin)
+            return func
+        return decorator
+
+    def once(
+            self,
+            key: Hashable,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Decorator to register a one-time handler for a specific key.
+            The handler must accept a MessageProtocol object as an
+            argument and return a MessageProtocol or None. If an auth
+            plugin is provided, it will be used to check the message in
+            addition to any auth plugin that is set on the node. If a
+            cipher plugin is provided, it will be used to decrypt the
+            message in addition to any cipher plugin that is set on the
+            node. These plugins will also be used for preparing any
+            response message sent by the handler.
+        """
+        def decorator(func: UDPHandler):
+            self.add_ephemeral_handler(key, func, auth_plugin, cipher_plugin)
             return func
         return decorator
 
@@ -350,6 +389,12 @@ class UDPNode:
         self.logger.debug("Removing handler for key=%s", key)
         if key in self.handlers:
             del self.handlers[key]
+
+    def remove_ephemeral_handler(self, key: Hashable):
+        """Remove an ephemeral handler for a specific key."""
+        self.logger.debug("Removing ephemeral handler for key=%s", key)
+        if key in self.ephemeral_handlers:
+            del self.ephemeral_handlers[key]
 
     def subscribe(self, key: Hashable, addr: tuple[str, int]):
         """Subscribe a peer to a specific key. The key must be a
