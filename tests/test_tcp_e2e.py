@@ -284,6 +284,15 @@ class TestTCPE2E(unittest.TestCase):
             assert len([log for log in client_log if log[0] == 'resource1']) == 1
             assert len([log for log in client_log if log[0] == 'resource2']) == 1
 
+            # test client.request: positive case
+            response = await client.request(b'/resource1')
+            assert response is not None
+            assert response.body.content == b'content1'
+
+            # test client.request: negative case
+            with self.assertRaises(TimeoutError) as e:
+                response = await client.request(b'/notgooduri', timeout=1.0)
+
             # close client and cancel server
             await client.close()
             server_task.cancel()

@@ -17,7 +17,7 @@ This is currently a work-in-progress. Remaining work before the v0.1.0 release:
 - [x] Optional authorization plugin using tapescript
 - [x] Optional cipher plugin using Curve25519 asymmetric encryption
 - [ ] Optional authorization plugin using Hashcash/PoW for anti-spam DoS protection
-- [ ] Ephemeral handlers (i.e. handlers that are removed after first use)
+- [x] Ephemeral handlers (i.e. handlers that are removed after first use)
 - [ ] IPv6 support
 - [ ] Core daemon to proxy traffic for local apps
 - [ ] E2e encrypted chat app example

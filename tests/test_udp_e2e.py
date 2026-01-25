@@ -690,21 +690,34 @@ class TestUDPE2E(unittest.TestCase):
                 netaio.MessageType.REQUEST_URI
             ), server_addr)
             await asyncio.sleep(0.1)
-            assert call_count['value'] == 1, f"Handler should have been called once, got {call_count['value']}"
-            assert (netaio.MessageType.REQUEST_URI) not in server.ephemeral_handlers, "Ephemeral handler should be removed after call"
+            assert call_count['value'] == 1, \
+                f"Handler should have been called once, got {call_count['value']}"
+            assert (netaio.MessageType.REQUEST_URI) not in server.ephemeral_handlers, \
+                "Ephemeral handler should be removed after call"
 
             client.send(netaio.Message.prepare(
                 netaio.Body.prepare(b'test', uri=b'ephemeral_test'),
                 netaio.MessageType.REQUEST_URI
             ), server_addr)
             await asyncio.sleep(0.1)
-            assert call_count['value'] == 1, f"Handler should still have been called once, got {call_count['value']}"
+            assert call_count['value'] == 1, \
+                f"Handler should still have been called once, got {call_count['value']}"
 
-            auth_plugin2 = netaio.HMACAuthPlugin(config={"secret": "test2", "hmac_field": "hmac2"})
-            cipher_plugin2 = netaio.Sha256StreamCipherPlugin(config={"key": "test2", "iv_field": "iv2", "encrypt_uri": False})
+            auth_plugin2 = netaio.HMACAuthPlugin(
+                config={"secret": "test2", "hmac_field": "hmac2"}
+            )
+            cipher_plugin2 = netaio.Sha256StreamCipherPlugin(
+                config={"key": "test2", "iv_field": "iv2", "encrypt_uri": False}
+            )
 
-            @server.once(netaio.MessageType.REQUEST_URI, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
-            def server_ephemeral_handler_layer2(message: netaio.Message, _: tuple[str, int]):
+            @server.once(
+                netaio.MessageType.REQUEST_URI,
+                auth_plugin=auth_plugin2,
+                cipher_plugin=cipher_plugin2
+            )
+            def server_ephemeral_handler_layer2(
+                message: netaio.Message, _: tuple[str, int]
+            ):
                 call_count2['value'] += 1
                 return netaio.Message.prepare(
                     netaio.Body.prepare(b'layer2_response', uri=message.body.uri),
@@ -716,8 +729,13 @@ class TestUDPE2E(unittest.TestCase):
                 netaio.MessageType.REQUEST_URI
             ), server_addr, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
             await asyncio.sleep(0.1)
-            assert call_count2['value'] == 1, f"Second layer handler should have been called once, got {call_count2['value']}"
-            assert (netaio.MessageType.REQUEST_URI) not in server.ephemeral_handlers or (netaio.MessageType.REQUEST_URI, b'ephemeral_test2') not in server.ephemeral_handlers, "Ephemeral handler should be removed after call"
+            assert call_count2['value'] == 1, \
+                f"Second layer handler should have been called once, got" +\
+                f" {call_count2['value']}"
+            assert (netaio.MessageType.REQUEST_URI) not in server.ephemeral_handlers \
+                or (netaio.MessageType.REQUEST_URI, b'ephemeral_test2') not in \
+                server.ephemeral_handlers, \
+                "Ephemeral handler should be removed after call"
 
             # test ephemeral handler removal
             @server.once(netaio.MessageType.REQUEST_URI)
@@ -729,9 +747,29 @@ class TestUDPE2E(unittest.TestCase):
                     netaio.MessageType.RESPOND_URI
                 )
 
-            assert netaio.MessageType.REQUEST_URI in server.ephemeral_handlers, "Ephemeral handler should be registered"
+            assert netaio.MessageType.REQUEST_URI in server.ephemeral_handlers, \
+                "Ephemeral handler should be registered"
             server.remove_ephemeral_handler(netaio.MessageType.REQUEST_URI)
-            assert netaio.MessageType.REQUEST_URI not in server.ephemeral_handlers, "Ephemeral handler should be removed"
+            assert netaio.MessageType.REQUEST_URI not in server.ephemeral_handlers, \
+                "Ephemeral handler should be removed"
+
+            # test node.request
+            @server.on((netaio.MessageType.REQUEST_URI, b'request'))
+            def server_handler(message: netaio.Message, *_):
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'response', uri=message.body.uri),
+                    netaio.MessageType.RESPOND_URI
+                )
+
+            # test node.request: positive case
+            server_addr = ('127.0.0.1', server_addr[1])
+            response = await client.request(b'request', server=server_addr)
+            assert response is not None
+            assert response.body.content == b'response'
+
+            # test node.request: negative case
+            with self.assertRaises(TimeoutError):
+                response = await client.request(b'not found', 1.0, server=server_addr)
 
             await server.stop()
             await client.stop()

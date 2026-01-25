@@ -750,7 +750,9 @@ class DefaultPeerPlugin:
         return Peer(addrs=set(), id=peer_id, data=peer_data)
 
 
-def keys_extractor(message: MessageProtocol) -> list[Hashable]:
+def keys_extractor(
+        message: MessageProtocol, host: tuple[str, int]|None = None
+    ) -> list[Hashable]:
     """Extract handler keys for a given message. Custom implementations
         should return at least one key, and the more specific keys
         should be listed first. This is used to determine which handler
@@ -758,7 +760,11 @@ def keys_extractor(message: MessageProtocol) -> list[Hashable]:
         includes both the message type and the body uri, and one that is
         just the message type.
     """
-    return [(message.header.message_type, message.body.uri), message.header.message_type]
+    return [
+        (message.header.message_type, message.body.uri, host),
+        (message.header.message_type, message.body.uri),
+        message.header.message_type,
+    ]
 
 def make_error_response(
         msg: str,

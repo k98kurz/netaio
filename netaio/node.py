@@ -218,7 +218,7 @@ class UDPNode:
                 self.logger.warning("Error decrypting message: %s; dropping", e)
                 return
 
-        keys = self.extract_keys(message)
+        keys = self.extract_keys(message, addr)
         self.logger.debug("Message received from %s with keys=%s", addr, keys)
 
         for key in keys:
@@ -519,6 +519,49 @@ class UDPNode:
         data = message.encode()
         self.transport.sendto(data, addr)
         self.logger.debug(f"Sent message with checksum={message.header.checksum} to {addr}")
+
+    async def request(
+            self, uri: bytes, timeout: float = 10.0,
+            server: tuple[str, int] = None,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ) -> MessageProtocol:
+        """Send a REQUEST_URI message and wait for a RESPOND_URI response.
+            Sets an ephemeral handler for the expected response using the
+            `@self.once()` decorator, then sends a REQUEST_URI message to
+            the specified address. Waits in a loop until either the response
+            is received or the timeout is reached. If it times out, removes
+            the ephemeral handler and raises a TimeoutError. If the response
+            is received, returns that message.
+        """
+        result = []
+
+        key = (self.message_type_class.RESPOND_URI, uri, server)
+        event = asyncio.Event()
+        @self.once(key, auth_plugin, cipher_plugin)
+        def handle_response(message: MessageProtocol, addr: tuple):
+            result.append(message)
+            event.set()
+
+        request_body = self.body_class.prepare(content=b'', uri=uri)
+        request_message = self.message_class.prepare(
+            request_body, self.message_type_class.REQUEST_URI
+        )
+        self.send(
+            request_message, server, use_auth, use_cipher, auth_plugin, cipher_plugin
+        )
+
+        try:
+            await asyncio.wait_for(event.wait(), timeout=timeout)
+        except asyncio.TimeoutError:
+            self.remove_ephemeral_handler(key)
+            raise TimeoutError(
+                f"Request for URI {uri.decode('utf-8', errors='replace')} @ " +
+                f"{server} timed out after {timeout}s"
+            )
+
+        return result[0]
 
     def broadcast(
             self, message: MessageProtocol, use_auth: bool = True,

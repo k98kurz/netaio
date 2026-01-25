@@ -1,3 +1,12 @@
+## 0.0.9
+
+- Added ephemeral handlers to UDPNode, TCPClient, and TCPServer:
+    - `add_ephemeral_handler(key, handler, auth_plugin, cipher_plugin)` method
+    - `remove_ephemeral_handler(key)` method
+    - `@once(key, auth_plugin, cipher_plugin)` decorator method
+- Added `.request()` method to UDPNode and TCPClient, which uses ephemeral handlers
+scoped to the requested server/node
+
 ## 0.0.8
 
 - Optimized `TCPServer` and `UDPNode`:

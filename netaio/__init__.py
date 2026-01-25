@@ -27,10 +27,6 @@ from .common import (
 )
 from .auth import HMACAuthPlugin
 from .cipher import Sha256StreamCipherPlugin
+from .version import version
 
 
-__version__ = "0.0.8"
-
-def version() -> str:
-    """Return the version of the netaio package."""
-    return __version__

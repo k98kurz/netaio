@@ -261,6 +261,58 @@ class TCPClient:
         await writer.drain()
         self.logger.debug("Message sent to server")
 
+    async def request(
+            self, uri: bytes, timeout: float = 10.0,
+            server: tuple[str, int] = None,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ) -> MessageProtocol:
+        """Send a REQUEST_URI message and wait for a RESPOND_URI response.
+            Sets an ephemeral handler for the expected response using the
+            `@self.once()` decorator, then sends a REQUEST_URI message to
+            the connected server. Waits in a loop until either the response
+            is received or the timeout is reached. If it times out, removes
+            the ephemeral handler and raises a TimeoutError. If the response
+            is received, returns that message.
+        """
+        result = []
+
+        key = (self.message_type_class.RESPOND_URI, uri, server or self.default_host)
+        event = asyncio.Event()
+        @self.once(key, auth_plugin, cipher_plugin)
+        def handle_response(message: MessageProtocol, writer: asyncio.StreamWriter):
+            result.append(message)
+            event.set()
+
+        request_body = self.body_class.prepare(content=b'', uri=uri)
+        request_message = self.message_class.prepare(
+            request_body, self.message_type_class.REQUEST_URI
+        )
+        await self.send(
+            request_message, server, use_auth, use_cipher, auth_plugin, cipher_plugin
+        )
+
+        try:
+            task = asyncio.create_task(self.receive_loop())
+            deadline = asyncio.get_event_loop().time() + timeout
+            await asyncio.wait_for(event.wait(), timeout=timeout)
+        finally:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        if not len(result):
+            self.remove_ephemeral_handler(key)
+            raise TimeoutError(
+                f"Request for URI {uri.decode('utf-8', errors='replace')} timed" +
+                f" out after {timeout}s"
+            )
+
+        return result[0]
+
     async def receive_once(
             self, server: tuple[str, int] = None, use_auth: bool = True,
             use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
@@ -345,7 +397,7 @@ class TCPClient:
                 self.logger.error("Error decrypting message; dropping", exc_info=True)
                 return
 
-        keys = self.extract_keys(msg)
+        keys = self.extract_keys(msg, server)
         result = None
 
         self.logger.debug("Message received from server")
