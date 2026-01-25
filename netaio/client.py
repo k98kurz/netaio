@@ -46,6 +46,7 @@ class TCPClient:
     cipher_plugin: CipherPluginProtocol
     peer_plugin: PeerPluginProtocol
     handle_auth_error: AuthErrorHandler
+    _receive_loop_task: asyncio.Task | None
 
     def __init__(
             self, host: str = "127.0.0.1", port: int = 8888,
@@ -109,6 +110,7 @@ class TCPClient:
         self.cipher_plugin = cipher_plugin
         self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
+        self._receive_loop_task = None
         self._enable_automatic_peer_management = False
         self._disconnect_msg = None
         self._advertise_msg = None
@@ -293,16 +295,22 @@ class TCPClient:
             request_message, server, use_auth, use_cipher, auth_plugin, cipher_plugin
         )
 
+        was_running = (
+            self._receive_loop_task is not None
+            and not self._receive_loop_task.done()
+        )
         try:
-            task = asyncio.create_task(self.receive_loop())
+            if not was_running:
+                task = asyncio.create_task(self.receive_loop())
             deadline = asyncio.get_event_loop().time() + timeout
             await asyncio.wait_for(event.wait(), timeout=timeout)
         finally:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+            if not was_running:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
 
         if not len(result):
             self.remove_ephemeral_handler(key)
@@ -452,16 +460,20 @@ class TCPClient:
             used to decrypt the message in addition to any cipher
             plugin that is set on the client.
         """
-        server = server or self.default_host
-        while True:
-            try:
-                await self.receive_once(server, use_auth, use_cipher, auth_plugin, cipher_plugin)
-            except asyncio.CancelledError:
-                self.logger.info("Receive loop cancelled")
-                break
-            except Exception as e:
-                self.logger.error("Error in receive_loop", exc_info=True)
-                break
+        self._receive_loop_task = asyncio.current_task()
+        try:
+            server = server or self.default_host
+            while True:
+                try:
+                    await self.receive_once(server, use_auth, use_cipher, auth_plugin, cipher_plugin)
+                except asyncio.CancelledError:
+                    self.logger.info("Receive loop cancelled")
+                    break
+                except Exception as e:
+                    self.logger.error("Error in receive_loop", exc_info=True)
+                    break
+        finally:
+            self._receive_loop_task = None
 
     async def close(self, server: tuple[str, int] = None):
         """Close the connection to the server."""
