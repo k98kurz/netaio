@@ -10,6 +10,7 @@ from typing import (
     Coroutine,
     Any,
     NamedTuple,
+    Awaitable,
 )
 from zlib import crc32
 import asyncio
@@ -720,6 +721,10 @@ class PeerPluginProtocol(Protocol):
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
 UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None]
 AuthErrorHandler = Callable[[NetworkNodeProtocol, AuthPluginProtocol, MessageProtocol|None], MessageProtocol|None]
+TimeoutErrorHandler = Callable[
+    [NetworkNodeProtocol, str, tuple[str, int] | None, TimeoutError, dict[str, Any]],
+    Awaitable[None] | None
+]
 
 
 class DefaultPeerPlugin:
