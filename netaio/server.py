@@ -45,7 +45,7 @@ class TCPServer:
     auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
-    extract_keys: Callable[[MessageProtocol], list[Hashable]]
+    extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]
     make_error: Callable[[str], MessageProtocol]
     subscriptions: dict[Hashable, set[asyncio.StreamWriter]]
     clients: set[asyncio.StreamWriter]
@@ -62,7 +62,7 @@ class TCPServer:
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
-            keys_extractor: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
+            keys_extractor: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = keys_extractor,
             make_error_response: Callable[[str], MessageProtocol] = make_error_response,
             default_handler: Handler = not_found_handler,
             logger: logging.Logger = default_server_logger,
@@ -357,7 +357,7 @@ class TCPServer:
                     )
                     return
 
-            keys = self.extract_keys(message)
+            keys = self.extract_keys(message, addr)
             self.logger.debug(
                 "Message received from %s with keys=%s", addr, keys
             )
