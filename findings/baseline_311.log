@@ -1,0 +1,38 @@
+test_e2e (test_tcp_e2e.TestTCPE2E.test_e2e) ... 2026-01-24 14:16:24,752 - netaio.server - INFO - Server started on 0.0.0.0:62360
+2026-01-24 14:16:24,853 - netaio.client - INFO - Connecting to 127.0.0.1:62360
+2026-01-24 14:16:24,857 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,858 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,859 - netaio.client - INFO - Connecting to 127.0.0.1:62360
+2026-01-24 14:16:24,863 - netaio.server - INFO - Client connected from ('127.0.0.1', 42986)
+2026-01-24 14:16:24,863 - netaio.server - INFO - Client connected from ('127.0.0.1', 42986)
+2026-01-24 14:16:24,877 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,888 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,895 - netaio.server - INFO - Client connected from ('127.0.0.1', 42986)
+2026-01-24 14:16:24,903 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,906 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,906 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,907 - netaio.client - WARNING - Message auth failed
+2026-01-24 14:16:24,907 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,908 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,909 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,909 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,910 - netaio.client - WARNING - Message auth failed
+2026-01-24 14:16:24,911 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,911 - netaio.server - INFO - Client connected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,911 - netaio.client - INFO - Closing connection to server...
+2026-01-24 14:16:24,911 - netaio.client - INFO - Connection to server closed
+2026-01-24 14:16:24,912 - netaio.server - INFO - Client disconnected from ('127.0.0.1', 42974)
+2026-01-24 14:16:24,912 - netaio.server - INFO - Removing closed client ('127.0.0.1', 42974)
+/usr/lib/python3.11/asyncio/streams.py:414: ResourceWarning: unclosed <StreamWriter transport=<_SelectorSocketTransport closing fd=9 read=idle write=<idle, bufsize=0>> reader=<StreamReader transport=<_SelectorSocketTransport closing fd=9 read=idle write=<idle, bufsize=0>>>>
+  warnings.warn(f"unclosed {self!r}", ResourceWarning)
+2026-01-24 14:16:24,912 - netaio.server - INFO - Removing closed client ('127.0.0.1', 42986)
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 0.163s
+
+OK
+
+TestTCPE2E.test_e2e
+DEBUG 1
+DEBUG 3
