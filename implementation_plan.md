@@ -2,46 +2,11 @@
 
 ## Tasks
 
-### TASK 4: Fix Timeout Handler Invocation Bug (CRITICAL)
+### TASK 6: Add Timeout Handler Infrastructure to UDPNode (CRITICAL)
 
 - Status: Done
-- Description: Fix the unreachable timeout handler code in TCPClient.request()
-- **Priority**: CRITICAL - blocking all other timeout handler work
-- Acceptance Criteria:
-    - Wrap `await asyncio.wait_for(event.wait(), timeout=timeout)` in try/except block
-    - Catch `asyncio.TimeoutError` exception
-    - Convert to `TimeoutError` and call `_invoke_timeout_handler()` before raising
-    - Ensure timeout handler is actually invoked when timeout occurs
-    - All existing tests continue to pass
-
-### TASK 2: Fix Type Hints for keys_extractor
-
-- Status: Pending
-- Description: Update keys_extractor type hints to accept tuple[str, int] | None as second parameter
-- Acceptance Criteria:
-    - NetworkNodeProtocol.extract_keys property in common.py (line ~239, search by context) type changed from `Callable[[MessageProtocol], list[Hashable]]` to `Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]`
-    - TCPClient class attribute in netaio/client.py updated (line ~43, search by context)
-    - TCPClient __init__ parameter in netaio/client.py updated (line ~58, search by context)
-    - UDPNode class attribute in netaio/node.py updated (line ~53, search by context)
-    - UDPNode __init__ parameter in netaio/node.py updated (line ~75, search by context)
-
-### TASK 5: Implement AutoReconnectTimeoutHandler for TCPClient
-
-- Status: Pending
-- Description: Create bundled auto-reconnect timeout handler at bottom of client.py
-- Acceptance Criteria:
-    - Class defined at bottom of netaio/client.py
-    - Constructor accepts connect_timeout, max_retries, delay, on_reconnect parameters
-    - __call__ method implements async reconnect logic with retry loop
-    - Attempts to reconnect and invokes on_reconnect callback on success
-    - Returns None (the TimeoutError is always raised by request() after handler completes)
-    - Handler runs for side effects: prepares connection for subsequent requests after the current one fails
-    - Proper error handling and logging throughout
-
-### TASK 6: Add Timeout Handler Infrastructure to UDPNode
-
-- Status: Pending
 - Description: Implement timeout error handler support in UDPNode class (same as TCPClient)
+- **Priority**: CRITICAL - implementation completely missing
 - Acceptance Criteria:
     - Import TimeoutErrorHandler from common module
     - Add timeout_error_handler parameter to __init__ with default None
@@ -54,9 +19,45 @@
     - **Important**: TimeoutError is always raised after the handler completes; handlers run for side effects only
     - No AutoReconnectTimeoutHandler added (UDP is connectionless)
 
+### TASK 2: Fix Type Hints for keys_extractor
+
+- Status: In Progress (NOT FIXED - type annotations still incorrect)
+- Description: Update keys_extractor type hints to accept tuple[str, int] | None as second parameter
+- **Priority**: HIGH - type annotations are incorrect despite function signature being correct
+- Acceptance Criteria:
+    - NetworkNodeProtocol.extract_keys property in common.py (line 240) type changed from `Callable[[MessageProtocol], list[Hashable]]` to `Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]`
+    - TCPClient class attribute in netaio/client.py (line 44) updated
+    - TCPClient __init__ parameter in netaio/client.py (line 63) updated
+    - UDPNode class attribute in netaio/node.py (line 53) updated
+    - UDPNode __init__ parameter in netaio/node.py (line 75) updated
+
+### TASK 4: Fix Timeout Handler Invocation Bug
+
+- Status: Done
+- Description: Fix the unreachable timeout handler code in TCPClient.request()
+- Acceptance Criteria:
+    - Wrap `await asyncio.wait_for(event.wait(), timeout=timeout)` in try/except block
+    - Catch `asyncio.TimeoutError` exception
+    - Convert to `TimeoutError` and call `_invoke_timeout_handler()` before raising
+    - Ensure timeout handler is actually invoked when timeout occurs
+    - All existing tests continue to pass
+
+### TASK 5: Implement AutoReconnectTimeoutHandler for TCPClient
+
+- Status: Done
+- Description: Create bundled auto-reconnect timeout handler at bottom of client.py
+- Acceptance Criteria:
+    - Class defined at bottom of netaio/client.py
+    - Constructor accepts connect_timeout, max_retries, delay, on_reconnect parameters
+    - __call__ method implements async reconnect logic with retry loop
+    - Attempts to reconnect and invokes on_reconnect callback on success
+    - Returns None (the TimeoutError is always raised by request() after handler completes)
+    - Handler runs for side effects: prepares connection for subsequent requests after the current one fails
+    - Proper error handling and logging throughout
+
 ### TASK 7: Update Module Exports
 
-- Status: Pending
+- Status: Done
 - Description: Export new types and handlers from netaio/__init__.py
 - Acceptance Criteria:
     - TimeoutErrorHandler exported from netaio.__init__
@@ -65,17 +66,20 @@
 
 ## Dependencies
 
-- **Task 4 (Critical Bug Fix)** must be completed FIRST - blocking all timeout handler functionality
-- **Task 1** (TimeoutErrorHandler type) is already DONE (enables Tasks 4, 5, 6)
-- **Task 3** (Race condition fix) is already DONE (independent of timeout handler work)
-- **Task 2** (Type hints) can be completed independently at any time
-- **Task 5** (AutoReconnectTimeoutHandler) can be completed after Task 4 is fixed
-- **Task 6** (UDPNode timeout infrastructure) can be completed after Task 4 is fixed
-- **Task 7** (Exports) must be completed after Task 5 (AutoReconnectTimeoutHandler implementation)
+- **Task 6 (CRITICAL)** is DONE - UDPNode timeout handler infrastructure completed
+- **Task 2 (HIGH)** should be completed next - type annotations are still incorrect
+- **Task 4** (Critical Bug Fix) is DONE - blocking issue resolved
+- **Task 1** (TimeoutErrorHandler type) is DONE
+- **Task 3** (Race condition fix) is DONE
+- **Task 5** (AutoReconnectTimeoutHandler) is DONE
+- **Task 7** (Exports) is DONE
 
 ## Notes
 
 - Task 1 is COMPLETE (TimeoutErrorHandler type definition)
+- Task 2 is IN PROGRESS (Type hint fixes - NOT FIXED per review)
 - Task 3 is COMPLETE (Race condition fix)
 - Task 4 is COMPLETE (Timeout handler invocation bug fixed)
-- Tasks 2, 5, 6, 7 are NOT STARTED
+- Task 5 is COMPLETE (AutoReconnectTimeoutHandler implementation)
+- Task 6 is COMPLETE (UDPNode timeout handler infrastructure)
+- Task 7 is COMPLETE (Module exports updated)
