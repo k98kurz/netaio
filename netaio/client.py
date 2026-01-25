@@ -120,7 +120,7 @@ class TCPClient:
         self.cipher_plugin = cipher_plugin
         self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
-        self._timeout_error_handler = timeout_error_handler
+        self.handle_timeout_error = timeout_error_handler
         self._timeout_handler_tasks = set()
         self._timeout_handler_lock = asyncio.Lock()
         self._receive_loop_task = None
@@ -715,7 +715,7 @@ class TCPClient:
 
     def set_timeout_handler(self, handler: TimeoutErrorHandler):
         """Set or replace the timeout error handler."""
-        self._timeout_error_handler = handler
+        self.handle_timeout_error = handler
 
     async def _invoke_timeout_handler(
             self,
@@ -725,10 +725,10 @@ class TCPClient:
             context: dict[str, Any]
     ):
         """Invoke the timeout error handler with sync/async handling."""
-        if self._timeout_error_handler is None:
+        if self.handle_timeout_error is None:
             return
 
-        result = self._timeout_error_handler(
+        result = self.handle_timeout_error(
             self, timeout_type, server, error, context
         )
 

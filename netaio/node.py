@@ -60,7 +60,7 @@ class UDPNode:
     cipher_plugin: CipherPluginProtocol
     peer_plugin: PeerPluginProtocol
     handle_auth_error: AuthErrorHandler
-    timeout_error_handler: TimeoutErrorHandler
+    handle_timeout_error: TimeoutErrorHandler
     _timeout_handler_tasks: set[asyncio.Task]
     _timeout_handler_lock: asyncio.Lock
 
@@ -145,7 +145,7 @@ class UDPNode:
         self.cipher_plugin = cipher_plugin
         self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
-        self.timeout_error_handler = timeout_error_handler
+        self.handle_timeout_error = timeout_error_handler
         self.logger = logger
         self.transport = None
         self.subscriptions = {}
@@ -587,7 +587,7 @@ class UDPNode:
 
     def set_timeout_handler(self, handler: TimeoutErrorHandler):
         """Set or replace the timeout error handler."""
-        self.timeout_error_handler = handler
+        self.handle_timeout_error = handler
 
     async def _invoke_timeout_handler(
             self,
@@ -597,10 +597,10 @@ class UDPNode:
             context: dict[str, Any]
     ):
         """Invoke the timeout error handler with sync/async handling."""
-        if self.timeout_error_handler is None:
+        if self.handle_timeout_error is None:
             return
 
-        result = self.timeout_error_handler(
+        result = self.handle_timeout_error(
             self, timeout_type, server, error, context
         )
 
