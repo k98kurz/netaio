@@ -11,13 +11,16 @@ from typing import (
     Any,
     NamedTuple,
     Awaitable,
+    TypeVar,
 )
 from zlib import crc32
 import asyncio
 import logging
-import packify
+import packify  # type: ignore[import-untyped]
 import socket
 import struct
+
+MessageTypeVar = TypeVar('MessageTypeVar', bound=IntEnum)
 
 
 @runtime_checkable
@@ -38,7 +41,7 @@ class HeaderProtocol(Protocol):
         ...
 
     @property
-    def message_type(self) -> MessageType:
+    def message_type(self) -> MessageTypeVar:
         """At a minimum, a Header must have body_length, auth_length,
             message_type, and checksum properties.
         """
@@ -62,7 +65,10 @@ class HeaderProtocol(Protocol):
         ...
 
     @classmethod
-    def decode(cls, data: bytes) -> HeaderProtocol:
+    def decode(
+        cls, data: bytes,
+        message_type_factory: Callable[[int], MessageTypeVar]|None = None
+    ) -> HeaderProtocol:
         """Decode the header from the data."""
         ...
 
@@ -117,7 +123,7 @@ class BodyProtocol(Protocol):
         ...
 
     @classmethod
-    def prepare(cls, content: bytes, uri: bytes = b'', overhead: int = 0, *args, **kwargs) -> BodyProtocol:
+    def prepare(cls, content: bytes, uri: bytes = b'', overhead: int = 0) -> BodyProtocol:
         """Prepare a body from content and optional arguments."""
         ...
 
@@ -131,7 +137,7 @@ class MessageProtocol(Protocol):
         ...
 
     @property
-    def auth_data(self) -> AuthFieldsProtocol:
+    def auth_data(self) -> AuthFieldsProtocol|None:
         """A Message must have an auth_data property."""
         ...
 
@@ -154,8 +160,8 @@ class MessageProtocol(Protocol):
 
     @classmethod
     def prepare(
-            cls, body: BodyProtocol, message_type: MessageType,
-            auth_data: AuthFieldsProtocol = None
+            cls, body: BodyProtocol, message_type: MessageTypeVar,
+            auth_data: AuthFieldsProtocol|None = None
         ) -> MessageProtocol:
         """Prepare a message from a body."""
         ...
@@ -188,7 +194,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def message_type_class(self) -> type[MessageType]:
+    def message_type_class(self) -> type[MessageTypeVar]:
         """A class implementing this protocol must have a message_type_class
             property referencing the message type class to use for parsing
             received messages.
@@ -270,7 +276,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def auth_plugin(self) -> AuthPluginProtocol:
+    def auth_plugin(self) -> AuthPluginProtocol|None:
         """A class implementing this protocol must have an auth_plugin
             property referencing an auth plugin for
             authenticating/authorizing messages.
@@ -278,7 +284,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def cipher_plugin(self) -> CipherPluginProtocol:
+    def cipher_plugin(self) -> CipherPluginProtocol|None:
         """A class implementing this protocol must have a cipher_plugin
             property referencing a cipher plugin for encrypting and
             decrypting messages.
@@ -286,7 +292,14 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def handle_auth_error(self) -> AuthErrorHandler:
+    def peer_plugin(self) -> PeerPluginProtocol|None:
+        """A class implementing this protocol must have a peer_plugin
+            property referencing a peer plugin for peer-related operations.
+        """
+        ...
+
+    @property
+    def handle_auth_error(self) -> AuthErrorHandler|None:
         """A class implementing this protocol must have a
             handle_auth_error property referencing a function that is
             called when the auth check fails for a received message. If
@@ -327,8 +340,8 @@ class NetworkNodeProtocol(Protocol):
     def on(
             self,
             key: Hashable,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Decorator to register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
@@ -345,8 +358,8 @@ class NetworkNodeProtocol(Protocol):
     def once(
             self,
             key: Hashable,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Decorator to register a one-time handler for a specific key.
             The handler must accept a MessageProtocol object as an
@@ -403,7 +416,7 @@ class MessageType(IntEnum):
 @dataclass
 class Header:
     """Default header class."""
-    message_type: MessageType
+    message_type: IntEnum
     auth_length: int
     body_length: int
     checksum: int
@@ -422,7 +435,7 @@ class Header:
     @classmethod
     def decode(
             cls, data: bytes,
-            message_type_factory: Callable[[int], IntEnum]|None = None
+            message_type_factory: Callable[[int], MessageTypeVar]|None = None
         ) -> Header:
         """Decode the header from the data."""
         excess = False
@@ -443,10 +456,14 @@ class Header:
             )
 
         if message_type_factory is None:
-            message_type_factory = cls.message_type_class
+            from typing import cast
+            message_type_factory = cast(
+                Callable[[int], MessageTypeVar],
+                cls.message_type_class
+            )
 
         return cls(
-            message_type=message_type_factory(message_type),
+            message_type=message_type_factory(message_type),  # type: ignore[arg-type]
             auth_length=auth_length,
             body_length=body_length,
             checksum=checksum
@@ -533,8 +550,8 @@ class Body:
 class Message:
     """Default message class."""
     header: Header
-    auth_data: AuthFields
-    body: Body
+    auth_data: AuthFields|None
+    body: BodyProtocol
 
     def check(self) -> bool:
         """Check if the message is valid."""
@@ -543,15 +560,19 @@ class Message:
     @classmethod
     def decode(
             cls, data: bytes,
-            message_type_factory: Callable[[int], IntEnum]|None = None
+            message_type_factory: Callable[[int], MessageTypeVar]|None = None
         ) -> Message:
-        """Decode the message from the data. Raises ValueError if the
+        """Decode message from data. Raises ValueError if
             checksum does not match.
         """
         header_data = data[:Header.header_length()]
         data = data[Header.header_length():]
         header = Header.decode(header_data, message_type_factory)
-        auth_data = AuthFields.decode(data[:header.auth_length])
+        auth_data = (
+            AuthFields.decode(data[:header.auth_length])
+            if header.auth_length > 0
+            else None
+        )
         body = Body.decode(data[header.auth_length:])
 
         if header.checksum != crc32(body.encode()):
@@ -565,7 +586,7 @@ class Message:
 
     def encode(self) -> bytes:
         """Encode the message into bytes."""
-        auth_data = self.auth_data.encode()
+        auth_data = self.auth_data.encode() if self.auth_data is not None else b''
         body = self.body.encode()
         self.header.auth_length = len(auth_data)
         self.header.body_length = len(body)
@@ -578,19 +599,19 @@ class Message:
 
     @classmethod
     def prepare(
-            cls, body: BodyProtocol, message_type: MessageType|IntEnum,
-            auth_data: AuthFields|None = None
+            cls, body: BodyProtocol, message_type: MessageTypeVar,
+            auth_data: AuthFieldsProtocol|None = None
         ) -> Message:
         """Prepare a message from a body and optional arguments."""
         auth_data = AuthFields() if auth_data is None else auth_data
         return cls(
             header=Header(
-                message_type=message_type,
+                message_type=message_type,  # type: ignore[arg-type]
                 auth_length=len(auth_data.encode()),
                 body_length=len(body.encode()),
                 checksum=crc32(body.encode())
             ),
-            auth_data=auth_data,
+            auth_data=auth_data,  # type: ignore[arg-type]
             body=body
         )
 

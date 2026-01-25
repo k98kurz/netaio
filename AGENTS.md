@@ -27,7 +27,7 @@ python -m unittest tests.test_misc.TestMisc.test_message_type_class_monkey_patch
 Do not attempt to build the project.
 
 ### Code Quality
-No explicit linting/formatting configuration currently exists. Follow the style guidelines below.
+Both mypy and pyright are available for linting. Also follow the style guidelines below.
 
 ---
 
