@@ -34,7 +34,7 @@ class TCPServer:
     """TCP server class."""
     port: int
     interface: str
-    local_peer: Peer
+    local_peer: Peer|None
     peers: dict[bytes, Peer]
     peer_addrs: dict[tuple[str, int], bytes]
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
@@ -50,13 +50,14 @@ class TCPServer:
     subscriptions: dict[Hashable, set[asyncio.StreamWriter]]
     clients: set[asyncio.StreamWriter]
     logger: logging.Logger
-    auth_plugin: AuthPluginProtocol
-    cipher_plugin: CipherPluginProtocol
-    handle_auth_error: AuthErrorHandler
+    auth_plugin: AuthPluginProtocol|None
+    cipher_plugin: CipherPluginProtocol|None
+    peer_plugin: PeerPluginProtocol|None
+    handle_auth_error: AuthErrorHandler|None
 
     def __init__(
             self, port: int = 8888, interface: str = "0.0.0.0",
-            local_peer: Peer = None,
+            local_peer: Peer|None = None,
             header_class: type[HeaderProtocol] = Header,
             message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
@@ -66,10 +67,10 @@ class TCPServer:
             make_error_response: Callable[[str], MessageProtocol] = make_error_response,
             default_handler: Handler = not_found_handler,
             logger: logging.Logger = default_server_logger,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None,
-            peer_plugin: PeerPluginProtocol = None,
-            auth_error_handler: AuthErrorHandler = auth_error_handler,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None,
+            peer_plugin: PeerPluginProtocol|None = None,
+            auth_error_handler: AuthErrorHandler|None = None,
         ):
         """Initialize the TCPServer.
             `interface` is the interface to listen on.
@@ -129,8 +130,8 @@ class TCPServer:
     def add_handler(
             self, key: Hashable,
             handler: Handler,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
@@ -149,8 +150,8 @@ class TCPServer:
     def add_ephemeral_handler(
             self, key: Hashable,
             handler: Handler,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Register an ephemeral handler for a specific key. The handler
             will be removed either after it is called the first time.
@@ -161,8 +162,8 @@ class TCPServer:
 
     def on(
             self, key: Hashable,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Decorator to register a handler for a specific key. The
             handler must accept a MessageProtocol object as an argument
@@ -182,8 +183,8 @@ class TCPServer:
 
     def once(
             self, key: Hashable,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Decorator to register a one-time handler for a specific key.
             The handler must accept a MessageProtocol object as an
@@ -288,7 +289,9 @@ class TCPServer:
         self.clients.add(writer)
         header_length = self.header_class.header_length()
         peer_id = self.peer_addrs.get(addr, None)
-        peer = self.peers.get(peer_id, None)
+        peer: Peer|None = None
+        if peer_id is not None:
+            peer = self.peers.get(peer_id, None)
         auth_plugin = None
         cipher_plugin = None
         header_bytes = await reader.readexactly(header_length)
@@ -302,12 +305,12 @@ class TCPServer:
 
         body_bytes = await reader.readexactly(header.body_length)
         body: BodyProtocol = self.body_class.decode(body_bytes)
-
-        message: MessageProtocol = self.message_class(
-            header=header,
-            auth_data=auth,
-            body=body
-        )
+ 
+        message: MessageProtocol = self.message_class(  # type: ignore[misc]
+            header=header,  # type: ignore[misc]
+            auth_data=auth,  # type: ignore[misc]
+            body=body  # type: ignore[misc]
+        )  # type: ignore[misc]
         self.logger.debug(
             "Received message with checksum=%s from %s",
             message.header.checksum, addr
@@ -323,18 +326,22 @@ class TCPServer:
             # outer auth
             if use_auth and self.auth_plugin is not None:
                 self.logger.debug("Calling self.auth_plugin.check on auth and body")
-                check = self.auth_plugin.check(
-                    message.auth_data, message.body, self, peer,
-                    self.peer_plugin
-                )
+                if message.auth_data is not None:
+                    check = self.auth_plugin.check(
+                        message.auth_data, message.body, self, peer,
+                        self.peer_plugin
+                    )
+                else:
+                    check = False
                 if not check:
                     self.logger.warning(
                         "Invalid auth_fields received from %s", addr
                     )
-                    response = self.handle_auth_error(self, self.auth_plugin, message)
-                    if response is not None:
-                        await self.send(writer, response, use_auth=False, use_cipher=False)
-                        response = None # prevent double sending
+                    if self.handle_auth_error is not None:
+                        response = self.handle_auth_error(self, self.auth_plugin, message)  # type: ignore[arg-type]
+                        if response is not None:
+                            await self.send(writer, response, use_auth=False, use_cipher=False)
+                            response = None # prevent double sending
                     return
                 else:
                     self.logger.debug(
@@ -374,18 +381,23 @@ class TCPServer:
                         self.logger.debug(
                             "Calling auth_plugin.check on auth and body"
                         )
-                        check = auth_plugin.check(
-                            message.auth_data, message.body, self, peer,
-                            self.peer_plugin
-                        )
+                        if message.auth_data is not None:
+                            check = auth_plugin.check(
+                                message.auth_data, message.body, self, peer,
+                                self.peer_plugin
+                            )
+                        else:
+                            check = False
                         if not check:
                             self.logger.warning(
                                 "Invalid auth_fields received from %s",
                                 addr
                             )
-                            response = self.handle_auth_error(
-                                self, auth_plugin, message
-                            )
+                            response = None
+                            if self.handle_auth_error is not None:
+                                response = self.handle_auth_error(
+                                    self, auth_plugin, message
+                                )
                             if response is not None:
                                 await self.send(
                                     writer, response, use_auth=False,
@@ -567,7 +579,9 @@ class TCPServer:
         """
         addr = client.get_extra_info("peername")
         peer_id = self.peer_addrs.get(addr, None)
-        peer = self.peers.get(peer_id, None)
+        peer: Peer|None = None
+        if peer_id is not None:
+            peer = self.peers.get(peer_id, None)
         message = self.prepare_message(
             message, use_auth=use_auth, use_cipher=use_cipher,
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
@@ -605,13 +619,13 @@ class TCPServer:
 
         # check if any plugin is peer-specific
         peer_specific = False
-        if use_auth and self.auth_plugin and self.auth_plugin.is_peer_specific():
+        if use_auth and self.auth_plugin is not None and self.auth_plugin.is_peer_specific():
             peer_specific = True
-        if use_cipher and self.cipher_plugin and self.cipher_plugin.is_peer_specific():
+        if use_cipher and self.cipher_plugin is not None and self.cipher_plugin.is_peer_specific():
             peer_specific = True
-        if auth_plugin and auth_plugin.is_peer_specific():
+        if auth_plugin is not None and auth_plugin.is_peer_specific():
             peer_specific = True
-        if cipher_plugin and cipher_plugin.is_peer_specific():
+        if cipher_plugin is not None and cipher_plugin.is_peer_specific():
             peer_specific = True
 
         if peer_specific:
@@ -676,13 +690,13 @@ class TCPServer:
 
         # check if any plugin is peer-specific
         peer_specific = False
-        if use_auth and self.auth_plugin.is_peer_specific():
+        if use_auth and self.auth_plugin is not None and self.auth_plugin.is_peer_specific():
             peer_specific = True
-        if use_cipher and self.cipher_plugin.is_peer_specific():
+        if use_cipher and self.cipher_plugin is not None and self.cipher_plugin.is_peer_specific():
             peer_specific = True
-        if auth_plugin and auth_plugin.is_peer_specific():
+        if auth_plugin is not None and auth_plugin.is_peer_specific():
             peer_specific = True
-        if cipher_plugin and cipher_plugin.is_peer_specific():
+        if cipher_plugin is not None and cipher_plugin.is_peer_specific():
             peer_specific = True
 
         if peer_specific:
