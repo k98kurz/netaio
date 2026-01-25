@@ -24,7 +24,7 @@
 
 ### TASK 3: Fix Race Condition in TCPClient.receive_loop()
 
-- Status: Pending
+- Status: Done
 - Description: Add task tracking to prevent concurrent receive_loop tasks from corrupting TCP stream
 - Acceptance Criteria:
     - _receive_loop_task: asyncio.Task | None instance variable added to TCPClient class
