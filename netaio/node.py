@@ -51,7 +51,7 @@ class UDPNode:
     handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     ephemeral_handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     default_handler: UDPHandler
-    extract_keys: Callable[[MessageProtocol], list[Hashable]]
+    extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]
     make_error: Callable[[str], MessageProtocol]
     subscriptions: dict[Hashable, set[tuple[str, int]]]
     logger: logging.Logger
@@ -76,7 +76,7 @@ class UDPNode:
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             default_handler: UDPHandler = not_found_handler,
-            extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
+            extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = keys_extractor,
             make_error_response: Callable[[str], MessageProtocol] = make_error_response,
             logger: logging.Logger = default_node_logger,
             auth_plugin: AuthPluginProtocol = None,

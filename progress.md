@@ -1,5 +1,33 @@
 # Progress
 
+## Task 2: Fix Type Hints for keys_extractor (HIGH)
+
+### Completed
+- Fixed NetworkNodeProtocol.extract_keys type annotation in common.py (line 240)
+- Fixed TCPClient class attribute type annotation in netaio/client.py (line 44)
+- Fixed TCPClient __init__ parameter type annotation in netaio/client.py (line 63)
+- Fixed UDPNode class attribute type annotation in netaio/node.py (line 54)
+- Fixed UDPNode __init__ parameter type annotation in netaio/node.py (line 79)
+- All type hints now correctly accept `tuple[str, int] | None` as second parameter
+
+### Acceptance Criteria Met
+✓ NetworkNodeProtocol.extract_keys property in common.py (line 240) type changed from `Callable[[MessageProtocol], list[Hashable]]` to `Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]`
+✓ TCPClient class attribute in netaio/client.py (line 44) updated
+✓ TCPClient __init__ parameter in netaio/client.py (line 63) updated
+✓ UDPNode class attribute in netaio/node.py (line 53) updated
+✓ UDPNode __init__ parameter in netaio/node.py (line 75) updated
+
+### Learnings
+- The original type hints only accepted a single MessageProtocol parameter
+- The actual keys_extractor function signature includes an optional `host: tuple[str, int] | None` parameter
+- This mismatch between type hints and implementation caused type checking issues
+- All 28 existing tests continue to pass after the fix
+
+### Status
+**COMPLETE** - Task 2 can be marked as "In Review"
+
+---
+
 ## Task 4: Fix Timeout Handler Invocation Bug (CRITICAL)
 
 ### Completed
