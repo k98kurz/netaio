@@ -21,10 +21,11 @@ from .common import (
     make_error_response,
     Handler,
     UDPHandler,
+    AuthErrorHandler,
+    TimeoutErrorHandler,
     default_server_logger,
     default_client_logger,
     default_node_logger,
-    TimeoutErrorHandler,
 )
 from .auth import HMACAuthPlugin
 from .cipher import Sha256StreamCipherPlugin

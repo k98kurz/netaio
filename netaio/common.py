@@ -229,6 +229,15 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
+    def ephemeral_handlers(self) -> dict[Hashable, tuple[Handler|UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
+        """A class implementing this protocol must have an ephemeral_handlers
+            property referencing a dictionary of one-time handler functions,
+            keyed by a hashable object, that will be called when a message
+            with corresponding key is received and then removed.
+        """
+        ...
+
+    @property
     def default_handler(self) -> Handler|UDPHandler:
         """A class implementing this protocol must have a default_handler
             property referencing the default handler to use for messages
@@ -304,6 +313,17 @@ class NetworkNodeProtocol(Protocol):
         """
         ...
 
+    def add_ephemeral_handler(
+            self, key: Hashable, handler: Handler|UDPHandler,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ):
+        """Register an ephemeral handler for a specific key. The handler
+            will be removed after it is called the first time.
+            Otherwise identical to `add_handler`.
+        """
+        ...
+
     def on(
             self,
             key: Hashable,
@@ -322,8 +342,30 @@ class NetworkNodeProtocol(Protocol):
         """
         ...
 
+    def once(
+            self,
+            key: Hashable,
+            auth_plugin: AuthPluginProtocol = None,
+            cipher_plugin: CipherPluginProtocol = None
+        ):
+        """Decorator to register a one-time handler for a specific key.
+            The handler must accept a MessageProtocol object as an
+            argument and return a MessageProtocol, None, or a Coroutine
+            that resolves to a MessageProtocol or None. If an auth
+            plugin is provided, it will be used to check the message in
+            addition to any auth plugin that is set on the client. If a
+            cipher plugin is provided, it will be used to decrypt the
+            message in addition to any cipher plugin that is set on the
+            client.
+        """
+        ...
+
     def remove_handler(self, key: Hashable):
         """Remove a handler from the node."""
+        ...
+
+    def remove_ephemeral_handler(self, key: Hashable):
+        """Remove an ephemeral handler for a specific key."""
         ...
 
     def set_logger(self, logger: logging.Logger):
