@@ -237,7 +237,9 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def extract_keys(self) -> Callable[[MessageProtocol], list[Hashable]]:
+    def extract_keys(
+        self,
+    ) -> Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]:
         """A class implementing this protocol must have an extract_keys
             property referencing a function that extracts the keys used
             for routing/choosing responses from a message.

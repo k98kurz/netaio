@@ -41,7 +41,7 @@ class TCPClient:
     message_class: type[MessageProtocol]
     handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
     ephemeral_handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
-    extract_keys: Callable[[MessageProtocol], list[Hashable]]
+    extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]
     logger: logging.Logger
     auth_plugin: AuthPluginProtocol
     cipher_plugin: CipherPluginProtocol
@@ -60,7 +60,7 @@ class TCPClient:
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
-            extract_keys: Callable[[MessageProtocol], list[Hashable]] = keys_extractor,
+            extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = keys_extractor,
             logger: logging.Logger = default_client_logger,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None,
