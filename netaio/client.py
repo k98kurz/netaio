@@ -21,7 +21,7 @@ from .common import (
     default_client_logger
 )
 from enum import IntEnum
-from typing import Any, Callable, Coroutine, Hashable
+from typing import Any, Awaitable, Callable, Coroutine, Hashable
 import asyncio
 import logging
 
@@ -744,3 +744,120 @@ class TCPClient:
                 task.cancel()
             await asyncio.gather(*self._timeout_handler_tasks, return_exceptions=True)
             self._timeout_handler_tasks.clear()
+
+
+class AutoReconnectTimeoutHandler:
+    """Bundled timeout handler that automatically reconnects to server.
+
+    This handler runs as a side effect when a timeout occurs, attempting to
+    re-establish the connection so subsequent requests can succeed. The original
+    TimeoutError is always raised after the handler completes.
+
+    Constructor Parameters:
+        connect_timeout: Timeout in seconds for each connect attempt
+        max_retries: Maximum number of reconnect attempts
+        delay: Delay in seconds between retry attempts
+        on_reconnect: Optional callback invoked on successful reconnect,
+                      called with client, server, and attempt_number arguments
+
+    Usage:
+        handler = AutoReconnectTimeoutHandler(
+            connect_timeout=5.0,
+            max_retries=3,
+            delay=1.0,
+            on_reconnect=lambda client, server, attempt: ...
+        )
+        client.set_timeout_handler(handler)
+    """
+
+    def __init__(
+        self,
+        connect_timeout: float = 5.0,
+        max_retries: int = 3,
+        delay: float = 1.0,
+        on_reconnect: Callable[
+            [TCPClient, tuple[str, int], int],
+            Awaitable[None] | None
+        ] = None
+    ):
+        self._connect_timeout = connect_timeout
+        self._max_retries = max_retries
+        self._delay = delay
+        self._on_reconnect = on_reconnect
+
+    async def __call__(
+        self,
+        client: TCPClient,
+        timeout_type: str,
+        server: tuple[str, int] | None,
+        error: TimeoutError,
+        context: dict[str, Any]
+    ) -> None:
+        """Attempt to reconnect after a timeout.
+
+        Args:
+            client: The TCPClient instance that experienced the timeout
+            timeout_type: Type of timeout that occurred
+            server: The server address (host, port) or None for default
+            error: The TimeoutError that was raised
+            context: Additional context about the timeout
+
+        Returns:
+            None - the TimeoutError is always raised by request() after this
+        """
+        if timeout_type != 'request_timeout':
+            return
+
+        target_server = server or client.default_host
+        client.logger.info(
+            "Auto-reconnect handler invoked for server %s:%s (max_retries=%d)",
+            target_server[0], target_server[1], self._max_retries
+        )
+
+        for attempt in range(1, self._max_retries + 1):
+            try:
+                client.logger.info(
+                    "Reconnect attempt %d/%d to %s:%s",
+                    attempt, self._max_retries, target_server[0], target_server[1]
+                )
+                await asyncio.wait_for(
+                    client.connect(target_server[0], target_server[1]),
+                    timeout=self._connect_timeout
+                )
+                client.logger.info(
+                    "Successfully reconnected to %s:%s",
+                    target_server[0], target_server[1]
+                )
+
+                if self._on_reconnect is not None:
+                    result = self._on_reconnect(client, target_server, attempt)
+                    if isinstance(result, Coroutine):
+                        await result
+
+                return
+
+            except asyncio.TimeoutError:
+                client.logger.warning(
+                    "Reconnect attempt %d/%d to %s:%s timed out",
+                    attempt, self._max_retries, target_server[0], target_server[1]
+                )
+            except ConnectionError as e:
+                client.logger.warning(
+                    "Reconnect attempt %d/%d to %s:%s failed: %s",
+                    attempt, self._max_retries, target_server[0],
+                    target_server[1], str(e)
+                )
+            except Exception as e:
+                client.logger.error(
+                    "Reconnect attempt %d/%d to %s:%s encountered unexpected error",
+                    attempt, self._max_retries, target_server[0], target_server[1],
+                    exc_info=True
+                )
+
+            if attempt < self._max_retries:
+                await asyncio.sleep(self._delay)
+
+        client.logger.error(
+            "Failed to reconnect to %s:%s after %d attempts",
+            target_server[0], target_server[1], self._max_retries
+        )

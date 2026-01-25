@@ -65,3 +65,99 @@
 
 ### Status
 **IN REVIEW** - All acceptance criteria met; 28 tests pass including 8 TCP e2e tests
+
+---
+
+## Task 5: Implement AutoReconnectTimeoutHandler for TCPClient
+
+### Completed
+- Added `AutoReconnectTimeoutHandler` class at bottom of netaio/client.py (line 749-825)
+- Constructor accepts connect_timeout, max_retries, delay, on_reconnect parameters
+- `__call__` method implements async reconnect logic with retry loop
+- Attempts to reconnect with configurable timeout and max retries
+- Invokes on_reconnect callback (sync or async) on successful reconnect
+- Returns None - TimeoutError is always raised by request() after handler completes
+- Proper error handling and logging for timeout, connection, and generic exceptions
+- Added `Awaitable` import to typing imports in client.py
+- Exported `AutoReconnectTimeoutHandler` and `TimeoutErrorHandler` from netaio/__init__.py
+- All 28 existing tests continue to pass
+- Imports verified: `from netaio import AutoReconnectTimeoutHandler, TimeoutErrorHandler`
+
+### Acceptance Criteria Met
+✓ Class defined at bottom of netaio/client.py
+✓ Constructor accepts connect_timeout, max_retries, delay, on_reconnect parameters
+✓ __call__ method implements async reconnect logic with retry loop
+✓ Attempts to reconnect and invokes on_reconnect callback on success
+✓ Returns None (the TimeoutError is always raised by request() after handler completes)
+✓ Handler runs for side effects: prepares connection for subsequent requests after the current one fails
+✓ Proper error handling and logging throughout
+
+### Learnings
+- The handler only runs for 'request_timeout' type, ignores other timeout types
+- Uses asyncio.wait_for with connect_timeout for each connection attempt
+- Properly handles both sync and async on_reconnect callbacks
+- Logs at info/warning/error levels appropriately for different scenarios
+- Implements exponential backoff via configurable delay between retries
+
+###     Status
+**IN REVIEW** - Task 5 complete with exports (Task 7 also completed)
+
+---
+
+## Task 6: Add Timeout Handler Infrastructure to UDPNode (CRITICAL)
+
+### Completed
+- Added `TimeoutErrorHandler` to imports from common module in netaio/node.py
+- Added `Coroutine` to typing imports
+- Added class attributes: `timeout_error_handler`, `_timeout_handler_tasks`, `_timeout_handler_lock`
+- Added `timeout_error_handler` parameter to `__init__` with default None
+- Updated docstring to describe timeout_error_handler parameter
+- Initialized `self.timeout_error_handler = timeout_error_handler` in `__init__`
+- Initialized `self._timeout_handler_tasks = set()` in `__init__`
+- Initialized `self._timeout_handler_lock = asyncio.Lock()` in `__init__`
+- Implemented `set_timeout_handler(handler)` method at line 585-586
+- Implemented `async _invoke_timeout_handler(timeout_type, server, error, context)` method at lines 589-605
+- Implemented `async cancel_timeout_handler_tasks()` method at lines 608-613
+- Modified `request()` method to call `_invoke_timeout_handler()` before raising TimeoutError (lines 579-582)
+- Added `await self.cancel_timeout_handler_tasks()` call to `stop()` method for proper cleanup
+
+### Acceptance Criteria Met
+✓ Import TimeoutErrorHandler from common module
+✓ Add timeout_error_handler parameter to __init__ with default None
+✓ Initialize _timeout_error_handler, _timeout_handler_tasks set, and _timeout_handler_lock
+✓ Implement set_timeout_handler(handler) method
+✓ Implement async _invoke_timeout_handler(timeout_type, server, error, context) method
+✓ Implement async cancel_timeout_handler_tasks() method
+✓ Call _invoke_timeout_handler() before raising TimeoutError in request() with descriptive timeout_type and relevant context dict
+✓ Handlers executed with proper sync/async handling and task tracking
+✓ TimeoutError is always raised after the handler completes; handlers run for side effects only
+✓ No AutoReconnectTimeoutHandler added (UDP is connectionless)
+
+### Learnings
+- UDP is connectionless so no AutoReconnectTimeoutHandler is needed
+- Sync handlers execute synchronously before TimeoutError is re-raised
+- Async handlers are tracked as tasks and cleaned up via `cancel_timeout_handler_tasks()`
+- The `_invoke_timeout_handler` pattern from TCPClient works identically for UDP
+- The context dict includes uri, timeout, server, and key for debugging
+- Both sync and async handlers tested successfully
+
+### Status
+**IN REVIEW** - All acceptance criteria met; 28 tests pass including 7 UDP e2e tests
+
+---
+
+## Task 7: Update Module Exports
+
+### Completed
+- Added `TimeoutErrorHandler` to imports from common module in netaio/__init__.py
+- Added `AutoReconnectTimeoutHandler` to imports from client module in netaio/__init__.py
+- Verified imports work: `from netaio import AutoReconnectTimeoutHandler, TimeoutErrorHandler`
+- All 28 existing tests continue to pass
+
+### Acceptance Criteria Met
+✓ TimeoutErrorHandler exported from netaio.__init__
+✓ AutoReconnectTimeoutHandler exported from netaio.__init__
+✓ Exports accessible via `from netaio import TimeoutErrorHandler, AutoReconnectTimeoutHandler`
+
+### Status
+**IN REVIEW** - All acceptance criteria met

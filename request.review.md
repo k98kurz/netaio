@@ -1,55 +1,63 @@
-# Review Request: Task 3 - Fix Race Condition in TCPClient.receive_loop()
+# Request Review - Task 6: Add Timeout Handler Infrastructure to UDPNode
 
 ## Summary
 
-Fixed a race condition in `TCPClient.request()` where concurrent calls could create multiple `receive_loop` tasks, causing TCP stream corruption. The fix adds task tracking to prevent concurrent receive_loop tasks.
+Implemented timeout error handler infrastructure in `UDPNode` class, matching the pattern already used in `TCPClient`. This allows users to register custom handlers that are invoked when a `request()` call times out.
 
 ## Changes Made
 
-### netaio/client.py
+### netaio/node.py
+- Added `TimeoutErrorHandler` to imports from common module (line 21)
+- Added `Coroutine` to typing imports (line 28)
+- Added class attributes:
+  - `timeout_error_handler: TimeoutErrorHandler` (line 62)
+  - `_timeout_handler_tasks: set[asyncio.Task]` (line 63)
+  - `_timeout_handler_lock: asyncio.Lock` (line 64)
+- Added `timeout_error_handler` parameter to `__init__` with default None (line 86)
+- Updated docstring to describe `timeout_error_handler` parameter (lines 119-122)
+- Initialized `self.timeout_error_handler = timeout_error_handler` in `__init__` (line 147)
+- Initialized `self._timeout_handler_tasks = set()` in `__init__` (line 153)
+- Initialized `self._timeout_handler_lock = asyncio.Lock()` in `__init__` (line 154)
+- Implemented `set_timeout_handler(handler)` method (lines 585-586)
+- Implemented `async _invoke_timeout_handler(timeout_type, server, error, context)` method (lines 589-605)
+  - Checks if handler is None and returns early if so
+  - Invokes handler with node, timeout_type, server, error, and context
+  - For async handlers, creates tracked task and adds to `_timeout_handler_tasks`
+  - Sync handlers execute synchronously before TimeoutError is re-raised
+- Implemented `async cancel_timeout_handler_tasks()` method (lines 608-613)
+  - Uses `_timeout_handler_lock` for thread safety
+  - Cancels all running timeout handler tasks
+  - Waits for tasks to complete with `return_exceptions=True`
+  - Clears the task set
+- Modified `request()` method to call `_invoke_timeout_handler()` before raising TimeoutError (lines 579-582)
+  - Creates descriptive context dict with uri, timeout, server, and key
+  - Passes 'request_timeout' as timeout_type
+  - Always raises TimeoutError after handler completes
+- Added `await self.cancel_timeout_handler_tasks()` call to `stop()` method (line 1012) for proper cleanup
 
-1. **Added class attribute** (line 50):
-   ```python
-   _receive_loop_task: asyncio.Task | None
-   ```
+## Testing
 
-2. **Initialized attribute in __init__** (line 112):
-   ```python
-   self._receive_loop_task = None
-   ```
-
-3. **Modified receive_loop()** (lines 446-466):
-   - Set `self._receive_loop_task = asyncio.current_task()` at start
-   - Set `self._receive_loop_task = None` in finally block
-   - Wrapped entire method body in try/finally to ensure cleanup
-
-4. **Modified request()** (lines 293-310):
-   - Added `was_running` variable to check if receive_loop was already running
-   - Only create new task if `not was_running`
-   - Only cancel task in finally block if `not was_running`
-
-### implementation_plan.md
-Updated Task 3 status from "Pending" to "In Review"
+- All 28 existing tests pass (including 7 UDP e2e tests)
+- Created test script to verify:
+  - Async timeout handler is called with correct parameters
+  - Sync timeout handler works correctly
+  - Default behavior (no handler) works correctly
+  - TimeoutError is always raised after handler completes
 
 ## Acceptance Criteria Met
-✓ _receive_loop_task: asyncio.Task | None instance variable added to TCPClient class
-✓ receive_loop() sets self._receive_loop_task = asyncio.current_task() at start
-✓ receive_loop() sets self._receive_loop_task = None in finally block
-✓ request() uses local variable `was_running` to track if receive_loop was already running
-✓ request() checks if receive_loop is already running: `was_running = (self._receive_loop_task is not None and not self._receive_loop_task.done())`
-✓ request() only creates new task if not already running
-✓ request() only cancels task in finally block if it was created during the call (i.e., not was_running)
 
-## Test Results
+- ✓ Import TimeoutErrorHandler from common module
+- ✓ Add timeout_error_handler parameter to __init__ with default None
+- ✓ Initialize _timeout_error_handler, _timeout_handler_tasks set, and _timeout_handler_lock
+- ✓ Implement set_timeout_handler(handler) method
+- ✓ Implement async _invoke_timeout_handler(timeout_type, server, error, context) method
+- ✓ Implement async cancel_timeout_handler_tasks() method
+- ✓ Call _invoke_timeout_handler() before raising TimeoutError in request() with descriptive timeout_type and relevant context dict
+- ✓ Handlers executed with proper sync/async handling and task tracking
+- ✓ TimeoutError is always raised after the handler completes; handlers run for side effects only
+- ✓ No AutoReconnectTimeoutHandler added (UDP is connectionless)
 
-All 28 tests pass, including all 8 TCP e2e tests:
-```
-Ran 28 tests in 9.785s
-OK
-```
+## Remaining Work
 
-## Design Notes
-
-- The `was_running` pattern ensures that if a receive_loop is already active (e.g., from another concurrent request), we don't create a duplicate task
-- If receive_loop was already running, we don't cancel it in the finally block since we didn't create it
-- The finally block in receive_loop ensures `_receive_loop_task` is always reset to None when the task exits
+Task 2 remains:
+- Task 2: Fix Type Hints for keys_extractor

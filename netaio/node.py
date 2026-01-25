@@ -19,12 +19,13 @@ from .common import (
     auth_error_handler,
     UDPHandler,
     AuthErrorHandler,
+    TimeoutErrorHandler,
     DefaultPeerPlugin,
     default_node_logger,
 )
 from enum import IntEnum
 from time import time
-from typing import Callable, Hashable, Any
+from typing import Any, Callable, Coroutine, Hashable
 import asyncio
 import socket
 import logging
@@ -59,6 +60,9 @@ class UDPNode:
     cipher_plugin: CipherPluginProtocol
     peer_plugin: PeerPluginProtocol
     handle_auth_error: AuthErrorHandler
+    timeout_error_handler: TimeoutErrorHandler
+    _timeout_handler_tasks: set[asyncio.Task]
+    _timeout_handler_lock: asyncio.Lock
 
     def __init__(
             self,
@@ -79,6 +83,7 @@ class UDPNode:
             cipher_plugin: CipherPluginProtocol = None,
             peer_plugin: PeerPluginProtocol = None,
             auth_error_handler: AuthErrorHandler = auth_error_handler,
+            timeout_error_handler: TimeoutErrorHandler = None,
             ignore_own_ip: bool = True,
         ):
         """Initialize the UDPNode.
@@ -113,6 +118,10 @@ class UDPNode:
             send error messages for failed auth checks (e.g. if the
             auth plugin is an anti-spam plugin and messages that fail
             the auth check should just be dropped).
+            `timeout_error_handler` is a function that handles timeout
+            errors. It is called with (self, timeout_type, server, error,
+            context) and can perform recovery actions or logging. The
+            TimeoutError is always raised after the handler completes.
             If `ignore_own_ip` is True, messages from the local IP
             address will be ignored.
         """
@@ -136,10 +145,13 @@ class UDPNode:
         self.cipher_plugin = cipher_plugin
         self.peer_plugin = peer_plugin or DefaultPeerPlugin()
         self.handle_auth_error = auth_error_handler
+        self.timeout_error_handler = timeout_error_handler
         self.logger = logger
         self.transport = None
         self.subscriptions = {}
         self._advertise_peer_tasks = {}
+        self._timeout_handler_tasks = set()
+        self._timeout_handler_lock = asyncio.Lock()
         self._local_ip = get_ip() if ignore_own_ip else None
 
     def connection_made(self, transport: asyncio.DatagramTransport):
@@ -556,12 +568,54 @@ class UDPNode:
             await asyncio.wait_for(event.wait(), timeout=timeout)
         except asyncio.TimeoutError:
             self.remove_ephemeral_handler(key)
-            raise TimeoutError(
+            error = TimeoutError(
                 f"Request for URI {uri.decode('utf-8', errors='replace')} @ " +
                 f"{server} timed out after {timeout}s"
             )
+            context = {
+                'uri': uri,
+                'timeout': timeout,
+                'server': server,
+                'key': key
+            }
+            await self._invoke_timeout_handler(
+                'request_timeout', server, error, context
+            )
+            raise error
 
         return result[0]
+
+    def set_timeout_handler(self, handler: TimeoutErrorHandler):
+        """Set or replace the timeout error handler."""
+        self.timeout_error_handler = handler
+
+    async def _invoke_timeout_handler(
+            self,
+            timeout_type: str,
+            server: tuple[str, int] | None,
+            error: TimeoutError,
+            context: dict[str, Any]
+    ):
+        """Invoke the timeout error handler with sync/async handling."""
+        if self.timeout_error_handler is None:
+            return
+
+        result = self.timeout_error_handler(
+            self, timeout_type, server, error, context
+        )
+
+        if isinstance(result, Coroutine):
+            task = asyncio.create_task(result)
+            self._timeout_handler_tasks.add(task)
+            task.add_done_callback(self._timeout_handler_tasks.discard)
+
+    async def cancel_timeout_handler_tasks(self):
+        """Cancel all running timeout handler tasks."""
+        async with self._timeout_handler_lock:
+            for task in list(self._timeout_handler_tasks):
+                task.cancel()
+            await asyncio.gather(*self._timeout_handler_tasks, return_exceptions=True)
+            self._timeout_handler_tasks.clear()
 
     def broadcast(
             self, message: MessageProtocol, use_auth: bool = True,
@@ -955,6 +1009,7 @@ class UDPNode:
         """Stop the UDPNode."""
         for app_id in list(self._advertise_peer_tasks.keys()):
             await self.stop_peer_management(app_id)
+        await self.cancel_timeout_handler_tasks()
         self.transport.close()
 
     def set_logger(self, logger: logging.Logger):
