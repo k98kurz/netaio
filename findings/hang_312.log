@@ -1,0 +1,25 @@
+test_e2e (test_tcp_e2e.TestTCPE2E.test_e2e) ... 2026-01-24 14:16:31,106 - netaio.server - INFO - Server started on 0.0.0.0:43849
+2026-01-24 14:16:31,206 - netaio.client - INFO - Connecting to 127.0.0.1:43849
+2026-01-24 14:16:31,209 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,209 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,209 - netaio.client - INFO - Connecting to 127.0.0.1:43849
+2026-01-24 14:16:31,211 - netaio.server - INFO - Client connected from ('127.0.0.1', 54188)
+2026-01-24 14:16:31,211 - netaio.server - INFO - Client connected from ('127.0.0.1', 54188)
+2026-01-24 14:16:31,218 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,223 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,227 - netaio.server - INFO - Client connected from ('127.0.0.1', 54188)
+2026-01-24 14:16:31,234 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,237 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,237 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,238 - netaio.client - WARNING - Message auth failed
+2026-01-24 14:16:31,238 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,238 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,240 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,240 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,240 - netaio.client - WARNING - Message auth failed
+2026-01-24 14:16:31,242 - netaio.server - WARNING - Invalid auth_fields received from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,242 - netaio.server - INFO - Client connected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,243 - netaio.client - INFO - Closing connection to server...
+2026-01-24 14:16:31,243 - netaio.client - INFO - Connection to server closed
+2026-01-24 14:16:31,243 - netaio.server - INFO - Client disconnected from ('127.0.0.1', 54186)
+2026-01-24 14:16:31,243 - netaio.server - INFO - Removing closed client ('127.0.0.1', 54186)
