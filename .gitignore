@@ -4,3 +4,4 @@ venv*
 dist
 .ralph/
 .research/
+findings/
