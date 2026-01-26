@@ -862,13 +862,16 @@ def make_error_response(
 
 def auth_error_handler(
         node: NetworkNodeProtocol, auth_plugin: AuthPluginProtocol,
-        msg: MessageProtocol
+        msg: MessageProtocol|None
     ) -> MessageProtocol|None:
     """Called when the auth check call fails for a message. If the
         message that failed the auth check was an error message, do
         not send a response. Otherwise, send the error message returned
         by the auth plugin.
     """
+    if msg is None:
+        node.logger.debug("Message is None, not sending a response")
+        return None
     node.logger.debug(f"Message auth failed for message with type {msg.header.message_type.name}")
     if 'ERROR' in msg.header.message_type.name.upper():
         node.logger.debug("Message is an error message, not sending a response")
