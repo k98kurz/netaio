@@ -1,0 +1,1046 @@
+/home/sithlord/Documents/repos/netaio/netaio/asymmetric.py
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:94:33 - error: Cannot access attribute "to_bytes" for class "bytes"
+    Attribute "to_bytes" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:97:9 - error: No overloads for "update" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:97:35 - error: Argument of type "dict[str, bytes | int | Unknown]" cannot be assigned to parameter "m" of type "Iterable[tuple[str, bytes]]" in function "update"
+    "str" is not assignable to "tuple[str, bytes]"
+    "str" is not assignable to "tuple[str, bytes]"
+    "str" is not assignable to "tuple[str, bytes]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:100:41 - error: Cannot access attribute "bytes" for class "bytes"
+    Attribute "bytes" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:121:37 - error: "parse_data" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:123:24 - error: No overloads for "__getitem__" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:123:24 - error: Argument of type "Literal['lock']" cannot be assigned to parameter "key" of type "slice[Any, Any, Any]" in function "__getitem__"
+    "Literal['lock']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:130:33 - error: Cannot access attribute "to_bytes" for class "bytes"
+    Attribute "to_bytes" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:206:28 - error: No overloads for "__getitem__" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:206:28 - error: Argument of type "Literal['pubkey']" cannot be assigned to parameter "key" of type "slice[Any, Any, Any]" in function "__getitem__"
+    "Literal['pubkey']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:248:28 - error: No overloads for "__getitem__" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/asymmetric.py:248:28 - error: Argument of type "Literal['pubkey']" cannot be assigned to parameter "key" of type "slice[Any, Any, Any]" in function "__getitem__"
+    "Literal['pubkey']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
+/home/sithlord/Documents/repos/netaio/netaio/auth.py
+  /home/sithlord/Documents/repos/netaio/netaio/auth.py:62:9 - error: No overloads for "update" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/auth.py:62:35 - error: Argument of type "dict[str, bytes | int]" cannot be assigned to parameter "m" of type "Iterable[tuple[str, bytes]]" in function "update"
+    "str" is not assignable to "tuple[str, bytes]"
+    "str" is not assignable to "tuple[str, bytes]"
+    "str" is not assignable to "tuple[str, bytes]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/auth.py:65:59 - error: Cannot access attribute "to_bytes" for class "bytes"
+    Attribute "to_bytes" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/auth.py:85:24 - error: Cannot access attribute "to_bytes" for class "bytes"
+    Attribute "to_bytes" is unknown (reportAttributeAccessIssue)
+/home/sithlord/Documents/repos/netaio/netaio/cipher.py
+  /home/sithlord/Documents/repos/netaio/netaio/cipher.py:54:39 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/cipher.py:56:49 - error: Expected 0 positional arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/cipher.py:68:32 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/cipher.py:87:39 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/cipher.py:88:49 - error: Expected 0 positional arguments (reportCallIssue)
+/home/sithlord/Documents/repos/netaio/netaio/client.py
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:252:58 - error: Argument of type "Self@TCPClient" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "encrypt"
+    Type "Self@TCPClient" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPClient*" is incompatible with protocol "NetworkNodeProtocol"
+        "default_handler" is not present
+        "make_error" is not present
+          "handlers" is an incompatible type
+            "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+          "ephemeral_handlers" is an incompatible type
+            "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:357:45 - error: Expression of type "None" cannot be assigned to parameter of type "tuple[str, int]"
+    "None" is not assignable to "tuple[str, int]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:400:13 - error: No parameter named "header" (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:401:13 - error: No parameter named "auth_data" (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:402:13 - error: No parameter named "body" (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:693:37 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:693:46 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_data" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:705:41 - error: "unpack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:710:36 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "remove_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/client.py:796:13 - error: Expression of type "None" cannot be assigned to parameter of type "(TCPClient, tuple[str, int], int) -> (Awaitable[None] | None)"
+    Type "None" is not assignable to type "(TCPClient, tuple[str, int], int) -> (Awaitable[None] | None)" (reportArgumentType)
+/home/sithlord/Documents/repos/netaio/netaio/common.py
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:44:31 - warning: TypeVar "MessageTypeVar" appears only once in generic function signature
+    Use "IntEnum" instead (reportInvalidTypeVarUse)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:163:52 - warning: TypeVar "MessageTypeVar" appears only once in generic function signature
+    Use "IntEnum" instead (reportInvalidTypeVarUse)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:197:42 - warning: TypeVar "MessageTypeVar" appears only once in generic function signature
+    Use "IntEnum" instead (reportInvalidTypeVarUse)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:491:27 - error: Argument of type "SerializableType" cannot be assigned to parameter "fields" of type "dict[str, bytes]" in function "__init__"
+    Type "SerializableType" is not assignable to type "dict[str, bytes]"
+      "Decimal" is not assignable to "dict[str, bytes]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:602:52 - warning: TypeVar "MessageTypeVar" appears only once in generic function signature
+    Use "IntEnum" instead (reportInvalidTypeVarUse)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:807:16 - error: Type "SerializableType" is not assignable to return type "dict[str, Any] | NamedTuple"
+    Type "SerializableType" is not assignable to type "dict[str, Any] | NamedTuple"
+      Type "Decimal" is not assignable to type "dict[str, Any] | NamedTuple"
+        "Decimal" is not assignable to "dict[str, Any]"
+        "Decimal" is not assignable to "NamedTuple" (reportReturnType)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:807:31 - error: Argument of type "bytes | None" cannot be assigned to parameter "data" of type "bytes" in function "unpack"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:819:30 - error: "Packable" is not iterable
+    "__iter__" method not defined (reportGeneralTypeIssues)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:819:30 - error: "int" is not iterable
+    "__iter__" method not defined (reportGeneralTypeIssues)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:819:30 - error: "bool" is not iterable
+    "__iter__" method not defined (reportGeneralTypeIssues)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:819:30 - error: "float" is not iterable
+    "__iter__" method not defined (reportGeneralTypeIssues)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:819:30 - error: "Decimal" is not iterable
+    "__iter__" method not defined (reportGeneralTypeIssues)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:819:30 - error: "None" is not iterable
+    "__iter__" method not defined (reportGeneralTypeIssues)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:820:37 - error: Argument of type "Unknown | str | int" cannot be assigned to parameter "id" of type "bytes | None" in function "__init__"
+    Type "Unknown | str | int" is not assignable to type "bytes | None"
+      Type "int" is not assignable to type "bytes | None"
+        "int" is not assignable to "bytes"
+        "int" is not assignable to "None" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:820:51 - error: Argument of type "Unknown | str | int" cannot be assigned to parameter "data" of type "bytes | None" in function "__init__"
+    Type "Unknown | str | int" is not assignable to type "bytes | None"
+      Type "int" is not assignable to type "bytes | None"
+        "int" is not assignable to "bytes"
+        "int" is not assignable to "None" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:848:43 - error: Cannot access attribute "NOT_FOUND" for class "type[IntEnum]"
+    Attribute "NOT_FOUND" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:851:43 - error: Cannot access attribute "AUTH_ERROR" for class "type[IntEnum]"
+    Attribute "AUTH_ERROR" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/common.py:854:43 - error: Cannot access attribute "ERROR" for class "type[IntEnum]"
+    Attribute "ERROR" is unknown (reportAttributeAccessIssue)
+/home/sithlord/Documents/repos/netaio/netaio/crypto.py
+  /home/sithlord/Documents/repos/netaio/netaio/crypto.py:89:12 - error: Type "bytes" is not assignable to return type "str"
+    "bytes" is not assignable to "str" (reportReturnType)
+/home/sithlord/Documents/repos/netaio/netaio/node.py
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:150:26 - error: Cannot assign to attribute "transport" for class "UDPNode*"
+    "None" is not assignable to "DatagramTransport" (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:200:13 - error: No parameter named "header" (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:201:13 - error: No parameter named "auth_data" (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:202:13 - error: No parameter named "body" (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:217:54 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "check"
+    Type "Self@UDPNode" is not assignable to type "NetworkNodeProtocol | None"
+      "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:256:62 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "check"
+    Type "Self@UDPNode" is not assignable to type "NetworkNodeProtocol | None"
+      "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:323:78 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "make"
+    Type "Self@UDPNode" is not assignable to type "NetworkNodeProtocol | None"
+      "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:460:30 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "encrypt"
+    Type "Self@UDPNode" is not assignable to type "NetworkNodeProtocol | None"
+      "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:473:21 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:473:54 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "make"
+    Type "Self@UDPNode" is not assignable to type "NetworkNodeProtocol | None"
+      "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:487:30 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "encrypt"
+    Type "Self@UDPNode" is not assignable to type "NetworkNodeProtocol | None"
+      "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:502:21 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:502:54 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "make"
+    Type "Self@UDPNode" is not assignable to type "NetworkNodeProtocol | None"
+      "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:519:13 - error: Argument of type "() -> Self@UDPNode" cannot be assigned to parameter "protocol_factory" of type "() -> _ProtocolT@create_datagram_endpoint" in function "create_datagram_endpoint"
+    Type "() -> Self@UDPNode" is not assignable to type "() -> _ProtocolT@create_datagram_endpoint"
+      Function return type "Self@UDPNode" is incompatible with type "_ProtocolT@create_datagram_endpoint"
+        Type "Self@UDPNode" is not assignable to type "BaseProtocol"
+          "UDPNode*" is not assignable to "BaseProtocol" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:544:19 - error: Type "MessageProtocol | None" is not assignable to declared type "MessageProtocol"
+    Type "MessageProtocol | None" is not assignable to type "MessageProtocol"
+      "None" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportAssignmentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:625:13 - error: Argument of type "Self@UDPNode" cannot be assigned to parameter of type "NetworkNodeProtocol"
+    "UDPNode*" is incompatible with protocol "NetworkNodeProtocol"
+      "handlers" is an incompatible type
+        "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+          Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+          Consider switching from "dict" to "Mapping" which is covariant in the value type
+      "ephemeral_handlers" is an incompatible type
+        "dict[Hashable, tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+          Type parameter "_VT@dict" is invariant, but "tuple[UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:671:23 - error: Type "MessageProtocol | None" is not assignable to declared type "MessageProtocol"
+    Type "MessageProtocol | None" is not assignable to type "MessageProtocol"
+      "None" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportAssignmentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:714:19 - error: Type "MessageProtocol | None" is not assignable to declared type "MessageProtocol"
+    Type "MessageProtocol | None" is not assignable to type "MessageProtocol"
+      "None" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportAssignmentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:762:23 - error: Type "MessageProtocol | None" is not assignable to declared type "MessageProtocol"
+    Type "MessageProtocol | None" is not assignable to type "MessageProtocol"
+      "None" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportAssignmentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:796:39 - error: "id" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:827:20 - error: No overloads for "get" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:827:35 - error: Argument of type "bytes | None" cannot be assigned to parameter "key" of type "bytes" in function "get"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:875:40 - error: Cannot access attribute "ADVERTISE_PEER" for class "type[IntEnum]"
+    Attribute "ADVERTISE_PEER" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:891:34 - error: "pack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:891:39 - error: Argument of type "Peer | None" cannot be assigned to parameter "peer" of type "Peer" in function "pack"
+    Type "Peer | None" is not assignable to type "Peer"
+      "None" is not assignable to "Peer" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:894:37 - error: Cannot access attribute "ADVERTISE_PEER" for class "type[IntEnum]"
+    Attribute "ADVERTISE_PEER" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:898:34 - error: "pack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:898:39 - error: Argument of type "Peer | None" cannot be assigned to parameter "peer" of type "Peer" in function "pack"
+    Type "Peer | None" is not assignable to type "Peer"
+      "None" is not assignable to "Peer" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:901:37 - error: Cannot access attribute "DISCONNECT" for class "type[IntEnum]"
+    Attribute "DISCONNECT" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:955:40 - error: Cannot access attribute "ADVERTISE_PEER" for class "type[IntEnum]"
+    Attribute "ADVERTISE_PEER" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:956:40 - error: Cannot access attribute "PEER_DISCOVERED" for class "type[IntEnum]"
+    Attribute "PEER_DISCOVERED" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:957:40 - error: Cannot access attribute "DISCONNECT" for class "type[IntEnum]"
+    Attribute "DISCONNECT" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:960:43 - error: Cannot access attribute "ADVERTISE_PEER" for class "type[IntEnum]"
+    Attribute "ADVERTISE_PEER" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:969:41 - error: "unpack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:974:44 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:974:53 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_data" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:980:38 - error: "pack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:980:43 - error: Argument of type "Peer | None" cannot be assigned to parameter "peer" of type "Peer" in function "pack"
+    Type "Peer | None" is not assignable to type "Peer"
+      "None" is not assignable to "Peer" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:983:41 - error: Cannot access attribute "PEER_DISCOVERED" for class "type[IntEnum]"
+    Attribute "PEER_DISCOVERED" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:986:43 - error: Cannot access attribute "PEER_DISCOVERED" for class "type[IntEnum]"
+    Attribute "PEER_DISCOVERED" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:995:41 - error: "unpack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1000:37 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1000:46 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_data" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1002:43 - error: Cannot access attribute "DISCONNECT" for class "type[IntEnum]"
+    Attribute "DISCONNECT" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1011:41 - error: "unpack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1016:36 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "remove_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1026:54 - error: Cannot access attribute "ADVERTISE_PEER" for class "type[IntEnum]"
+    Attribute "ADVERTISE_PEER" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1027:54 - error: Cannot access attribute "PEER_DISCOVERED" for class "type[IntEnum]"
+    Attribute "PEER_DISCOVERED" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/node.py:1028:54 - error: Cannot access attribute "DISCONNECT" for class "type[IntEnum]"
+    Attribute "DISCONNECT" is unknown (reportAttributeAccessIssue)
+/home/sithlord/Documents/repos/netaio/netaio/server.py
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:331:58 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "check"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:358:34 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "decrypt"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:386:66 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "check"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:399:37 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter of type "NetworkNodeProtocol"
+    "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+      "handlers" is an incompatible type
+        "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+          Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+          Consider switching from "dict" to "Mapping" which is covariant in the value type
+      "ephemeral_handlers" is an incompatible type
+        "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+          Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:416:42 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "decrypt"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:444:21 - error: Argument of type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None]" cannot be assigned to parameter "message" of type "MessageProtocol" in function "encrypt"
+    Type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None]" is not assignable to type "MessageProtocol"
+      "Coroutine[Any, Any, MessageProtocol | None]" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:444:31 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "encrypt"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:453:21 - error: Argument of type "AuthFieldsProtocol | Unknown | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | Unknown | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:453:30 - error: Cannot access attribute "auth_data" for class "Coroutine[Any, Any, MessageProtocol | None]"
+    Attribute "auth_data" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:453:50 - error: Cannot access attribute "body" for class "Coroutine[Any, Any, MessageProtocol | None]"
+    Attribute "body" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:453:56 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "make"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:463:21 - error: Argument of type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None]" cannot be assigned to parameter "message" of type "MessageProtocol" in function "encrypt"
+    Type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None]" is not assignable to type "MessageProtocol"
+      "Coroutine[Any, Any, MessageProtocol | None]" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:463:31 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "encrypt"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:472:21 - error: Argument of type "AuthFieldsProtocol | Unknown | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | Unknown | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:472:30 - error: Cannot access attribute "auth_data" for class "Coroutine[Any, Any, MessageProtocol | None]"
+    Attribute "auth_data" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:472:50 - error: Cannot access attribute "body" for class "Coroutine[Any, Any, MessageProtocol | None]"
+    Attribute "body" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:472:56 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "make"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:477:25 - error: Argument of type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None]" cannot be assigned to parameter "message" of type "MessageProtocol" in function "send"
+    Type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None]" is not assignable to type "MessageProtocol"
+      "Coroutine[Any, Any, MessageProtocol | None]" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:510:30 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "encrypt"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:523:21 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:523:54 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "make"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:537:30 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "encrypt"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:552:21 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:552:54 - error: Argument of type "Self@TCPServer" cannot be assigned to parameter "node" of type "NetworkNodeProtocol | None" in function "make"
+    Type "Self@TCPServer" is not assignable to type "NetworkNodeProtocol | None"
+      "TCPServer*" is incompatible with protocol "NetworkNodeProtocol"
+        "handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+            Type parameter "_VT@dict" is invariant, but "tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]" is not the same as "tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]"
+            Consider switching from "dict" to "Mapping" which is covariant in the value type
+        "ephemeral_handlers" is an incompatible type
+          "dict[Hashable, tuple[Handler, AuthPluginProtocol | None, CipherPluginProtocol | None]]" is not assignable to "dict[Hashable, tuple[Handler | UDPHandler, AuthPluginProtocol | None, CipherPluginProtocol | None]]"
+    ... (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:565:31 - error: Expression of type "None" cannot be assigned to parameter of type "set[Unknown]"
+    "None" is not assignable to "set[Unknown]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:585:19 - error: Type "MessageProtocol | None" is not assignable to declared type "MessageProtocol"
+    Type "MessageProtocol | None" is not assignable to type "MessageProtocol"
+      "None" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportAssignmentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:643:23 - error: Type "MessageProtocol | None" is not assignable to declared type "MessageProtocol"
+    Type "MessageProtocol | None" is not assignable to type "MessageProtocol"
+      "None" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportAssignmentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:714:23 - error: Type "MessageProtocol | None" is not assignable to declared type "MessageProtocol"
+    Type "MessageProtocol | None" is not assignable to type "MessageProtocol"
+      "None" is incompatible with protocol "MessageProtocol"
+        "header" is not present
+        "auth_data" is not present
+        "body" is not present
+        "check" is not present
+        "encode" is not present
+        "copy" is not present
+    ... (reportAssignmentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:741:39 - error: "id" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:772:20 - error: No overloads for "get" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:772:35 - error: Argument of type "bytes | None" cannot be assigned to parameter "key" of type "bytes" in function "get"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:820:43 - error: Cannot access attribute "ADVERTISE_PEER" for class "type[IntEnum]"
+    Attribute "ADVERTISE_PEER" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:830:41 - error: "unpack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:835:44 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:835:53 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_data" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:841:38 - error: "pack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:841:43 - error: Argument of type "Peer | None" cannot be assigned to parameter "peer" of type "Peer" in function "pack"
+    Type "Peer | None" is not assignable to type "Peer"
+      "None" is not assignable to "Peer" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:844:41 - error: Cannot access attribute "PEER_DISCOVERED" for class "type[IntEnum]"
+    Attribute "PEER_DISCOVERED" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:847:43 - error: Cannot access attribute "PEER_DISCOVERED" for class "type[IntEnum]"
+    Attribute "PEER_DISCOVERED" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:857:41 - error: "unpack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:862:37 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:862:46 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_data" of type "bytes" in function "add_or_update_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:864:43 - error: Cannot access attribute "DISCONNECT" for class "type[IntEnum]"
+    Attribute "DISCONNECT" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:874:41 - error: "unpack" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:879:38 - error: Argument of type "bytes | None" cannot be assigned to parameter "peer_id" of type "bytes" in function "remove_peer"
+    Type "bytes | None" is not assignable to type "bytes"
+      "None" is not assignable to "bytes" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:883:54 - error: Cannot access attribute "ADVERTISE_PEER" for class "type[IntEnum]"
+    Attribute "ADVERTISE_PEER" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:884:54 - error: Cannot access attribute "PEER_DISCOVERED" for class "type[IntEnum]"
+    Attribute "PEER_DISCOVERED" is unknown (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/netaio/server.py:885:54 - error: Cannot access attribute "DISCONNECT" for class "type[IntEnum]"
+    Attribute "DISCONNECT" is unknown (reportAttributeAccessIssue)
+/home/sithlord/Documents/repos/netaio/tests/test_misc.py
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:17:23 - error: Cannot assign to attribute "message_type_class" for class "type[Header]"
+    Expression of type "type[TestMessageType]" cannot be assigned to attribute "message_type_class" of class "Header"
+      "type[TestMessageType]" is not assignable to "message_type_class"
+      Type "type[TestMessageType]" is not assignable to type "message_type_class" (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:32:23 - error: Cannot assign to attribute "message_type_class" for class "type[Header]"
+    Expression of type "type[TestMessageType]" cannot be assigned to attribute "message_type_class" of class "Header"
+      "type[TestMessageType]" is not assignable to "message_type_class"
+      Type "type[TestMessageType]" is not assignable to type "message_type_class" (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:54:34 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:60:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:60:58 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:62:28 - error: Cannot assign to attribute "content" for class "BodyProtocol"
+    "Literal[b"new content"]" is not assignable to "property" (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:75:34 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:81:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:81:58 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_misc.py:83:28 - error: Cannot assign to attribute "content" for class "BodyProtocol"
+    "Literal[b"new content"]" is not assignable to "property" (reportAttributeAccessIssue)
+/home/sithlord/Documents/repos/netaio/tests/test_plugins.py
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:16:39 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:17:26 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:18:38 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:23:34 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:28:32 - error: Cannot assign to attribute "content" for class "BodyProtocol"
+    "Literal[b"hello world, caesar is alive"]" is not assignable to "property" (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:29:38 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:39:46 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:41:42 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:58:42 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:79:26 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:82:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:83:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:86:27 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:93:28 - error: Cannot assign to attribute "content" for class "BodyProtocol"
+    "Literal[b"everything is fine"]" is not assignable to "property" (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:96:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:99:38 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:121:32 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:125:32 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:128:34 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:129:34 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:130:34 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:131:34 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:134:40 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:139:40 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:156:16 - error: No overloads for "__getitem__" match the provided arguments (reportCallIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:156:16 - error: Argument of type "Literal['foo']" cannot be assigned to parameter "key" of type "slice[Any, Any, Any]" in function "__getitem__"
+    "Literal['foo']" is not assignable to "slice[Any, Any, Any]" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:170:26 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:171:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:172:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:173:34 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:186:13 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:189:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:190:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:195:13 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:202:13 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:207:28 - error: Cannot assign to attribute "content" for class "BodyProtocol"
+    "Literal[b"hello world, caesar is alive"]" is not assignable to "property" (reportAttributeAccessIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:209:13 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:232:23 - error: Argument of type "list[Certificate]" cannot be assigned to parameter "certs" of type "list[bytes | Certificate]" in function "make_delegate_key_chain_witness"
+    "list[Certificate]" is not assignable to "list[bytes | Certificate]"
+      Type parameter "_T@list" is invariant, but "Certificate" is not the same as "bytes | Certificate"
+      Consider switching from "list" to "Sequence" which is covariant (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:247:26 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:248:30 - error: "fields" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:249:34 - error: Argument of type "AuthFields | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFields | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:334:32 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "make"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_plugins.py:335:41 - error: Argument of type "AuthFieldsProtocol | None" cannot be assigned to parameter "auth_fields" of type "AuthFieldsProtocol" in function "check"
+    Type "AuthFieldsProtocol | None" is not assignable to type "AuthFieldsProtocol"
+      "None" is incompatible with protocol "AuthFieldsProtocol"
+        "fields" is not present
+        "decode" is not present
+        "encode" is not present (reportArgumentType)
+/home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:64:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:69:14 - error: Argument of type "(message: Message, writer: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, writer: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:75:14 - error: Argument of type "(message: Message, writer: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, writer: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:81:14 - error: Argument of type "(message: Message, writer: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, writer: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:86:14 - error: Argument of type "(message: Message, writer: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, writer: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:91:14 - error: Argument of type "(message: Message, writer: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, writer: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:112:29 - error: "encode" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:113:27 - error: "encode" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:118:29 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:119:27 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:120:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:121:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:122:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:123:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:128:29 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:129:27 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:130:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:131:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:132:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:133:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:140:29 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:141:27 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:142:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:143:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:144:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:145:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:149:29 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:150:27 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:151:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:152:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:153:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:154:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:158:29 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:159:27 - error: "header" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:160:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:161:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:162:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:163:27 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:243:14 - error: Argument of type "(message: Message, _: StreamWriter) -> (Message | None)" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> (Message | None)" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:259:14 - error: Argument of type "(message: Message, _: StreamWriter) -> None" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> None" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:261:35 - error: Argument of type "tuple[Literal['resource1'], Message]" cannot be assigned to parameter "object" of type "Message" in function "append"
+    "tuple[Literal['resource1'], Message]" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:272:14 - error: Argument of type "(message: Message, _: StreamWriter) -> None" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> None" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:274:35 - error: Argument of type "tuple[Literal['resource2'], Message]" cannot be assigned to parameter "object" of type "Message" in function "append"
+    "tuple[Literal['resource2'], Message]" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:284:54 - error: "__getitem__" method not defined on type "Message" (reportIndexIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:285:54 - error: "__getitem__" method not defined on type "Message" (reportIndexIssue)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:330:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:339:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:347:14 - error: Argument of type "(message: Message, _: StreamWriter) -> None" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> None" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:362:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:368:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:374:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:388:29 - error: "body" is not a known attribute of "None" (reportOptionalMemberAccess)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:393:14 - error: Argument of type "(message: Message, _: StreamWriter) -> None" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> None" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:444:14 - error: Argument of type "(message: Message, writer: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, writer: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:453:14 - error: Argument of type "(message: Message, _: StreamWriter) -> None" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> None" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:580:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:588:14 - error: Argument of type "(message: Message, _: StreamWriter) -> None" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> None" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:678:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:683:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:748:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:753:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:837:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_tcp_e2e.py:842:14 - error: Argument of type "(message: Message, _: StreamWriter) -> Message" cannot be assigned to parameter "func" of type "Handler" in function "decorator"
+    Type "(message: Message, _: StreamWriter) -> Message" is not assignable to type "Handler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+/home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:81:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:86:14 - error: Argument of type "(message: Message, addr: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, addr: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:90:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:96:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:101:14 - error: Argument of type "(message: Message, addr: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, addr: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:107:14 - error: Argument of type "(message: Message, addr: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, addr: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:113:14 - error: Argument of type "(message: Message, addr: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, addr: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:257:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:261:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:265:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:273:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:277:14 - error: Argument of type "(message: Message, addr: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, addr: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:286:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:300:57 - error: Argument of type "float" cannot be assigned to parameter "every" of type "int" in function "begin_peer_advertisement"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:301:57 - error: Argument of type "float" cannot be assigned to parameter "every" of type "int" in function "begin_peer_advertisement"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:320:69 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:320:87 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:327:69 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:327:87 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:386:69 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:386:87 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:456:57 - error: Argument of type "float" cannot be assigned to parameter "every" of type "int" in function "begin_peer_advertisement"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:457:57 - error: Argument of type "float" cannot be assigned to parameter "every" of type "int" in function "begin_peer_advertisement"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:473:69 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:473:87 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:474:69 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:474:87 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:497:33 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:497:51 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:501:33 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:501:51 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:571:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:579:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:594:69 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:594:87 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:595:69 - error: Argument of type "float" cannot be assigned to parameter "advertise_every" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:595:87 - error: Argument of type "float" cannot be assigned to parameter "peer_timeout" of type "int" in function "manage_peers_automatically"
+    "float" is not assignable to "int" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:671:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:672:17 - error: Function declaration "server_ephemeral_handler" is obscured by a declaration of the same name (reportRedeclaration)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:680:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:713:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:741:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:757:14 - error: Argument of type "(message: Message, *_: Unknown) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, *_: Unknown) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:814:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:819:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:824:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:918:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:923:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> Message" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> Message" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+  /home/sithlord/Documents/repos/netaio/tests/test_udp_e2e.py:928:14 - error: Argument of type "(message: Message, _: tuple[str, int]) -> None" cannot be assigned to parameter "func" of type "UDPHandler" in function "decorator"
+    Type "(message: Message, _: tuple[str, int]) -> None" is not assignable to type "UDPHandler"
+      Parameter 1: type "MessageProtocol" is incompatible with type "Message"
+        "MessageProtocol" is not assignable to "Message" (reportArgumentType)
+308 errors, 4 warnings, 0 informations

@@ -513,7 +513,7 @@ class TCPServer:
                 self.logger.warning(
                     "Error encrypting message; dropping", exc_info=True
                 )
-                return
+                return None
 
         # inner auth
         if auth_plugin is not None:
@@ -527,7 +527,7 @@ class TCPServer:
                 self.logger.warning(
                     "Error making message; dropping", exc_info=True
                 )
-                return
+                return None
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
@@ -540,7 +540,7 @@ class TCPServer:
                 self.logger.warning(
                     "Error encrypting message; dropping", exc_info=True
                 )
-                return
+                return None
 
         # outer auth
         if use_auth and self.auth_plugin is not None:
@@ -556,7 +556,7 @@ class TCPServer:
                 self.logger.warning(
                     "Error making message; dropping", exc_info=True
                 )
-                return
+                return None
 
         return message
 

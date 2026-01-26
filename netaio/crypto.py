@@ -83,7 +83,7 @@ def check_hmac(key: bytes, message: bytes, mac: bytes) -> bool:
 
     return diff == 0
 
-def seal(key: bytes, plaintext: bytes, iv: bytes | None = None) -> str:
+def seal(key: bytes, plaintext: bytes, iv: bytes | None = None) -> bytes:
     """Generate an iv, encrypt a message, and create an hmac all in one."""
     iv, ct = encrypt(key, plaintext, iv)
     return pack(

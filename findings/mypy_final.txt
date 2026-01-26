@@ -1,0 +1,450 @@
+netaio/crypto.py:89: error: Incompatible return value type (got "bytes", expected "str")  [return-value]
+netaio/common.py:44: error: A function returning TypeVar should receive at least one argument containing the same TypeVar  [type-var]
+netaio/common.py:44: note: Consider using the upper bound "IntEnum" instead
+netaio/common.py:681: error: Incompatible default for argument "message_class" (default has type "type[Message]", argument has type "type[MessageProtocol]")  [assignment]
+netaio/common.py:683: error: Incompatible default for argument "header_class" (default has type "type[Header]", argument has type "type[HeaderProtocol]")  [assignment]
+netaio/common.py:841: error: Incompatible default for argument "message_class" (default has type "type[Message]", argument has type "type[MessageProtocol]")  [assignment]
+netaio/common.py:848: error: "type[IntEnum]" has no attribute "NOT_FOUND"  [attr-defined]
+netaio/common.py:851: error: "type[IntEnum]" has no attribute "AUTH_ERROR"  [attr-defined]
+netaio/common.py:854: error: "type[IntEnum]" has no attribute "ERROR"  [attr-defined]
+netaio/server.py:61: error: Incompatible default for argument "header_class" (default has type "type[Header]", argument has type "type[HeaderProtocol]")  [assignment]
+netaio/server.py:65: error: Incompatible default for argument "message_class" (default has type "type[Message]", argument has type "type[MessageProtocol]")  [assignment]
+netaio/server.py:309: error: Unexpected keyword argument "header" for "MessageProtocol"  [call-arg]
+netaio/server.py:309: note: Error code "call-arg" not covered by "type: ignore" comment
+venv/lib/python3.11/site-packages/mypy/typeshed/stdlib/builtins.pyi: note: "MessageProtocol" defined here
+netaio/server.py:309: error: Unexpected keyword argument "auth_data" for "MessageProtocol"  [call-arg]
+netaio/server.py:309: error: Unexpected keyword argument "body" for "MessageProtocol"  [call-arg]
+netaio/server.py:331: error: Argument 3 to "check" of "AuthPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:331: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:331: note:     Expected:
+netaio/server.py:331: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:331: note:     Got:
+netaio/server.py:331: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:331: note:     Expected:
+netaio/server.py:331: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:331: note:     Got:
+netaio/server.py:331: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:331: note:     <3 more conflict(s) not shown>
+netaio/server.py:341: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/server.py:341: note: Error code "assignment" not covered by "type: ignore" comment
+netaio/server.py:358: error: Argument 2 to "decrypt" of "CipherPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:358: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:358: note:     Expected:
+netaio/server.py:358: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:358: note:     Got:
+netaio/server.py:358: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:358: note:     Expected:
+netaio/server.py:358: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:358: note:     Got:
+netaio/server.py:358: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:358: note:     <3 more conflict(s) not shown>
+netaio/server.py:386: error: Argument 3 to "check" of "AuthPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:386: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:386: note:     Expected:
+netaio/server.py:386: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:386: note:     Got:
+netaio/server.py:386: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:386: note:     Expected:
+netaio/server.py:386: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:386: note:     Got:
+netaio/server.py:386: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:386: note:     <3 more conflict(s) not shown>
+netaio/server.py:399: error: Argument 1 has incompatible type "TCPServer"; expected "NetworkNodeProtocol"  [arg-type]
+netaio/server.py:399: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:399: note:     Expected:
+netaio/server.py:399: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:399: note:     Got:
+netaio/server.py:399: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:399: note:     Expected:
+netaio/server.py:399: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:399: note:     Got:
+netaio/server.py:399: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:399: note:     <3 more conflict(s) not shown>
+netaio/server.py:416: error: Argument 2 to "decrypt" of "CipherPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:416: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:416: note:     Expected:
+netaio/server.py:416: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:416: note:     Got:
+netaio/server.py:416: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:416: note:     Expected:
+netaio/server.py:416: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:416: note:     Got:
+netaio/server.py:416: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:416: note:     <3 more conflict(s) not shown>
+netaio/server.py:426: error: Incompatible types in assignment (expression has type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None", variable has type "MessageProtocol | None")  [assignment]
+netaio/server.py:435: error: Incompatible types in assignment (expression has type "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None", variable has type "MessageProtocol | None")  [assignment]
+netaio/server.py:444: error: Argument 2 to "encrypt" of "CipherPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:444: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:444: note:     Expected:
+netaio/server.py:444: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:444: note:     Got:
+netaio/server.py:444: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:444: note:     Expected:
+netaio/server.py:444: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:444: note:     Got:
+netaio/server.py:444: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:444: note:     <3 more conflict(s) not shown>
+netaio/server.py:453: error: Argument 1 to "make" of "AuthPluginProtocol" has incompatible type "AuthFieldsProtocol | None"; expected "AuthFieldsProtocol"  [arg-type]
+netaio/server.py:453: error: Argument 3 to "make" of "AuthPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:453: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:453: note:     Expected:
+netaio/server.py:453: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:453: note:     Got:
+netaio/server.py:453: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:453: note:     Expected:
+netaio/server.py:453: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:453: note:     Got:
+netaio/server.py:453: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:453: note:     <3 more conflict(s) not shown>
+netaio/server.py:463: error: Argument 2 to "encrypt" of "CipherPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:463: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:463: note:     Expected:
+netaio/server.py:463: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:463: note:     Got:
+netaio/server.py:463: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:463: note:     Expected:
+netaio/server.py:463: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:463: note:     Got:
+netaio/server.py:463: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:463: note:     <3 more conflict(s) not shown>
+netaio/server.py:472: error: Argument 1 to "make" of "AuthPluginProtocol" has incompatible type "AuthFieldsProtocol | None"; expected "AuthFieldsProtocol"  [arg-type]
+netaio/server.py:472: error: Argument 3 to "make" of "AuthPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:472: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:472: note:     Expected:
+netaio/server.py:472: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:472: note:     Got:
+netaio/server.py:472: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:472: note:     Expected:
+netaio/server.py:472: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:472: note:     Got:
+netaio/server.py:472: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:472: note:     <3 more conflict(s) not shown>
+netaio/server.py:510: error: Argument 2 to "encrypt" of "CipherPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:510: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:510: note:     Expected:
+netaio/server.py:510: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:510: note:     Got:
+netaio/server.py:510: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:510: note:     Expected:
+netaio/server.py:510: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:510: note:     Got:
+netaio/server.py:510: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:510: note:     <3 more conflict(s) not shown>
+netaio/server.py:516: error: Return value expected  [return-value]
+netaio/server.py:523: error: Argument 1 to "make" of "AuthPluginProtocol" has incompatible type "AuthFieldsProtocol | None"; expected "AuthFieldsProtocol"  [arg-type]
+netaio/server.py:523: error: Argument 3 to "make" of "AuthPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:523: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:523: note:     Expected:
+netaio/server.py:523: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:523: note:     Got:
+netaio/server.py:523: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:523: note:     Expected:
+netaio/server.py:523: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:523: note:     Got:
+netaio/server.py:523: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:523: note:     <3 more conflict(s) not shown>
+netaio/server.py:530: error: Return value expected  [return-value]
+netaio/server.py:537: error: Argument 2 to "encrypt" of "CipherPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:537: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:537: note:     Expected:
+netaio/server.py:537: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:537: note:     Got:
+netaio/server.py:537: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:537: note:     Expected:
+netaio/server.py:537: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:537: note:     Got:
+netaio/server.py:537: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:537: note:     <3 more conflict(s) not shown>
+netaio/server.py:543: error: Return value expected  [return-value]
+netaio/server.py:552: error: Argument 1 to "make" of "AuthPluginProtocol" has incompatible type "AuthFieldsProtocol | None"; expected "AuthFieldsProtocol"  [arg-type]
+netaio/server.py:552: error: Argument 3 to "make" of "AuthPluginProtocol" has incompatible type "TCPServer"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/server.py:552: note: Following member(s) of "TCPServer" have conflicts:
+netaio/server.py:552: note:     Expected:
+netaio/server.py:552: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:552: note:     Got:
+netaio/server.py:552: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:552: note:     Expected:
+netaio/server.py:552: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:552: note:     Got:
+netaio/server.py:552: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/server.py:552: note:     <3 more conflict(s) not shown>
+netaio/server.py:559: error: Return value expected  [return-value]
+netaio/server.py:565: error: Incompatible default for argument "collection" (default has type "None", argument has type "set[Any]")  [assignment]
+netaio/server.py:565: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+netaio/server.py:565: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+netaio/server.py:585: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/server.py:643: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/server.py:714: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/server.py:741: error: Item "None" of "Peer | None" has no attribute "id"  [union-attr]
+netaio/server.py:772: error: Argument 1 to "get" of "dict" has incompatible type "bytes | None"; expected "bytes"  [arg-type]
+netaio/server.py:830: error: Item "None" of "PeerPluginProtocol | None" has no attribute "unpack"  [union-attr]
+netaio/server.py:835: error: Argument 1 to "add_or_update_peer" of "TCPServer" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/server.py:835: error: Argument 2 to "add_or_update_peer" of "TCPServer" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/server.py:841: error: Item "None" of "PeerPluginProtocol | None" has no attribute "pack"  [union-attr]
+netaio/server.py:841: error: Argument 1 to "pack" of "PeerPluginProtocol" has incompatible type "Peer | None"; expected "Peer"  [arg-type]
+netaio/server.py:844: error: "type[IntEnum]" has no attribute "PEER_DISCOVERED"  [attr-defined]
+netaio/server.py:857: error: Item "None" of "PeerPluginProtocol | None" has no attribute "unpack"  [union-attr]
+netaio/server.py:862: error: Argument 1 to "add_or_update_peer" of "TCPServer" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/server.py:862: error: Argument 2 to "add_or_update_peer" of "TCPServer" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/server.py:874: error: Item "None" of "PeerPluginProtocol | None" has no attribute "unpack"  [union-attr]
+netaio/server.py:879: error: Argument 2 to "remove_peer" of "TCPServer" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/server.py:883: error: "type[IntEnum]" has no attribute "ADVERTISE_PEER"  [attr-defined]
+netaio/server.py:884: error: "type[IntEnum]" has no attribute "PEER_DISCOVERED"  [attr-defined]
+netaio/server.py:885: error: "type[IntEnum]" has no attribute "DISCONNECT"  [attr-defined]
+netaio/node.py:73: error: Incompatible default for argument "header_class" (default has type "type[Header]", argument has type "type[HeaderProtocol]")  [assignment]
+netaio/node.py:77: error: Incompatible default for argument "message_class" (default has type "type[Message]", argument has type "type[MessageProtocol]")  [assignment]
+netaio/node.py:150: error: Incompatible types in assignment (expression has type "None", variable has type "DatagramTransport")  [assignment]
+netaio/node.py:152: error: Need type annotation for "_advertise_peer_tasks" (hint: "_advertise_peer_tasks: dict[<type>, <type>] = ...")  [var-annotated]
+netaio/node.py:199: error: Unexpected keyword argument "header" for "MessageProtocol"  [call-arg]
+venv/lib/python3.11/site-packages/mypy/typeshed/stdlib/builtins.pyi: note: "MessageProtocol" defined here
+netaio/node.py:199: error: Unexpected keyword argument "auth_data" for "MessageProtocol"  [call-arg]
+netaio/node.py:199: error: Unexpected keyword argument "body" for "MessageProtocol"  [call-arg]
+netaio/node.py:217: error: Argument 3 to "check" of "AuthPluginProtocol" has incompatible type "UDPNode"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/node.py:217: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:217: note:     Expected:
+netaio/node.py:217: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:217: note:     Got:
+netaio/node.py:217: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:217: note:     Expected:
+netaio/node.py:217: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:217: note:     Got:
+netaio/node.py:217: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:217: note:     <3 more conflict(s) not shown>
+netaio/node.py:224: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:224: note: Error code "assignment" not covered by "type: ignore" comment
+netaio/node.py:226: error: Incompatible types in assignment (expression has type "None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:256: error: Argument 3 to "check" of "AuthPluginProtocol" has incompatible type "UDPNode"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/node.py:256: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:256: note:     Expected:
+netaio/node.py:256: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:256: note:     Got:
+netaio/node.py:256: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:256: note:     Expected:
+netaio/node.py:256: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:256: note:     Got:
+netaio/node.py:256: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:256: note:     <3 more conflict(s) not shown>
+netaio/node.py:263: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:263: note: Error code "assignment" not covered by "type: ignore" comment
+netaio/node.py:265: error: Incompatible types in assignment (expression has type "None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:281: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:285: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:323: error: Argument 3 to "make" of "AuthPluginProtocol" has incompatible type "UDPNode"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/node.py:323: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:323: note:     Expected:
+netaio/node.py:323: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:323: note:     Got:
+netaio/node.py:323: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:323: note:     Expected:
+netaio/node.py:323: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:323: note:     Got:
+netaio/node.py:323: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:323: note:     <3 more conflict(s) not shown>
+netaio/node.py:460: error: Argument 2 to "encrypt" of "CipherPluginProtocol" has incompatible type "UDPNode"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/node.py:460: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:460: note:     Expected:
+netaio/node.py:460: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:460: note:     Got:
+netaio/node.py:460: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:460: note:     Expected:
+netaio/node.py:460: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:460: note:     Got:
+netaio/node.py:460: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:460: note:     <3 more conflict(s) not shown>
+netaio/node.py:466: error: Return value expected  [return-value]
+netaio/node.py:473: error: Argument 1 to "make" of "AuthPluginProtocol" has incompatible type "AuthFieldsProtocol | None"; expected "AuthFieldsProtocol"  [arg-type]
+netaio/node.py:473: error: Argument 3 to "make" of "AuthPluginProtocol" has incompatible type "UDPNode"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/node.py:473: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:473: note:     Expected:
+netaio/node.py:473: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:473: note:     Got:
+netaio/node.py:473: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:473: note:     Expected:
+netaio/node.py:473: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:473: note:     Got:
+netaio/node.py:473: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:473: note:     <3 more conflict(s) not shown>
+netaio/node.py:480: error: Return value expected  [return-value]
+netaio/node.py:487: error: Argument 2 to "encrypt" of "CipherPluginProtocol" has incompatible type "UDPNode"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/node.py:487: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:487: note:     Expected:
+netaio/node.py:487: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:487: note:     Got:
+netaio/node.py:487: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:487: note:     Expected:
+netaio/node.py:487: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:487: note:     Got:
+netaio/node.py:487: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:487: note:     <3 more conflict(s) not shown>
+netaio/node.py:493: error: Return value expected  [return-value]
+netaio/node.py:502: error: Argument 1 to "make" of "AuthPluginProtocol" has incompatible type "AuthFieldsProtocol | None"; expected "AuthFieldsProtocol"  [arg-type]
+netaio/node.py:502: error: Argument 3 to "make" of "AuthPluginProtocol" has incompatible type "UDPNode"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/node.py:502: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:502: note:     Expected:
+netaio/node.py:502: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:502: note:     Got:
+netaio/node.py:502: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:502: note:     Expected:
+netaio/node.py:502: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:502: note:     Got:
+netaio/node.py:502: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:502: note:     <3 more conflict(s) not shown>
+netaio/node.py:509: error: Return value expected  [return-value]
+netaio/node.py:544: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:625: error: Argument 1 has incompatible type "UDPNode"; expected "NetworkNodeProtocol"  [arg-type]
+netaio/node.py:625: note: Following member(s) of "UDPNode" have conflicts:
+netaio/node.py:625: note:     Expected:
+netaio/node.py:625: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:625: note:     Got:
+netaio/node.py:625: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:625: note:     Expected:
+netaio/node.py:625: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:625: note:     Got:
+netaio/node.py:625: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/node.py:625: note:     <3 more conflict(s) not shown>
+netaio/node.py:671: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:714: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:762: error: Incompatible types in assignment (expression has type "MessageProtocol | None", variable has type "MessageProtocol")  [assignment]
+netaio/node.py:796: error: Item "None" of "Peer | None" has no attribute "id"  [union-attr]
+netaio/node.py:827: error: Argument 1 to "get" of "dict" has incompatible type "bytes | None"; expected "bytes"  [arg-type]
+netaio/node.py:875: error: "type[IntEnum]" has no attribute "ADVERTISE_PEER"  [attr-defined]
+netaio/node.py:891: error: Item "None" of "PeerPluginProtocol | None" has no attribute "pack"  [union-attr]
+netaio/node.py:891: error: Argument 1 to "pack" of "PeerPluginProtocol" has incompatible type "Peer | None"; expected "Peer"  [arg-type]
+netaio/node.py:894: error: "type[IntEnum]" has no attribute "ADVERTISE_PEER"  [attr-defined]
+netaio/node.py:898: error: Item "None" of "PeerPluginProtocol | None" has no attribute "pack"  [union-attr]
+netaio/node.py:898: error: Argument 1 to "pack" of "PeerPluginProtocol" has incompatible type "Peer | None"; expected "Peer"  [arg-type]
+netaio/node.py:901: error: "type[IntEnum]" has no attribute "DISCONNECT"  [attr-defined]
+netaio/node.py:955: error: "type[IntEnum]" has no attribute "ADVERTISE_PEER"  [attr-defined]
+netaio/node.py:956: error: "type[IntEnum]" has no attribute "PEER_DISCOVERED"  [attr-defined]
+netaio/node.py:957: error: "type[IntEnum]" has no attribute "DISCONNECT"  [attr-defined]
+netaio/node.py:960: error: "type[IntEnum]" has no attribute "ADVERTISE_PEER"  [attr-defined]
+netaio/node.py:969: error: Item "None" of "PeerPluginProtocol | None" has no attribute "unpack"  [union-attr]
+netaio/node.py:974: error: Argument 1 to "add_or_update_peer" of "UDPNode" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/node.py:974: error: Argument 2 to "add_or_update_peer" of "UDPNode" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/node.py:980: error: Item "None" of "PeerPluginProtocol | None" has no attribute "pack"  [union-attr]
+netaio/node.py:980: error: Argument 1 to "pack" of "PeerPluginProtocol" has incompatible type "Peer | None"; expected "Peer"  [arg-type]
+netaio/node.py:983: error: "type[IntEnum]" has no attribute "PEER_DISCOVERED"  [attr-defined]
+netaio/node.py:986: error: "type[IntEnum]" has no attribute "PEER_DISCOVERED"  [attr-defined]
+netaio/node.py:995: error: Item "None" of "PeerPluginProtocol | None" has no attribute "unpack"  [union-attr]
+netaio/node.py:1000: error: Argument 1 to "add_or_update_peer" of "UDPNode" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/node.py:1000: error: Argument 2 to "add_or_update_peer" of "UDPNode" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/node.py:1002: error: "type[IntEnum]" has no attribute "DISCONNECT"  [attr-defined]
+netaio/node.py:1011: error: Item "None" of "PeerPluginProtocol | None" has no attribute "unpack"  [union-attr]
+netaio/node.py:1016: error: Argument 2 to "remove_peer" of "UDPNode" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/node.py:1026: error: "type[IntEnum]" has no attribute "ADVERTISE_PEER"  [attr-defined]
+netaio/node.py:1027: error: "type[IntEnum]" has no attribute "PEER_DISCOVERED"  [attr-defined]
+netaio/node.py:1028: error: "type[IntEnum]" has no attribute "DISCONNECT"  [attr-defined]
+netaio/client.py:58: error: Incompatible default for argument "header_class" (default has type "type[Header]", argument has type "type[HeaderProtocol]")  [assignment]
+netaio/client.py:62: error: Incompatible default for argument "message_class" (default has type "type[Message]", argument has type "type[MessageProtocol]")  [assignment]
+netaio/client.py:252: error: Argument 2 to "encrypt" of "CipherPluginProtocol" has incompatible type "TCPClient"; expected "NetworkNodeProtocol | None"  [arg-type]
+netaio/client.py:252: note: "TCPClient" is missing following "NetworkNodeProtocol" protocol members:
+netaio/client.py:252: note:     default_handler, make_error
+netaio/client.py:252: note: Following member(s) of "TCPClient" have conflicts:
+netaio/client.py:252: note:     Expected:
+netaio/client.py:252: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/client.py:252: note:     Got:
+netaio/client.py:252: note:         def add_ephemeral_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/client.py:252: note:     Expected:
+netaio/client.py:252: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None] | Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/client.py:252: note:     Got:
+netaio/client.py:252: note:         def add_handler(self, key: Hashable, handler: Callable[[MessageProtocol, StreamWriter], MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None], auth_plugin: AuthPluginProtocol | None = ..., cipher_plugin: CipherPluginProtocol | None = ...) -> Any
+netaio/client.py:252: note:     <3 more conflict(s) not shown>
+netaio/client.py:357: error: Incompatible default for argument "server" (default has type "None", argument has type "tuple[str, int]")  [assignment]
+netaio/client.py:357: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+netaio/client.py:357: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+netaio/client.py:399: error: Unexpected keyword argument "header" for "MessageProtocol"  [call-arg]
+netaio/client.py:399: note: Error code "call-arg" not covered by "type: ignore" comment
+venv/lib/python3.11/site-packages/mypy/typeshed/stdlib/builtins.pyi: note: "MessageProtocol" defined here
+netaio/client.py:399: error: Unexpected keyword argument "auth_data" for "MessageProtocol"  [call-arg]
+netaio/client.py:399: error: Unexpected keyword argument "body" for "MessageProtocol"  [call-arg]
+netaio/client.py:416: error: "None" not callable  [misc]
+netaio/client.py:416: note: Error code "misc" not covered by "type: ignore" comment
+netaio/client.py:425: error: Return value expected  [return-value]
+netaio/client.py:434: error: "None" not callable  [misc]
+netaio/client.py:434: note: Error code "misc" not covered by "type: ignore" comment
+netaio/client.py:443: error: Return value expected  [return-value]
+netaio/client.py:462: error: "None" not callable  [misc]
+netaio/client.py:462: note: Error code "misc" not covered by "type: ignore" comment
+netaio/client.py:471: error: Return value expected  [return-value]
+netaio/client.py:480: error: Incompatible return value type (got "MessageProtocol | Coroutine[Any, Any, MessageProtocol | None]", expected "MessageProtocol | None")  [return-value]
+netaio/client.py:611: error: Incompatible types in assignment (expression has type "MessageProtocol", variable has type "None")  [assignment]
+netaio/client.py:620: error: Incompatible types in assignment (expression has type "MessageProtocol", variable has type "None")  [assignment]
+netaio/client.py:629: error: Incompatible types in assignment (expression has type "MessageProtocol", variable has type "None")  [assignment]
+netaio/client.py:632: error: Incompatible types in assignment (expression has type "MessageProtocol", variable has type "None")  [assignment]
+netaio/client.py:637: error: "None" has no attribute "auth_data"  [attr-defined]
+netaio/client.py:639: error: "None" has no attribute "auth_data"  [attr-defined]
+netaio/client.py:640: error: "None" has no attribute "body"  [attr-defined]
+netaio/client.py:643: error: "None" has no attribute "auth_data"  [attr-defined]
+netaio/client.py:645: error: "None" has no attribute "auth_data"  [attr-defined]
+netaio/client.py:646: error: "None" has no attribute "body"  [attr-defined]
+netaio/client.py:672: error: Argument 1 to "pack" of "PeerPluginProtocol" has incompatible type "Peer | None"; expected "Peer"  [arg-type]
+netaio/client.py:672: note: Error code "arg-type" not covered by "type: ignore" comment
+netaio/client.py:693: error: Argument 1 to "add_or_update_peer" of "TCPClient" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/client.py:693: error: Argument 2 to "add_or_update_peer" of "TCPClient" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/client.py:705: error: Item "None" of "PeerPluginProtocol | None" has no attribute "unpack"  [union-attr]
+netaio/client.py:710: error: Argument 2 to "remove_peer" of "TCPClient" has incompatible type "bytes | Any | None"; expected "bytes"  [arg-type]
+netaio/client.py:713: error: "None" has no attribute "copy"  [attr-defined]
+netaio/client.py:796: error: Incompatible default for argument "on_reconnect" (default has type "None", argument has type "Callable[[TCPClient, tuple[str, int], int], Awaitable[None] | None]")  [assignment]
+netaio/client.py:796: note: PEP 484 prohibits implicit Optional. Accordingly, mypy has changed its default to no_implicit_optional=True
+netaio/client.py:796: note: Use https://github.com/hauntsaninja/no_implicit_optional to automatically upgrade your codebase
+netaio/cipher.py:54: error: Item "None" of "AuthFieldsProtocol | None" has no attribute "fields"  [union-attr]
+netaio/cipher.py:56: error: Too many arguments for "AuthFieldsProtocol"  [call-arg]
+netaio/cipher.py:56: error: Cannot instantiate type "type[None]"  [misc]
+netaio/cipher.py:68: error: Item "None" of "AuthFieldsProtocol | None" has no attribute "fields"  [union-attr]
+netaio/cipher.py:87: error: Item "None" of "AuthFieldsProtocol | None" has no attribute "fields"  [union-attr]
+netaio/cipher.py:88: error: Too many arguments for "AuthFieldsProtocol"  [call-arg]
+netaio/cipher.py:88: error: Cannot instantiate type "type[None]"  [misc]
+netaio/auth.py:64: error: Dict entry 1 has incompatible type "str": "bytes | int"; expected "str": "bytes"  [dict-item]
+netaio/auth.py:65: error: Item "bytes" of "bytes | int" has no attribute "to_bytes"  [union-attr]
+netaio/auth.py:85: error: Item "bytes" of "bytes | int" has no attribute "to_bytes"  [union-attr]
+netaio/auth.py:91: error: Incompatible default for argument "message_class" (default has type "type[Message]", argument has type "type[MessageProtocol]")  [assignment]
+netaio/auth.py:93: error: Incompatible default for argument "header_class" (default has type "type[Header]", argument has type "type[HeaderProtocol]")  [assignment]
+netaio/asymmetric.py:94: error: Item "bytes" of "bytes | int" has no attribute "to_bytes"  [union-attr]
+netaio/asymmetric.py:99: error: Dict entry 1 has incompatible type "str": "bytes | int"; expected "str": "bytes"  [dict-item]
+netaio/asymmetric.py:100: error: Item "bytes" of "Any | bytes" has no attribute "bytes"  [union-attr]
+netaio/asymmetric.py:121: error: Item "None" of "PeerPluginProtocol | None" has no attribute "parse_data"  [union-attr]
+netaio/asymmetric.py:123: error: No overload variant of "__getitem__" of "tuple" matches argument type "str"  [call-overload]
+netaio/asymmetric.py:123: note: Possible overload variants:
+netaio/asymmetric.py:123: note:     def __getitem__(self, SupportsIndex, /) -> Any
+netaio/asymmetric.py:123: note:     def __getitem__(self, slice[Any, Any, Any], /) -> tuple[Any, ...]
+netaio/asymmetric.py:130: error: Item "bytes" of "bytes | int" has no attribute "to_bytes"  [union-attr]
+netaio/asymmetric.py:138: error: Incompatible default for argument "message_class" (default has type "type[Message]", argument has type "type[MessageProtocol]")  [assignment]
+netaio/asymmetric.py:140: error: Incompatible default for argument "header_class" (default has type "type[Header]", argument has type "type[HeaderProtocol]")  [assignment]
+netaio/asymmetric.py:206: error: No overload variant of "__getitem__" of "tuple" matches argument type "str"  [call-overload]
+netaio/asymmetric.py:206: note: Possible overload variants:
+netaio/asymmetric.py:206: note:     def __getitem__(self, SupportsIndex, /) -> Any
+netaio/asymmetric.py:206: note:     def __getitem__(self, slice[Any, Any, Any], /) -> tuple[Any, ...]
+netaio/asymmetric.py:248: error: No overload variant of "__getitem__" of "tuple" matches argument type "str"  [call-overload]
+netaio/asymmetric.py:248: note: Possible overload variants:
+netaio/asymmetric.py:248: note:     def __getitem__(self, SupportsIndex, /) -> Any
+netaio/asymmetric.py:248: note:     def __getitem__(self, slice[Any, Any, Any], /) -> tuple[Any, ...]
+tests/test_udp_e2e.py:23: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:24: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:225: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:226: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:416: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:417: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:528: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:529: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:642: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:643: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:793: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:794: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:888: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_udp_e2e.py:889: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:21: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:22: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:23: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:225: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:226: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:261: error: Argument 1 to "append" of "list" has incompatible type "tuple[str, Message]"; expected "Message"  [arg-type]
+tests/test_tcp_e2e.py:274: error: Argument 1 to "append" of "list" has incompatible type "tuple[str, Message]"; expected "Message"  [arg-type]
+tests/test_tcp_e2e.py:311: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:312: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:418: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:419: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:547: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:548: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:820: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+tests/test_tcp_e2e.py:821: note: By default the bodies of untyped functions are not checked, consider using --check-untyped-defs  [annotation-unchecked]
+Found 172 errors in 9 files (checked 15 source files)
