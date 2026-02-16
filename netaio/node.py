@@ -533,28 +533,48 @@ class UDPNode:
         self.logger.debug(f"Sent message with checksum={message.header.checksum} to {addr}")
 
     async def request(
-            self, uri: bytes, timeout: float = 10.0,
-            server: tuple[str, int] = None,
+            self, uri: bytes, server: tuple[str, int],
+            timeout: float = 10.0,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol:
         """Send a REQUEST_URI message and wait for a RESPOND_URI response.
-            Sets an ephemeral handler for the expected response using the
-            `@self.once()` decorator, then sends a REQUEST_URI message to
-            the specified address. Waits in a loop until either the response
-            is received or the timeout is reached. If it times out, removes
-            the ephemeral handler and raises a TimeoutError. If the response
-            is received, returns that message.
+            Sets ephemeral handlers for RESPOND_URI, AUTH_ERROR, ERROR, and
+            NOT_FOUND message types using `add_ephemeral_handler`, then
+            sends a REQUEST_URI message to the specified address. Waits in a
+            loop until either a response (success or error) is received or
+            the timeout is reached. If it times out, removes all ephemeral
+            handlers and raises a TimeoutError. If a response is received,
+            returns that message (caller should check message.header.message_type
+            to determine if it's a success or error response).
         """
         result = []
 
-        key = (self.message_type_class.RESPOND_URI, uri, server)
+        keys = [
+            (self.message_type_class.RESPOND_URI, uri, server),
+            (self.message_type_class.AUTH_ERROR, uri, server),
+            (self.message_type_class.ERROR, uri, server),
+            (self.message_type_class.NOT_FOUND, uri, server),
+        ]
+
         event = asyncio.Event()
-        @self.once(key, auth_plugin, cipher_plugin)
-        def handle_response(message: MessageProtocol, addr: tuple):
-            result.append(message)
-            event.set()
+
+        def make_handler(my_key):
+            def handle_any_response(
+                message: MessageProtocol,
+                addr: tuple[str, int]
+            ):
+                result.append(message)
+                event.set()
+                for other_key in keys:
+                    if other_key != my_key:
+                        self.remove_ephemeral_handler(other_key)
+            return handle_any_response
+
+        for key in keys:
+            handler = make_handler(key)
+            self.add_ephemeral_handler(key, handler, auth_plugin, cipher_plugin)
 
         request_body = self.body_class.prepare(content=b'', uri=uri)
         request_message = self.message_class.prepare(
@@ -567,7 +587,8 @@ class UDPNode:
         try:
             await asyncio.wait_for(event.wait(), timeout=timeout)
         except asyncio.TimeoutError:
-            self.remove_ephemeral_handler(key)
+            for key in keys:
+                self.remove_ephemeral_handler(key)
             error = TimeoutError(
                 f"Request for URI {uri.decode('utf-8', errors='replace')} @ " +
                 f"{server} timed out after {timeout}s"
@@ -576,7 +597,7 @@ class UDPNode:
                 'uri': uri,
                 'timeout': timeout,
                 'server': server,
-                'key': key
+                'keys': keys
             }
             await self._invoke_timeout_handler(
                 'request_timeout', server, error, context

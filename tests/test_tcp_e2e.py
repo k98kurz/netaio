@@ -293,6 +293,27 @@ class TestTCPE2E(unittest.TestCase):
             with self.assertRaises(TimeoutError) as e:
                 response = await client.request(b'/notgooduri', timeout=1.0)
 
+            # change server handler to respond with NOT_FOUND
+            server.remove_handler(netaio.MessageType.REQUEST_URI)
+            @server.on(netaio.MessageType.REQUEST_URI)
+            def server_handle_request(message: netaio.Message, _: asyncio.StreamWriter):
+                server_log.append(message)
+                uri = message.body.uri
+                if uri in resources:
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(resources[uri], uri=uri),
+                        netaio.MessageType.RESPOND_URI
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'', uri=uri),
+                    netaio.MessageType.NOT_FOUND
+                )
+
+            # now request the bad uri
+            response = await client.request(b'/notgooduri')
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.NOT_FOUND, response
+
             # close client and cancel server
             await client.close()
             server_task.cancel()

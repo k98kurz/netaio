@@ -763,13 +763,26 @@ class TestUDPE2E(unittest.TestCase):
 
             # test node.request: positive case
             server_addr = ('127.0.0.1', server_addr[1])
-            response = await client.request(b'request', server=server_addr)
+            response = await client.request(b'request', server_addr)
             assert response is not None
             assert response.body.content == b'response'
 
             # test node.request: negative case
             with self.assertRaises(TimeoutError):
-                response = await client.request(b'not found', 1.0, server=server_addr)
+                response = await client.request(b'not found', server_addr, timeout=1.0)
+
+            # add server handler for NOT_found
+            @server.on(netaio.MessageType.REQUEST_URI)
+            def server_not_found(message: netaio.Message, *_):
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'', uri=message.body.uri),
+                    netaio.MessageType.NOT_FOUND
+                )
+
+            # now request a bad uri
+            response = await client.request(b'not found', server_addr)
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.NOT_FOUND, response
 
             await server.stop()
             await client.stop()
