@@ -27,7 +27,13 @@ import logging
 
 
 class TCPClient:
-    """TCP client class."""
+    """TCP client class with multi-server connection support. A single
+    TCPClient can connect to multiple servers simultaneously. Each server
+    connection has its own receive loop that can be started and stopped
+    independently. Use `connect()` to establish connections,
+    `start_receive_loop()` to begin receiving from a server, and `close()`
+    to disconnect.
+    """
     hosts: dict[tuple[str, int], tuple[asyncio.StreamReader, asyncio.StreamWriter]]
     default_host: tuple[str, int]
     port: int
@@ -57,7 +63,8 @@ class TCPClient:
     peer_plugin: PeerPluginProtocol
     handle_auth_error: AuthErrorHandler
     timeout_error_handler: TimeoutErrorHandler
-    _receive_loop_task: asyncio.Task | None
+    _receive_loop_tasks: dict[tuple[str, int], asyncio.Task]
+    _receive_loop_lock: asyncio.Lock
     _timeout_handler_tasks: set[asyncio.Task]
     _timeout_handler_lock: asyncio.Lock
 
@@ -135,7 +142,8 @@ class TCPClient:
         self.handle_timeout_error = timeout_error_handler
         self._timeout_handler_tasks = set()
         self._timeout_handler_lock = asyncio.Lock()
-        self._receive_loop_task = None
+        self._receive_loop_tasks = {}
+        self._receive_loop_lock = asyncio.Lock()
         self._enable_automatic_peer_management = False
         self._disconnect_msg = None
         self._advertise_msg = None
@@ -228,7 +236,13 @@ class TCPClient:
             del self.ephemeral_handlers[key]
 
     async def connect(self, host: str = None, port: int = None):
-        """Connect to a server."""
+        """Connect to a server.
+
+            Establishes a TCP connection to specified host and port. The
+            connection is stored in the hosts dict. To receive messages from
+            this server, start a receive loop via `start_receive_loop()`.
+            Multiple servers can be connected to simultaneously.
+        """
         host = host or self.default_host[0]
         port = port or self.default_host[1]
         self.logger.info("Connecting to %s:%d", host, port)
@@ -371,14 +385,16 @@ class TCPClient:
             auth_plugin=auth_plugin,
             cipher_plugin=cipher_plugin
         )
+        was_running = True
 
-        was_running = (
-            self._receive_loop_task is not None
-            and not self._receive_loop_task.done()
-        )
         try:
-            if not was_running:
-                task = asyncio.create_task(self.receive_loop())
+            task, was_running = await self.start_receive_loop(
+                server=server,
+                use_auth=use_auth,
+                use_cipher=use_cipher,
+                auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin,
+            )
             deadline = asyncio.get_event_loop().time() + timeout
             try:
                 await asyncio.wait_for(event.wait(), timeout=timeout)
@@ -654,8 +670,10 @@ class TCPClient:
             on the client. If a cipher plugin is provided, it will be
             used to decrypt the message in addition to any cipher
             plugin that is set on the client.
+
+            Note: This method is typically called via start_receive_loop()
+            for better lifecycle management.
         """
-        self._receive_loop_task = asyncio.current_task()
         try:
             server = server or self.default_host
             while True:
@@ -674,12 +692,134 @@ class TCPClient:
                     self.logger.error("Error in receive_loop", exc_info=True)
                     break
         finally:
-            self._receive_loop_task = None
+            async with self._receive_loop_lock:
+                self._receive_loop_tasks.pop(server, None)
+
+    async def start_receive_loop(
+            self, server: tuple[str, int] = None, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ) -> tuple[asyncio.Task, bool]:
+        """Start a receive loop for a specific server.
+
+            Starts a receive loop that will continue receiving messages from
+            specified server indefinitely until stopped. If a receive loop
+            is already running for this server, returns the existing task.
+
+            Returns: asyncio.Task object for the receive loop, which can be
+                cancelled via task.cancel() when no longer needed.
+        """
+        server = server or self.default_host
+        was_running = False
+
+        async with self._receive_loop_lock:
+            if server in self._receive_loop_tasks:
+                task = self._receive_loop_tasks[server]
+                if not task.done():
+                    was_running = True
+                    self.logger.debug(
+                        "Receive loop already running for server %s, returning "
+                        "existing task",
+                        server
+                    )
+                    return (task, was_running)
+                self._receive_loop_tasks.pop(server, None)
+
+            task = asyncio.create_task(
+                self.receive_loop(
+                    server,
+                    use_auth=use_auth,
+                    use_cipher=use_cipher,
+                    auth_plugin=auth_plugin,
+                    cipher_plugin=cipher_plugin,
+                )
+            )
+            self._receive_loop_tasks[server] = task
+
+        self.logger.info("Started receive loop for server %s", server)
+        return (task, was_running)
+
+    async def stop_receive_loop(self, server: tuple[str, int] = None) -> bool:
+        """Stop the receive loop for a specific server.
+
+            Cancels and waits for the receive loop task to complete. Returns
+            True if a receive loop was stopped, False if no receive loop was
+            running for this server.
+        """
+        server = server or self.default_host
+
+        async with self._receive_loop_lock:
+            task = self._receive_loop_tasks.pop(server, None)
+
+        if task is None:
+            self.logger.debug("No receive loop running for server %s", server)
+            return False
+
+        self.logger.info("Stopping receive loop for server %s", server)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+        return True
+
+    async def stop_all_receive_loops(self) -> int:
+        """Stop all running receive loops.
+
+            Cancels and waits for all receive loop tasks to complete.
+            Returns number of receive loops that were stopped.
+        """
+        async with self._receive_loop_lock:
+            tasks_to_cancel = list(self._receive_loop_tasks.values())
+            count = len(tasks_to_cancel)
+            self._receive_loop_tasks.clear()
+
+        if not tasks_to_cancel:
+            self.logger.debug("No receive loops running")
+            return 0
+
+        self.logger.info("Stopping %d receive loop(s)", count)
+
+        for task in tasks_to_cancel:
+            task.cancel()
+
+        await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
+
+        self.logger.info("Stopped %d receive loop(s)", count)
+        return count
+
+    async def get_receive_loops(self) -> dict[tuple[str, int], asyncio.Task]:
+        """Get a copy of all active receive loop tasks.
+
+            Returns a dictionary mapping server addresses to their
+            receive loop tasks. Useful for monitoring and debugging.
+        """
+        async with self._receive_loop_lock:
+            return self._receive_loop_tasks.copy()
 
     async def close(self, server: tuple[str, int] = None):
-        """Close the connection to the server."""
+        """Close the connection to the server.
+
+            Cancels any running receive loop for the server and closes
+            the connection. Pass a `server` argument to disconnect from
+            a non-default server.
+        """
         server = server or self.default_host
         self.logger.info("Closing connection to server...")
+
+        async with self._receive_loop_lock:
+            task = self._receive_loop_tasks.get(server, None)
+
+        if task is not None:
+            self.logger.debug("Cancelling receive loop for server %s", server)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
         _, writer = self.hosts[server]
         if self._enable_automatic_peer_management and self._disconnect_msg:
             self.logger.debug("Sending disconnect message")

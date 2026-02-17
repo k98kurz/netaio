@@ -10,6 +10,7 @@ import unittest
 
 class TestTCPE2E(unittest.TestCase):
     PORT = randint(10000, 65535)
+    PORT2 = randint(10000, 65535)
 
     @classmethod
     def setUpClass(cls):
@@ -846,6 +847,120 @@ class TestTCPE2E(unittest.TestCase):
         print(
             f'{self.__class__.__name__}.test_peer_management_with_asymmetric_plugins'
         )
+        asyncio.run(run_test())
+
+    def test_multi_server_receive_loop_lifecycle(self):
+        async def run_test():
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
+
+            server1 = netaio.TCPServer(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            server2 = netaio.TCPServer(
+                port=self.PORT2, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+
+            @server1.on(netaio.MessageType.REQUEST_URI)
+            def server1_handle_request(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
+                uri = message.body.uri
+                if uri == b'/resource1':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(b'content1', uri=uri),
+                        netaio.MessageType.RESPOND_URI
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'', uri=uri),
+                    netaio.MessageType.NOT_FOUND
+                )
+
+            @server2.on(netaio.MessageType.REQUEST_URI)
+            def server2_handle_request(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
+                uri = message.body.uri
+                if uri == b'/resource2':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(b'content2', uri=uri),
+                        netaio.MessageType.RESPOND_URI
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'', uri=uri),
+                    netaio.MessageType.NOT_FOUND
+                )
+
+            server1_task = asyncio.create_task(server1.start())
+            server2_task = asyncio.create_task(server2.start())
+            await asyncio.sleep(0.1)
+
+            await client.connect()
+            await client.connect(host='127.0.0.1', port=self.PORT2)
+
+            task1, was_running1 = await client.start_receive_loop(
+                server=('127.0.0.1', self.PORT)
+            )
+            assert not was_running1
+
+            loops = await client.get_receive_loops()
+            assert ('127.0.0.1', self.PORT) in loops
+            assert ('127.0.0.1', self.PORT2) not in loops
+
+            response2 = await client.request(
+                b'/resource2', server=('127.0.0.1', self.PORT2)
+            )
+            assert response2 is not None
+            assert response2.body.content == b'content2'
+
+            loops_after2 = await client.get_receive_loops()
+            assert ('127.0.0.1', self.PORT2) not in loops_after2
+            assert ('127.0.0.1', self.PORT) in loops_after2
+            assert not task1.done()
+
+            response1 = await client.request(b'/resource1')
+            assert response1 is not None
+            assert response1.body.content == b'content1'
+
+            loops_after1 = await client.get_receive_loops()
+            assert ('127.0.0.1', self.PORT) in loops_after1
+            assert not task1.done()
+
+            task1_again, was_running1_again = await client.start_receive_loop(
+                server=('127.0.0.1', self.PORT)
+            )
+            assert was_running1_again
+            assert task1_again == task1
+
+            count = await client.stop_all_receive_loops()
+            assert count == 1
+
+            loops_final = await client.get_receive_loops()
+            assert len(loops_final) == 0
+
+            await client.close(server=('127.0.0.1', self.PORT))
+            await client.close(server=('127.0.0.1', self.PORT2))
+            server1_task.cancel()
+            server2_task.cancel()
+
+            try:
+                await server1_task
+            except asyncio.CancelledError:
+                pass
+
+            try:
+                await server2_task
+            except asyncio.CancelledError:
+                pass
+
+        print()
+        print(f'{self.__class__.__name__}.test_multi_server_receive_loop_lifecycle')
         asyncio.run(run_test())
 
 
