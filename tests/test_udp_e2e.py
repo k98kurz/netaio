@@ -767,11 +767,11 @@ class TestUDPE2E(unittest.TestCase):
             assert response is not None
             assert response.body.content == b'response'
 
-            # test node.request: negative case
+            # test node.request: timeout case
             with self.assertRaises(TimeoutError):
                 response = await client.request(b'not found', server_addr, timeout=1.0)
 
-            # add server handler for NOT_found
+            # add server handler for NOT_FOUND
             @server.on(netaio.MessageType.REQUEST_URI)
             def server_not_found(message: netaio.Message, *_):
                 return netaio.Message.prepare(
@@ -783,6 +783,72 @@ class TestUDPE2E(unittest.TestCase):
             response = await client.request(b'not found', server_addr)
             assert response is not None
             assert response.header.message_type is netaio.MessageType.NOT_FOUND, response
+
+            # now test create happy path and error case
+            @server.on(netaio.MessageType.CREATE_URI)
+            def server_handle_create(message: netaio.Message, *_):
+                uri = message.body.uri
+                if uri == b'/yep':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(message.body.content, uri=uri),
+                        netaio.MessageType.OK
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'invalid', uri=uri),
+                    netaio.MessageType.ERROR
+                )
+            # create happy path
+            response = await client.create(b'/yep', b'something', server_addr)
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.OK, response
+            # create error case
+            response = await client.create(b'/nope', b'nothing', server_addr)
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.ERROR, response
+
+            # now test update happy path and error case
+            @server.on(netaio.MessageType.UPDATE_URI)
+            def server_handle_update(message: netaio.Message, *_):
+                uri = message.body.uri
+                if uri == b'/yep':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(message.body.content, uri=uri),
+                        netaio.MessageType.OK
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'invalid', uri=uri),
+                    netaio.MessageType.ERROR
+                )
+            # update happy path
+            response = await client.update(b'/yep', b'something', server_addr)
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.OK, response
+            # update error case
+            response = await client.update(b'/nope', b'nothing', server_addr)
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.ERROR, response
+
+            # now test delete happy path and error case
+            @server.on(netaio.MessageType.DELETE_URI)
+            def server_handle_delete(message: netaio.Message, *_):
+                uri = message.body.uri
+                if uri == b'/yep':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(message.body.content, uri=uri),
+                        netaio.MessageType.OK
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'invalid', uri=uri),
+                    netaio.MessageType.ERROR
+                )
+            # delete happy path
+            response = await client.delete(b'/yep', server_addr)
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.OK, response
+            # delete error case
+            response = await client.delete(b'/nope', server_addr)
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.ERROR, response
 
             await server.stop()
             await client.stop()

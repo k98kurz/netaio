@@ -533,30 +533,42 @@ class UDPNode:
         self.logger.debug(f"Sent message with checksum={message.header.checksum} to {addr}")
 
     async def request(
-            self, uri: bytes, server: tuple[str, int],
+            self, uri: bytes,
+            server: tuple[str, int], *,
             timeout: float = 10.0,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
-            cipher_plugin: CipherPluginProtocol|None = None
+            cipher_plugin: CipherPluginProtocol|None = None,
+            message_type: MessageType|None = None,
+            content: bytes = b'',
         ) -> MessageProtocol:
-        """Send a REQUEST_URI message and wait for a RESPOND_URI response.
-            Sets ephemeral handlers for RESPOND_URI, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types using `add_ephemeral_handler`, then
-            sends a REQUEST_URI message to the specified address. Waits in a
-            loop until either a response (success or error) is received or
-            the timeout is reached. If it times out, removes all ephemeral
+        """Send a request message and wait for a response.
+            Sets ephemeral handlers for OK, RESPOND_URI, AUTH_ERROR, ERROR, and
+            NOT_FOUND message types, then sends a message to the specified
+            address. Waits until a response (success or error) is received or
+            timeout is reached. If it times out, removes all ephemeral
             handlers and raises a TimeoutError. If a response is received,
             returns that message (caller should check message.header.message_type
-            to determine if it's a success or error response).
+            to determine success or error).
+
+            When message_type is None (default), sends REQUEST_URI. Use message_type
+            and content to send CREATE_URI, UPDATE_URI, or DELETE_URI messages.
         """
         result = []
+        message_type = message_type or self.message_type_class.REQUEST_URI
 
         keys = [
-            (self.message_type_class.RESPOND_URI, uri, server),
             (self.message_type_class.AUTH_ERROR, uri, server),
             (self.message_type_class.ERROR, uri, server),
-            (self.message_type_class.NOT_FOUND, uri, server),
         ]
+
+        if message_type == self.message_type_class.REQUEST_URI:
+            keys.append((self.message_type_class.RESPOND_URI, uri, server))
+        else:
+            keys.append((self.message_type_class.OK, uri, server))
+
+        if message_type != self.message_type_class.CREATE_URI:
+            keys.append((self.message_type_class.NOT_FOUND, uri, server))
 
         event = asyncio.Event()
 
@@ -576,9 +588,9 @@ class UDPNode:
             handler = make_handler(key)
             self.add_ephemeral_handler(key, handler, auth_plugin, cipher_plugin)
 
-        request_body = self.body_class.prepare(content=b'', uri=uri)
+        request_body = self.body_class.prepare(content=content, uri=uri)
         request_message = self.message_class.prepare(
-            request_body, self.message_type_class.REQUEST_URI
+            request_body, message_type
         )
         self.send(
             request_message, server, use_auth, use_cipher, auth_plugin, cipher_plugin
@@ -605,6 +617,88 @@ class UDPNode:
             raise error
 
         return result[0]
+
+    async def create(
+            self, uri: bytes, data: bytes, server: tuple[str, int], *,
+            timeout: float = 10.0,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ) -> MessageProtocol:
+        """Send a CREATE_URI message and wait for an OK response.
+            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
+            NOT_FOUND message types, then sends a CREATE_URI message
+            to the specified address. Waits until a response (success or
+            error) is received or timeout is reached. If it times out,
+            removes all ephemeral handlers and raises a TimeoutError. If a
+            response is received, returns that message (caller should check
+            message.header.message_type to determine success or error).
+        """
+        return await self.request(
+            uri, server,
+            timeout=timeout,
+            use_auth=use_auth,
+            use_cipher=use_cipher,
+            auth_plugin=auth_plugin,
+            cipher_plugin=cipher_plugin,
+            message_type=self.message_type_class.CREATE_URI,
+            content=data
+        )
+
+    async def update(
+            self, uri: bytes, data: bytes,
+            server: tuple[str, int], *,
+            timeout: float = 10.0,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ) -> MessageProtocol:
+        """Send an UPDATE_URI message and wait for an OK response.
+            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
+            NOT_FOUND message types, then sends an UPDATE_URI message
+            to the specified address. Waits until a response (success or
+            error) is received or timeout is reached. If it times out,
+            removes all ephemeral handlers and raises a TimeoutError. If a
+            response is received, returns that message (caller should check
+            message.header.message_type to determine success or error).
+        """
+        return await self.request(
+            uri, server,
+            timeout=timeout,
+            use_auth=use_auth,
+            use_cipher=use_cipher,
+            auth_plugin=auth_plugin,
+            cipher_plugin=cipher_plugin,
+            message_type=self.message_type_class.UPDATE_URI,
+            content=data
+        )
+
+    async def delete(
+            self, uri: bytes,
+            server: tuple[str, int], *,
+            timeout: float = 10.0,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ) -> MessageProtocol:
+        """Send a DELETE_URI message and wait for an OK response.
+            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
+            NOT_FOUND message types, then sends a DELETE_URI message
+            to the specified address. Waits until a response (success or
+            error) is received or timeout is reached. If it times out,
+            removes all ephemeral handlers and raises a TimeoutError. If a
+            response is received, returns that message (caller should check
+            message.header.message_type to determine success or error).
+        """
+        return await self.request(
+            uri, server,
+            timeout=timeout,
+            use_auth=use_auth,
+            use_cipher=use_cipher,
+            auth_plugin=auth_plugin,
+            cipher_plugin=cipher_plugin,
+            message_type=self.message_type_class.DELETE_URI
+        )
 
     def set_timeout_handler(self, handler: TimeoutErrorHandler):
         """Set or replace the timeout error handler."""

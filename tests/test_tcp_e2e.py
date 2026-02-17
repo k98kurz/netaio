@@ -289,7 +289,7 @@ class TestTCPE2E(unittest.TestCase):
             assert response is not None
             assert response.body.content == b'content1'
 
-            # test client.request: negative case
+            # test client.request: timeout case
             with self.assertRaises(TimeoutError) as e:
                 response = await client.request(b'/notgooduri', timeout=1.0)
 
@@ -313,6 +313,73 @@ class TestTCPE2E(unittest.TestCase):
             response = await client.request(b'/notgooduri')
             assert response is not None
             assert response.header.message_type is netaio.MessageType.NOT_FOUND, response
+
+            # now test create happy path and error case
+            @server.on(netaio.MessageType.CREATE_URI)
+            def server_handle_create(message: netaio.Message, _: asyncio.StreamWriter):
+                uri = message.body.uri
+                if uri == b'/yep':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(message.body.content, uri=uri),
+                        netaio.MessageType.OK
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'invalid', uri=uri),
+                    netaio.MessageType.ERROR
+                )
+            # create happy path
+            response = await client.create(b'/yep', b'something')
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.OK, response
+            # create error case
+            response = await client.create(b'/nope', b'nothing')
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.ERROR, response
+
+            # now test update happy path and error case
+            @server.on(netaio.MessageType.UPDATE_URI)
+            def server_handle_update(message: netaio.Message, _: asyncio.StreamWriter):
+                uri = message.body.uri
+                if uri == b'/yep':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(message.body.content, uri=uri),
+                        netaio.MessageType.OK
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'invalid', uri=uri),
+                    netaio.MessageType.ERROR
+                )
+            # update happy path
+            response = await client.update(b'/yep', b'something')
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.OK, response
+            # update error case
+            response = await client.update(b'/nope', b'nothing')
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.ERROR, response
+
+            # now test delete happy path and error case
+            @server.on(netaio.MessageType.DELETE_URI)
+            def server_handle_delete(message: netaio.Message, _: asyncio.StreamWriter):
+                uri = message.body.uri
+                if uri == b'/yep':
+                    return netaio.Message.prepare(
+                        netaio.Body.prepare(message.body.content, uri=uri),
+                        netaio.MessageType.OK
+                    )
+                return netaio.Message.prepare(
+                    netaio.Body.prepare(b'invalid', uri=uri),
+                    netaio.MessageType.ERROR
+                )
+            # delete happy path
+            response = await client.delete(b'/yep')
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.OK, response
+            # delete error case
+            response = await client.delete(b'/nope')
+            assert response is not None
+            assert response.header.message_type is netaio.MessageType.ERROR, response
+
 
             # close client and cancel server
             await client.close()
