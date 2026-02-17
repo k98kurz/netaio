@@ -5,5 +5,6 @@ dist
 .ralph/
 .research/
 findings/
+temp/
 .old/*
 **.swp
