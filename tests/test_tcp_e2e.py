@@ -24,9 +24,18 @@ class TestTCPE2E(unittest.TestCase):
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
             cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
-            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
-            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
-            second_client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            server = netaio.TCPServer(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            second_client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
 
             client_msg = netaio.Message.prepare(
                 netaio.Body.prepare(b'hello', uri=b'echo'),
@@ -67,13 +76,17 @@ class TestTCPE2E(unittest.TestCase):
                 return server_msg
 
             @server.on(netaio.MessageType.SUBSCRIBE_URI)
-            def server_subscribe(message: netaio.Message, writer: asyncio.StreamWriter):
+            def server_subscribe(
+                    message: netaio.Message, writer: asyncio.StreamWriter
+                ):
                 server_log.append(message)
                 server.subscribe(message.body.uri, writer)
                 return expected_subscribe_response
 
             @server.on(netaio.MessageType.UNSUBSCRIBE_URI)
-            def server_unsubscribe(message: netaio.Message, writer: asyncio.StreamWriter):
+            def server_unsubscribe(
+                    message: netaio.Message, writer: asyncio.StreamWriter
+                ):
                 server_log.append(message)
                 server.unsubscribe(message.body.uri, writer)
                 return expected_unsubscribe_response
@@ -89,7 +102,9 @@ class TestTCPE2E(unittest.TestCase):
                 return message
 
             @second_client.on(netaio.MessageType.NOTIFY_URI)
-            def second_client_notify(message: netaio.Message, writer: asyncio.StreamWriter):
+            def second_client_notify(
+                    message: netaio.Message, writer: asyncio.StreamWriter
+                ):
                 second_client_log.append(message)
                 return message
 
@@ -115,8 +130,12 @@ class TestTCPE2E(unittest.TestCase):
             # subscribe first client
             await client.send(client_subscribe_msg)
             response = await client.receive_once()
-            assert response.header.message_type == expected_subscribe_response.header.message_type, \
-                (response.header.message_type, expected_subscribe_response.header.message_type)
+            assert response.header.message_type == \
+                expected_subscribe_response.header.message_type, \
+                (
+                    response.header.message_type,
+                    expected_subscribe_response.header.message_type
+                )
             assert response.body.uri == expected_subscribe_response.body.uri, \
                 (response.body.uri, expected_subscribe_response.body.uri)
             assert response.body.content == expected_subscribe_response.body.content, \
@@ -125,8 +144,12 @@ class TestTCPE2E(unittest.TestCase):
             # subscribe second client
             await second_client.send(client_subscribe_msg)
             response = await second_client.receive_once()
-            assert response.header.message_type == expected_subscribe_response.header.message_type, \
-                (response.header.message_type, expected_subscribe_response.header.message_type)
+            assert response.header.message_type == \
+                expected_subscribe_response.header.message_type, \
+                (
+                    response.header.message_type,
+                    expected_subscribe_response.header.message_type
+                )
             assert response.body.uri == expected_subscribe_response.body.uri, \
                 (response.body.uri, expected_subscribe_response.body.uri)
             assert response.body.content == expected_subscribe_response.body.content, \
@@ -137,7 +160,8 @@ class TestTCPE2E(unittest.TestCase):
 
             # get notification from first client
             response = await client.receive_once(use_auth=False)
-            assert response.header.message_type == server_notify_msg.header.message_type, \
+            assert response.header.message_type == \
+                server_notify_msg.header.message_type, \
                 (response.header.message_type, server_notify_msg.header.message_type)
             assert response.body.uri == server_notify_msg.body.uri, \
                 (response.body.uri, server_notify_msg.body.uri)
@@ -146,7 +170,8 @@ class TestTCPE2E(unittest.TestCase):
 
             # get notification from second client
             response = await second_client.receive_once(use_auth=False)
-            assert response.header.message_type == server_notify_msg.header.message_type, \
+            assert response.header.message_type == \
+                server_notify_msg.header.message_type, \
                 (response.header.message_type, server_notify_msg.header.message_type)
             assert response.body.uri == server_notify_msg.body.uri, \
                 (response.body.uri, server_notify_msg.body.uri)
@@ -155,11 +180,16 @@ class TestTCPE2E(unittest.TestCase):
 
             await client.send(client_unsubscribe_msg)
             response = await client.receive_once()
-            assert response.header.message_type == expected_unsubscribe_response.header.message_type, \
-                (response.header.message_type, expected_unsubscribe_response.header.message_type)
+            assert response.header.message_type == \
+                expected_unsubscribe_response.header.message_type, \
+                (
+                    response.header.message_type,
+                    expected_unsubscribe_response.header.message_type
+                )
             assert response.body.uri == expected_unsubscribe_response.body.uri, \
                 (response.body.uri, expected_unsubscribe_response.body.uri)
-            assert response.body.content == expected_unsubscribe_response.body.content, \
+            assert response.body.content == \
+                expected_unsubscribe_response.body.content, \
                 (response.body.content, expected_unsubscribe_response.body.content)
 
             assert len(server_log) == 4, len(server_log)
@@ -177,7 +207,8 @@ class TestTCPE2E(unittest.TestCase):
             await client.send(client_msg)
             response = await client.receive_once(use_auth=False, use_cipher=False)
             assert response is not None
-            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+            assert response.header.message_type == \
+                netaio.MessageType.AUTH_ERROR, response
 
             # set different error handler on client
             def log_auth_error(client, auth_plugin, msg):
@@ -193,7 +224,8 @@ class TestTCPE2E(unittest.TestCase):
             assert response is None, response
             assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
-            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+            assert response.header.message_type == \
+                netaio.MessageType.AUTH_ERROR, response
 
             # test auth failure with no auth plugins
             # should pass through without calling log_auth_error
@@ -201,7 +233,8 @@ class TestTCPE2E(unittest.TestCase):
             await client.send(client_msg)
             response = await client.receive_once(use_auth=False, use_cipher=False)
             assert response is not None
-            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+            assert response.header.message_type == \
+                netaio.MessageType.AUTH_ERROR, response
             assert len(client_log) == 0, len(client_log)
 
             # Cancel server task and close client - proper shutdown pattern
@@ -241,7 +274,9 @@ class TestTCPE2E(unittest.TestCase):
             resources = {b'/resource1': b'content1', b'/resource2': b'content2'}
 
             @server.on(netaio.MessageType.REQUEST_URI)
-            def server_handle_request(message: netaio.Message, _: asyncio.StreamWriter):
+            def server_handle_request(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 server_log.append(message)
                 uri = message.body.uri
                 if uri in resources:
@@ -257,7 +292,9 @@ class TestTCPE2E(unittest.TestCase):
             await client.connect()
 
             @client.once((netaio.MessageType.RESPOND_URI, b'/resource1'))
-            def client_handle_response1(message: netaio.Message, _: asyncio.StreamWriter):
+            def client_handle_response1(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 client_log.append(('resource1', message))
 
             await client.send(netaio.Message.prepare(
@@ -267,10 +304,13 @@ class TestTCPE2E(unittest.TestCase):
             response = await client.receive_once()
             assert response is not None
             assert response.body.content == b'content1'
-            assert (netaio.MessageType.RESPOND_URI, b'/resource1') not in client.ephemeral_handlers
+            assert (netaio.MessageType.RESPOND_URI, b'/resource1') not in \
+                client.ephemeral_handlers
 
             @client.once((netaio.MessageType.RESPOND_URI, b'/resource2'))
-            def client_handle_response2(message: netaio.Message, _: asyncio.StreamWriter):
+            def client_handle_response2(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 client_log.append(('resource2', message))
 
             await client.send(netaio.Message.prepare(
@@ -295,8 +335,11 @@ class TestTCPE2E(unittest.TestCase):
 
             # change server handler to respond with NOT_FOUND
             server.remove_handler(netaio.MessageType.REQUEST_URI)
+
             @server.on(netaio.MessageType.REQUEST_URI)
-            def server_handle_request(message: netaio.Message, _: asyncio.StreamWriter):
+            def server_handle_request(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 server_log.append(message)
                 uri = message.body.uri
                 if uri in resources:
@@ -312,11 +355,14 @@ class TestTCPE2E(unittest.TestCase):
             # now request the bad uri
             response = await client.request(b'/notgooduri')
             assert response is not None
-            assert response.header.message_type is netaio.MessageType.NOT_FOUND, response
+            assert response.header.message_type is \
+                netaio.MessageType.NOT_FOUND, response
 
             # now test create happy path and error case
             @server.on(netaio.MessageType.CREATE_URI)
-            def server_handle_create(message: netaio.Message, _: asyncio.StreamWriter):
+            def server_handle_create(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 uri = message.body.uri
                 if uri == b'/yep':
                     return netaio.Message.prepare(
@@ -338,7 +384,9 @@ class TestTCPE2E(unittest.TestCase):
 
             # now test update happy path and error case
             @server.on(netaio.MessageType.UPDATE_URI)
-            def server_handle_update(message: netaio.Message, _: asyncio.StreamWriter):
+            def server_handle_update(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 uri = message.body.uri
                 if uri == b'/yep':
                     return netaio.Message.prepare(
@@ -360,7 +408,9 @@ class TestTCPE2E(unittest.TestCase):
 
             # now test delete happy path and error case
             @server.on(netaio.MessageType.DELETE_URI)
-            def server_handle_delete(message: netaio.Message, _: asyncio.StreamWriter):
+            def server_handle_delete(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 uri = message.body.uri
                 if uri == b'/yep':
                     return netaio.Message.prepare(
@@ -391,7 +441,10 @@ class TestTCPE2E(unittest.TestCase):
                 pass
 
         print()
-        print(f'{self.__class__.__name__}.test_ephemeral_handler_request_response_pattern')
+        print(
+            f'{self.__class__.__name__}.'
+            'test_ephemeral_handler_request_response_pattern'
+        )
         asyncio.run(run_test())
 
     def test_ephemeral_handler_server_side(self):
@@ -416,7 +469,9 @@ class TestTCPE2E(unittest.TestCase):
             call_count2 = {'value': 0}
 
             @server.once((netaio.MessageType.PUBLISH_URI, b'ephemeral_test'))
-            def server_ephemeral_handler(message: netaio.Message, _: asyncio.StreamWriter):
+            def server_ephemeral_handler(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 call_count['value'] += 1
                 server_log.append(message)
                 return netaio.Message.prepare(
@@ -425,7 +480,9 @@ class TestTCPE2E(unittest.TestCase):
                 )
 
             @server.on((netaio.MessageType.PUBLISH_URI, b'ephemeral_test'))
-            def server_regular_handler(message: netaio.Message, _: asyncio.StreamWriter):
+            def server_regular_handler(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 server_log.append(message)
                 return netaio.Message.prepare(
                     netaio.Body.prepare(b'regular_response', uri=message.body.uri),
@@ -449,18 +506,28 @@ class TestTCPE2E(unittest.TestCase):
             response = await client.receive_once()
             assert response.body.content == b'once_response'
             assert call_count['value'] == 1
-            assert (netaio.MessageType.PUBLISH_URI, b'ephemeral_test') not in server.ephemeral_handlers
+            assert (netaio.MessageType.PUBLISH_URI, b'ephemeral_test') not in \
+                server.ephemeral_handlers
 
             await client.send(msg)
             response = await client.receive_once()
             assert response.body.content == b'regular_response'
             assert call_count['value'] == 1
 
-            auth_plugin2 = netaio.HMACAuthPlugin(config={"secret": "test2", "hmac_field": "hmac2"})
-            cipher_plugin2 = netaio.Sha256StreamCipherPlugin(config={"key": "test2", "iv_field": "iv2", "encrypt_uri": False})
+            auth_plugin2 = netaio.HMACAuthPlugin(
+                config={"secret": "test2", "hmac_field": "hmac2"}
+            )
+            cipher_plugin2 = netaio.Sha256StreamCipherPlugin(
+                config={"key": "test2", "iv_field": "iv2", "encrypt_uri": False}
+            )
 
-            @server.once((netaio.MessageType.PUBLISH_URI, b'ephemeral_test2'), auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
-            def server_ephemeral_handler_layer2(message: netaio.Message, _: asyncio.StreamWriter):
+            @server.once(
+                (netaio.MessageType.PUBLISH_URI, b'ephemeral_test2'),
+                auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
+            def server_ephemeral_handler_layer2(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 call_count2['value'] += 1
                 return netaio.Message.prepare(
                     netaio.Body.prepare(b'layer2_response', uri=message.body.uri),
@@ -471,15 +538,21 @@ class TestTCPE2E(unittest.TestCase):
                 netaio.Body.prepare(b'test2', uri=b'ephemeral_test2'),
                 netaio.MessageType.PUBLISH_URI
             )
-            await client.send(msg2, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
-            response = await client.receive_once(auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            await client.send(
+                msg2, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
+            response = await client.receive_once(
+                auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
             assert response.body.content == b'layer2_response'
             assert call_count2['value'] == 1
 
             # test remove ephemeral handler
             assert netaio.MessageType.OK not in client.ephemeral_handlers
             @client.once(netaio.MessageType.OK)
-            def client_ephemeral_handler(message: netaio.Message, _: asyncio.StreamWriter):
+            def client_ephemeral_handler(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 call_count['value'] += 1
                 client_log.append(message)
                 return None
@@ -530,7 +603,9 @@ class TestTCPE2E(unittest.TestCase):
             )
 
             @server.on(netaio.MessageType.SUBSCRIBE_URI)
-            def server_subscribe(message: netaio.Message, writer: asyncio.StreamWriter):
+            def server_subscribe(
+                    message: netaio.Message, writer: asyncio.StreamWriter
+                ):
                 server_log.append(message)
                 server.subscribe(message.body.uri, writer)
                 return netaio.Message.prepare(
@@ -539,7 +614,9 @@ class TestTCPE2E(unittest.TestCase):
                 )
 
             @client.on(netaio.MessageType.CONFIRM_SUBSCRIBE)
-            def client_confirm_subscribe(message: netaio.Message, _: asyncio.StreamWriter):
+            def client_confirm_subscribe(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 client_log.append(message)
 
             # Start the server as a background task.
@@ -561,12 +638,14 @@ class TestTCPE2E(unittest.TestCase):
             # wait for peer data to be transmitted and response received
             await asyncio.sleep(0.1)
 
-            # server should have the client as a peer because of the ADVERTISE_PEER message
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER message
             assert len(server.peers) == 1, len(server.peers)
             assert client_peer.id in server.peers, server.peers
             assert server.peers[client_peer.id].data == client_peer.data, \
                 (server.peers[client_peer.id].data, client_peer.data)
-            # client should have the server as a peer because of the PEER_DISCOVERED response
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED response
             assert len(client.peers) == 1, len(client.peers)
             assert server_peer.id in client.peers, client.peers
             assert client.peers[server_peer.id].data == server_peer.data, \
@@ -583,14 +662,18 @@ class TestTCPE2E(unittest.TestCase):
             # server should receive the message and respond
             await asyncio.sleep(0.1)
             assert len(server_log) == 1, len(server_log)
-            assert server_log[-1].header.message_type is netaio.MessageType.SUBSCRIBE_URI, server_log[-1].header
+            assert server_log[-1].header.message_type is \
+                netaio.MessageType.SUBSCRIBE_URI, server_log[-1].header
             assert len(client_log) == 1, len(client_log)
-            assert client_log[-1].header.message_type is netaio.MessageType.CONFIRM_SUBSCRIBE, client_log[-1].header
+            assert client_log[-1].header.message_type is \
+                netaio.MessageType.CONFIRM_SUBSCRIBE, client_log[-1].header
 
             # client should be subscribed
-            assert len(server.subscriptions.get(b'subscribe/test', set())) == 1, server.subscriptions
+            assert len(server.subscriptions.get(b'subscribe/test', set())) == 1, \
+                server.subscriptions
 
-            # stop peer management on client and wait for the DISCONNECT message to be received
+            # stop peer management on client and wait for the DISCONNECT message
+            # to be received
             await client.stop_peer_management()
             await asyncio.sleep(0.1)
             assert len(server.peers) == 0, len(server.peers)
@@ -604,10 +687,12 @@ class TestTCPE2E(unittest.TestCase):
             await client.manage_peers_automatically()
             await asyncio.sleep(0.1)
 
-            # server should have the client as a peer because of the ADVERTISE_PEER messages
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER messages
             assert len(server.peers) == 1, len(server.peers)
             assert client_peer.id in server.peers, server.peers
-            # client should have the server as a peer because of the PEER_DISCOVERED responses
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED responses
             assert len(client.peers) == 1, len(client.peers)
             assert server_peer.id in client.peers, client.peers
 
@@ -665,16 +750,26 @@ class TestTCPE2E(unittest.TestCase):
             server = netaio.TCPServer(port=self.PORT, local_peer=server_peer)
             client = netaio.TCPClient(port=self.PORT, local_peer=client_peer)
 
-            @server.on(netaio.MessageType.REQUEST_URI, server_auth_plugin, server_cipher_plugin)
-            def server_handle_request_uri(message: netaio.Message, _: asyncio.StreamWriter):
+            @server.on(
+                netaio.MessageType.REQUEST_URI,
+                auth_plugin=server_auth_plugin, cipher_plugin=server_cipher_plugin
+            )
+            def server_handle_request_uri(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 server_log.append(message)
                 return netaio.Message.prepare(
                     netaio.Body.prepare(b'some content for u', uri=message.body.uri),
                     netaio.MessageType.RESPOND_URI
                 )
 
-            @client.on(netaio.MessageType.RESPOND_URI, client_auth_plugin, client_cipher_plugin)
-            def client_handle_respond_uri(message: netaio.Message, _: asyncio.StreamWriter):
+            @client.on(
+                netaio.MessageType.RESPOND_URI,
+                auth_plugin=client_auth_plugin, cipher_plugin=client_cipher_plugin
+            )
+            def client_handle_respond_uri(
+                    message: netaio.Message, _: asyncio.StreamWriter
+                ):
                 client_log.append(message)
 
             # Start the server as a background task.
@@ -696,12 +791,14 @@ class TestTCPE2E(unittest.TestCase):
             # wait for peer data to be transmitted and response received
             await asyncio.sleep(0.1)
 
-            # server should have the client as a peer because of the ADVERTISE_PEER message
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER message
             assert len(server.peers) == 1, len(server.peers)
             assert client_peer.id in server.peers, server.peers
             assert server.peers[client_peer.id].data == client_peer.data, \
                 (server.peers[client_peer.id].data, client_peer.data)
-            # client should have the server as a peer because of the PEER_DISCOVERED response
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED response
             assert len(client.peers) == 1, len(client.peers)
             assert server_peer.id in client.peers, client.peers
             assert client.peers[server_peer.id].data == server_peer.data, \
@@ -716,15 +813,19 @@ class TestTCPE2E(unittest.TestCase):
 
             # server should have received the message and responded
             assert len(server_log) == 1, len(server_log)
-            assert server_log[-1].header.message_type is netaio.MessageType.REQUEST_URI, server_log[-1].header
+            assert server_log[-1].header.message_type is \
+                netaio.MessageType.REQUEST_URI, server_log[-1].header
             assert server_log[-1].body.uri == b'something', server_log[-1].body.uri
-            assert server_log[-1].body.content == b'pls gibs me dat', server_log[-1].body.content
+            assert server_log[-1].body.content == b'pls gibs me dat', \
+                server_log[-1].body.content
 
             # client should have received the response from the server
             assert len(client_log) == 1, len(client_log)
-            assert client_log[-1].header.message_type is netaio.MessageType.RESPOND_URI, client_log[-1].header
+            assert client_log[-1].header.message_type is \
+                netaio.MessageType.RESPOND_URI, client_log[-1].header
             assert client_log[-1].body.uri == b'something', client_log[-1].body.uri
-            assert client_log[-1].body.content == b'some content for u', client_log[-1].body.content
+            assert client_log[-1].body.content == b'some content for u', \
+                client_log[-1].body.content
 
             # close client and stop server
             client_task.cancel()
@@ -742,7 +843,9 @@ class TestTCPE2E(unittest.TestCase):
                 pass
 
         print()
-        print(f'{self.__class__.__name__}.test_peer_management_with_asymmetric_plugins')
+        print(
+            f'{self.__class__.__name__}.test_peer_management_with_asymmetric_plugins'
+        )
         asyncio.run(run_test())
 
 
@@ -761,14 +864,20 @@ class TestTCPE2EWithoutDefaultPlugins(unittest.TestCase):
             cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
             server = netaio.TCPServer(port=self.PORT)
-            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
 
             @server.on(netaio.MessageType.REQUEST_URI)
             def server_request(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
 
-            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            @server.on(
+                netaio.MessageType.PUBLISH_URI,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
@@ -838,7 +947,10 @@ class TestTCPE2EWithoutDefaultPlugins(unittest.TestCase):
                 server_log.append(message)
                 return message
 
-            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            @server.on(
+                netaio.MessageType.PUBLISH_URI,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
@@ -871,8 +983,12 @@ class TestTCPE2EWithoutDefaultPlugins(unittest.TestCase):
                 (response.encode().hex(), echo_msg.encode().hex())
 
             # send to protected route
-            await client.send(publish_msg, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
-            response = await client.receive_once(auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            await client.send(
+                publish_msg, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
+            response = await client.receive_once(
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             assert response is not None
             assert response.body.content == publish_msg.body.content, \
                 (response.body.content, publish_msg.body.content)
@@ -919,15 +1035,22 @@ class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
                 "encrypt_uri": False
             })
 
-            server = netaio.TCPServer(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
-            client = netaio.TCPClient(port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            server = netaio.TCPServer(
+                port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
+            client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
 
             @server.on(netaio.MessageType.REQUEST_URI)
             def server_request(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
 
-            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            @server.on(
+                netaio.MessageType.PUBLISH_URI,
+                auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
             def server_publish(message: netaio.Message, _: asyncio.StreamWriter):
                 server_log.append(message)
                 return message
@@ -964,8 +1087,12 @@ class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
                 (response.header.message_type, echo_msg.header.message_type)
 
             # send to twice-protected route
-            await client.send(publish_msg(), auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
-            response = await client.receive_once(auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            await client.send(
+                publish_msg(), auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
+            response = await client.receive_once(
+                auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
             assert response is not None
             assert response.body.content == publish_msg().body.content, \
                 (response.body.content, publish_msg().body.content)
@@ -994,7 +1121,8 @@ class TestTCPE2ETwoLayersOfPlugins(unittest.TestCase):
             assert response is None, response
             assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
-            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, \
+                response
 
             # close client and stop server
             await client.close()

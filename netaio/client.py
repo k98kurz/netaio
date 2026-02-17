@@ -39,9 +39,18 @@ class TCPClient:
     auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
-    handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
-    ephemeral_handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
-    extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]
+    handlers: dict[
+        Hashable,
+        tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+    ]
+    ephemeral_handlers: dict[
+        Hashable,
+        tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+    ]
+    extract_keys: Callable[
+        [MessageProtocol, tuple[str, int] | None],
+        list[Hashable]
+    ]
     logger: logging.Logger
     auth_plugin: AuthPluginProtocol
     cipher_plugin: CipherPluginProtocol
@@ -53,14 +62,17 @@ class TCPClient:
     _timeout_handler_lock: asyncio.Lock
 
     def __init__(
-            self, host: str = "127.0.0.1", port: int = 8888,
+            self, host: str = "127.0.0.1", port: int = 8888, *,
             local_peer: Peer = None,
             header_class: type[HeaderProtocol] = Header,
             message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
-            extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = keys_extractor,
+            extract_keys: Callable[
+                [MessageProtocol, tuple[str, int] | None],
+                list[Hashable]
+            ] = keys_extractor,
             logger: logging.Logger = default_client_logger,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None,
@@ -130,7 +142,7 @@ class TCPClient:
 
     def add_handler(
             self, key: Hashable,
-            handler: Handler,
+            handler: Handler, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -148,7 +160,7 @@ class TCPClient:
 
     def add_ephemeral_handler(
             self, key: Hashable,
-            handler: Handler,
+            handler: Handler, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -160,7 +172,7 @@ class TCPClient:
         self.ephemeral_handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def on(
-            self, key: Hashable,
+            self, key: Hashable, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -175,12 +187,14 @@ class TCPClient:
             client.
         """
         def decorator(func: Handler):
-            self.add_handler(key, func, auth_plugin, cipher_plugin)
+            self.add_handler(
+                key, func, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             return func
         return decorator
 
     def once(
-            self, key: Hashable,
+            self, key: Hashable, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -195,7 +209,9 @@ class TCPClient:
             client.
         """
         def decorator(func: Handler):
-            self.add_ephemeral_handler(key, func, auth_plugin, cipher_plugin)
+            self.add_ephemeral_handler(
+                key, func, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             return func
         return decorator
 
@@ -219,10 +235,11 @@ class TCPClient:
         reader, writer = await asyncio.open_connection(host, port)
         self.hosts[(host, port)] = (reader, writer)
         if self._enable_automatic_peer_management and self._advertise_msg:
-            await self.send(self._advertise_msg.copy(), (host, port))
+            await self.send(self._advertise_msg.copy(), server=(host, port))
 
     async def send(
-            self, message: MessageProtocol, server: tuple[str, int] = None,
+            self, message: MessageProtocol, *,
+            server: tuple[str, int] = None,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
@@ -254,13 +271,17 @@ class TCPClient:
         # inner auth
         if auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.make on auth_data and body")
-            auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
+            auth_plugin.make(
+                message.auth_data, message.body, self, peer, self.peer_plugin
+            )
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
             self.logger.debug("Calling self.cipher_plugin.encrypt on message")
             try:
-                message = self.cipher_plugin.encrypt(message, self, peer, self.peer_plugin)
+                message = self.cipher_plugin.encrypt(
+                    message, self, peer, self.peer_plugin
+                )
             except Exception as e:
                 self.logger.error("Error encrypting message", exc_info=True)
                 return
@@ -268,9 +289,13 @@ class TCPClient:
         # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.make on auth_data and body")
-            self.auth_plugin.make(message.auth_data, message.body, self, peer, self.peer_plugin)
+            self.auth_plugin.make(
+                message.auth_data, message.body, self, peer, self.peer_plugin
+            )
 
-        self.logger.debug("Sending message of type=%s to server...", message.header.message_type)
+        self.logger.debug(
+            "Sending message of type=%s to server...", message.header.message_type
+        )
         _, writer = self.hosts[server]
         writer.write(message.encode())
         await writer.drain()
@@ -330,14 +355,21 @@ class TCPClient:
 
         for key in keys:
             handler = make_handler(key)
-            self.add_ephemeral_handler(key, handler, auth_plugin, cipher_plugin)
+            self.add_ephemeral_handler(
+                key, handler, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
 
         request_body = self.body_class.prepare(content=content, uri=uri)
         request_message = self.message_class.prepare(
             request_body, message_type
         )
         await self.send(
-            request_message, server, use_auth, use_cipher, auth_plugin, cipher_plugin
+            request_message,
+            server=server,
+            use_auth=use_auth,
+            use_cipher=use_cipher,
+            auth_plugin=auth_plugin,
+            cipher_plugin=cipher_plugin
         )
 
         was_running = (
@@ -471,8 +503,9 @@ class TCPClient:
         )
 
     async def receive_once(
-            self, server: tuple[str, int] = None, use_auth: bool = True,
-            use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            self, server: tuple[str, int] = None, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol|None:
         """Receive a message from the server. If a handler was
@@ -502,7 +535,9 @@ class TCPClient:
             data,
             message_type_factory=self.message_type_class
         )
-        self.logger.debug("Received message of type=%s from server", header.message_type)
+        self.logger.debug(
+            "Received message of type=%s from server", header.message_type
+        )
 
         auth_bytes = await reader.readexactly(header.auth_length)
         auth: AuthFieldsProtocol = self.auth_fields_class.decode(auth_bytes)
@@ -523,7 +558,9 @@ class TCPClient:
         # outer auth
         if use_auth and self.auth_plugin is not None:
             self.logger.debug("Calling self.auth_plugin.check on auth and body")
-            check = self.auth_plugin.check(msg.auth_data, msg.body, self, peer, self.peer_plugin)
+            check = self.auth_plugin.check(
+                msg.auth_data, msg.body, self, peer, self.peer_plugin
+            )
             if not check:
                 self.logger.warning("Message auth failed")
                 return self.handle_auth_error(self, self.auth_plugin, msg)
@@ -540,7 +577,9 @@ class TCPClient:
         # inner auth
         if auth_plugin is not None:
             self.logger.debug("Calling auth_plugin.check on auth and body")
-            check = auth_plugin.check(msg.auth_data, msg.body, self, peer, self.peer_plugin)
+            check = auth_plugin.check(
+                msg.auth_data, msg.body, self, peer, self.peer_plugin
+            )
             if not check:
                 self.logger.warning("Message auth failed")
                 return self.handle_auth_error(self, auth_plugin, msg)
@@ -561,14 +600,18 @@ class TCPClient:
         for key in keys:
             if key in self.handlers or key in self.ephemeral_handlers:
                 if key in self.ephemeral_handlers:
-                    handler, auth_plugin, cipher_plugin = self.ephemeral_handlers.pop(key)
+                    (
+                        handler, auth_plugin, cipher_plugin
+                    ) = self.ephemeral_handlers.pop(key)
                 else:
                     handler, auth_plugin, cipher_plugin = self.handlers[key]
 
                 # inner auth
                 if auth_plugin is not None:
                     self.logger.debug("Calling auth_plugin.check on auth and body")
-                    check = auth_plugin.check(msg.auth_data, msg.body, self, peer, self.peer_plugin)
+                    check = auth_plugin.check(
+                        msg.auth_data, msg.body, self, peer, self.peer_plugin
+                    )
                     if not check:
                         self.logger.warning("Message auth failed")
                         return self.handle_auth_error(self, auth_plugin, msg)
@@ -579,7 +622,9 @@ class TCPClient:
                     try:
                         msg = cipher_plugin.decrypt(msg, self, peer, self.peer_plugin)
                     except Exception as e:
-                        self.logger.error("Error decrypting message; dropping", exc_info=True)
+                        self.logger.error(
+                            "Error decrypting message; dropping", exc_info=True
+                        )
                         return
 
                 self.logger.debug("Calling handler for key=%s", key)
@@ -594,8 +639,9 @@ class TCPClient:
         return msg
 
     async def receive_loop(
-            self, server: tuple[str, int] = None, use_auth: bool = True,
-            use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            self, server: tuple[str, int] = None, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Receive messages from the server indefinitely. Use with
@@ -614,7 +660,13 @@ class TCPClient:
             server = server or self.default_host
             while True:
                 try:
-                    await self.receive_once(server, use_auth, use_cipher, auth_plugin, cipher_plugin)
+                    await self.receive_once(
+                        server,
+                        use_auth=use_auth,
+                        use_cipher=use_cipher,
+                        auth_plugin=auth_plugin,
+                        cipher_plugin=cipher_plugin
+                    )
                 except asyncio.CancelledError:
                     self.logger.info("Receive loop cancelled")
                     break
@@ -631,7 +683,7 @@ class TCPClient:
         _, writer = self.hosts[server]
         if self._enable_automatic_peer_management and self._disconnect_msg:
             self.logger.debug("Sending disconnect message")
-            await self.send(self._disconnect_msg.copy(), server)
+            await self.send(self._disconnect_msg.copy(), server=server)
         self.logger.debug("Closing writer")
         writer.close()
         self.logger.info("Connection to server closed")
@@ -689,7 +741,7 @@ class TCPClient:
             del self.peer_addrs[addr]
 
     async def manage_peers_automatically(
-            self, app_id: bytes = b'netaio',
+            self, app_id: bytes = b'netaio', *,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
@@ -755,13 +807,20 @@ class TCPClient:
             )
 
         # create the handlers
-        @self.on((self.message_type_class.ADVERTISE_PEER, app_id), auth_plugin, cipher_plugin)
-        def handle_advertise_peer(message: MessageProtocol, writer: asyncio.StreamWriter):
+        @self.on(
+            (self.message_type_class.ADVERTISE_PEER, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
+        def handle_advertise_peer(
+                message: MessageProtocol, writer: asyncio.StreamWriter
+            ):
             addr = writer.get_extra_info("peername")
             self.logger.debug("Received ADVERTISE_PEER message from %s", addr)
 
             if app_id != message.body.uri:
-                self.logger.debug("Ignoring ADVERTISE_PEER message with mismatched app_id")
+                self.logger.debug(
+                    "Ignoring ADVERTISE_PEER message with mismatched app_id"
+                )
                 return
 
             try:
@@ -782,13 +841,20 @@ class TCPClient:
                 self.message_type_class.PEER_DISCOVERED
             )
 
-        @self.on((self.message_type_class.PEER_DISCOVERED, app_id), auth_plugin, cipher_plugin)
-        def handle_peer_discovered(message: MessageProtocol, writer: asyncio.StreamWriter):
+        @self.on(
+            (self.message_type_class.PEER_DISCOVERED, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
+        def handle_peer_discovered(
+                message: MessageProtocol, writer: asyncio.StreamWriter
+            ):
             addr = writer.get_extra_info("peername")
             self.logger.debug("Received PEER_DISCOVERED message from %s", addr)
 
             if app_id != message.body.uri:
-                self.logger.debug("Ignoring PEER_DISCOVERED message with mismatched app_id")
+                self.logger.debug(
+                    "Ignoring PEER_DISCOVERED message with mismatched app_id"
+                )
                 return
 
             try:
@@ -799,7 +865,10 @@ class TCPClient:
 
             self.add_or_update_peer(peer.id, peer.data, addr)
 
-        @self.on((self.message_type_class.DISCONNECT, app_id), auth_plugin, cipher_plugin)
+        @self.on(
+            (self.message_type_class.DISCONNECT, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
         def handle_disconnect(message: MessageProtocol, writer: asyncio.StreamWriter):
             addr = writer.get_extra_info("peername")
             self.logger.debug("Received DISCONNECT message from %s", addr)
@@ -817,7 +886,7 @@ class TCPClient:
             self.remove_peer(addr, peer.id)
 
         for addr in self.hosts:
-            await self.send(self._advertise_msg.copy(), addr)
+            await self.send(self._advertise_msg.copy(), server=addr)
 
     async def stop_peer_management(self, app_id: bytes = b'netaio'):
         """Stops automatic peer management by disabling the feature,
@@ -829,14 +898,16 @@ class TCPClient:
         self.remove_handler((self.message_type_class.DISCONNECT, app_id))
         if self._disconnect_msg:
             for addr in self.peer_addrs:
-                await self.send(self._disconnect_msg.copy(), addr)
+                await self.send(self._disconnect_msg.copy(), server=addr)
 
     def set_logger(self, logger: logging.Logger):
         """Replace the current logger."""
         self.logger = logger
 
     def set_timeout_handler(self, handler: TimeoutErrorHandler):
-        """Set or replace the timeout error handler."""
+        """Set or replace the timeout error handler. Experimental
+            and of unknown utility as of v0.0.9.
+        """
         self.handle_timeout_error = handler
 
     async def _invoke_timeout_handler(
@@ -845,7 +916,7 @@ class TCPClient:
             server: tuple[str, int] | None,
             error: TimeoutError,
             context: dict[str, Any]
-    ):
+        ):
         """Invoke the timeout error handler with sync/async handling."""
         if self.handle_timeout_error is None:
             return

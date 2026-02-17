@@ -48,8 +48,14 @@ class UDPNode:
     auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
-    handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
-    ephemeral_handlers: dict[Hashable, tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
+    handlers: dict[
+        Hashable,
+        tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+    ]
+    ephemeral_handlers: dict[
+        Hashable,
+        tuple[UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+    ]
     default_handler: UDPHandler
     extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]
     make_error: Callable[[str], MessageProtocol]
@@ -76,8 +82,13 @@ class UDPNode:
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
             default_handler: UDPHandler = not_found_handler,
-            extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = keys_extractor,
-            make_error_response: Callable[[str], MessageProtocol] = make_error_response,
+            extract_keys: Callable[
+                [MessageProtocol, tuple[str, int] | None],
+                list[Hashable]
+            ] = keys_extractor,
+            make_error_response: Callable[
+                [str], MessageProtocol
+            ] = make_error_response,
             logger: logging.Logger = default_node_logger,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None,
@@ -164,7 +175,10 @@ class UDPNode:
         sock: socket.socket = transport.get_extra_info("socket")
         mreq = socket.inet_aton(self.multicast_group) + socket.inet_aton(self.interface)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-        self.logger.info(f"UDPNode joined multicast group {self.multicast_group} on port {self.port}")
+        self.logger.info(
+            f"UDPNode joined multicast group {self.multicast_group} on port "
+            f"{self.port}"
+        )
 
     def datagram_received(self, data: bytes, addr: tuple[str, int]):
         """Called when a datagram is received. The arguments are the
@@ -199,7 +213,10 @@ class UDPNode:
             auth_data=auth,
             body=body
         )
-        self.logger.debug("Received message with checksum=%s from %s", message.header.checksum, addr)
+        self.logger.debug(
+            "Received message with checksum=%s from %s",
+            message.header.checksum, addr
+        )
 
         if not message.check():
             self.logger.debug("Invalid message received from %s", addr)
@@ -225,7 +242,9 @@ class UDPNode:
         if self.cipher_plugin is not None:
             self.logger.debug("Calling self.cipher_plugin.decrypt on message")
             try:
-                message = self.cipher_plugin.decrypt(message, self, peer, self.peer_plugin)
+                message = self.cipher_plugin.decrypt(
+                    message, self, peer, self.peer_plugin
+                )
             except Exception as e:
                 self.logger.warning("Error decrypting message: %s; dropping", e)
                 return
@@ -236,7 +255,9 @@ class UDPNode:
         for key in keys:
             if key in self.handlers or key in self.ephemeral_handlers:
                 if key in self.ephemeral_handlers:
-                    handler, auth_plugin, cipher_plugin = self.ephemeral_handlers.pop(key)
+                    (
+                        handler, auth_plugin, cipher_plugin
+                    ) = self.ephemeral_handlers.pop(key)
                 else:
                     handler, auth_plugin, cipher_plugin = self.handlers[key]
 
@@ -258,16 +279,24 @@ class UDPNode:
                 if cipher_plugin is not None:
                     self.logger.debug("Calling cipher_plugin.decrypt on message")
                     try:
-                        message = cipher_plugin.decrypt(message, self, peer, self.peer_plugin)
+                        message = cipher_plugin.decrypt(
+                            message, self, peer, self.peer_plugin
+                        )
                     except Exception as e:
-                        self.logger.warning("Error decrypting message; dropping", exc_info=True)
+                        self.logger.warning(
+                            "Error decrypting message; dropping", exc_info=True
+                        )
                         return
 
-                self.logger.debug("Calling handler with message and addr for key=%s", key)
+                self.logger.debug(
+                    "Calling handler with message and addr for key=%s", key
+                )
                 response = handler(message, addr)
                 break
         else:
-            self.logger.warning("No handler found for keys=%s, calling default handler", keys)
+            self.logger.warning(
+                "No handler found for keys=%s, calling default handler", keys
+            )
             response = self.default_handler(message, addr)
 
         if response is not None:
@@ -280,23 +309,33 @@ class UDPNode:
 
             # inner cipher
             if cipher_plugin is not None:
-                self.logger.debug("Calling cipher_plugin.encrypt on response (handler)")
+                self.logger.debug(
+                    "Calling cipher_plugin.encrypt on response (handler)"
+                )
                 try:
-                    response = cipher_plugin.encrypt(response, self, peer, self.peer_plugin)
+                    response = cipher_plugin.encrypt(
+                        response, self, peer, self.peer_plugin
+                    )
                 except Exception as e:
                     self.logger.warning("Error encrypting response: %s; dropping", e)
                     return
 
             # inner auth
             if auth_plugin is not None:
-                self.logger.debug("Calling auth_plugin.make on response.body (handler)")
-                auth_plugin.make(response.auth_data, response.body, self, peer, self.peer_plugin)
+                self.logger.debug(
+                    "Calling auth_plugin.make on response.body (handler)"
+                )
+                auth_plugin.make(
+                    response.auth_data, response.body, self, peer, self.peer_plugin
+                )
 
             # outer cipher
             if self.cipher_plugin is not None:
                 self.logger.debug("Calling self.cipher_plugin.encrypt on response")
                 try:
-                    response = self.cipher_plugin.encrypt(response, self, peer, self.peer_plugin)
+                    response = self.cipher_plugin.encrypt(
+                        response, self, peer, self.peer_plugin
+                    )
                 except Exception as e:
                     self.logger.warning("Error encrypting response: %s; dropping", e)
                     return
@@ -304,7 +343,9 @@ class UDPNode:
             # outer auth
             if self.auth_plugin is not None:
                 self.logger.debug("Calling self.auth_plugin.make on response.body")
-                self.auth_plugin.make(response.auth_data, response.body, self, peer, self.peer_plugin)
+                self.auth_plugin.make(
+                    response.auth_data, response.body, self, peer, self.peer_plugin
+                )
 
             self.send(response, addr, use_auth=False, use_cipher=False)
 
@@ -322,9 +363,7 @@ class UDPNode:
         self.logger.info("Connection closed")
 
     def add_handler(
-            self,
-            key: Hashable,
-            handler: UDPHandler,
+            self, key: Hashable, handler: UDPHandler, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -342,8 +381,7 @@ class UDPNode:
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def add_ephemeral_handler(
-            self, key: Hashable,
-            handler: UDPHandler,
+            self, key: Hashable, handler: UDPHandler, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -355,8 +393,7 @@ class UDPNode:
         self.ephemeral_handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def on(
-            self,
-            key: Hashable,
+            self, key: Hashable, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -371,13 +408,14 @@ class UDPNode:
             message sent by the handler.
         """
         def decorator(func: UDPHandler):
-            self.add_handler(key, func, auth_plugin, cipher_plugin)
+            self.add_handler(
+                key, func, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             return func
         return decorator
 
     def once(
-            self,
-            key: Hashable,
+            self, key: Hashable, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -392,7 +430,9 @@ class UDPNode:
             response message sent by the handler.
         """
         def decorator(func: UDPHandler):
-            self.add_ephemeral_handler(key, func, auth_plugin, cipher_plugin)
+            self.add_ephemeral_handler(
+                key, func, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             return func
         return decorator
 
@@ -429,8 +469,9 @@ class UDPNode:
                 del self.subscriptions[key]
 
     def prepare_message(
-        self, message: MessageProtocol, use_auth: bool = True,
-        use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+        self, message: MessageProtocol, *,
+        use_auth: bool = True, use_cipher: bool = True,
+        auth_plugin: AuthPluginProtocol|None = None,
         cipher_plugin: CipherPluginProtocol|None = None, peer: Peer|None = None,
     ) -> MessageProtocol|None:
         """Prepares a message for transmission by invoking all necessary
@@ -507,7 +548,7 @@ class UDPNode:
         self.logger.info(f"UDPNode started on port {self.port}")
 
     def send(
-            self, message: MessageProtocol, addr: tuple[str, int],
+            self, message: MessageProtocol, addr: tuple[str, int], *,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
@@ -530,7 +571,9 @@ class UDPNode:
         )
         data = message.encode()
         self.transport.sendto(data, addr)
-        self.logger.debug(f"Sent message with checksum={message.header.checksum} to {addr}")
+        self.logger.debug(
+            f"Sent message with checksum={message.header.checksum} to {addr}"
+        )
 
     async def request(
             self, uri: bytes,
@@ -586,14 +629,18 @@ class UDPNode:
 
         for key in keys:
             handler = make_handler(key)
-            self.add_ephemeral_handler(key, handler, auth_plugin, cipher_plugin)
+            self.add_ephemeral_handler(
+                key, handler, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
 
         request_body = self.body_class.prepare(content=content, uri=uri)
         request_message = self.message_class.prepare(
             request_body, message_type
         )
         self.send(
-            request_message, server, use_auth, use_cipher, auth_plugin, cipher_plugin
+            request_message, server,
+            use_auth=use_auth, use_cipher=use_cipher,
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
 
         try:
@@ -701,7 +748,9 @@ class UDPNode:
         )
 
     def set_timeout_handler(self, handler: TimeoutErrorHandler):
-        """Set or replace the timeout error handler."""
+        """Set or replace the timeout error handler. Experimental
+            and of unknown utility as of v0.0.9.
+        """
         self.handle_timeout_error = handler
 
     async def _invoke_timeout_handler(
@@ -733,8 +782,9 @@ class UDPNode:
             self._timeout_handler_tasks.clear()
 
     def broadcast(
-            self, message: MessageProtocol, use_auth: bool = True,
-            use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            self, message: MessageProtocol, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Send the message to all known peers. If an auth plugin is
@@ -790,7 +840,7 @@ class UDPNode:
             self.send(msg, addr, use_auth=False, use_cipher=False)
 
     def multicast(
-            self, message: MessageProtocol, port: int|None = None,
+            self, message: MessageProtocol, port: int|None = None, *,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
@@ -815,8 +865,9 @@ class UDPNode:
         self.send(message, addr, use_auth=False, use_cipher=False)
 
     def notify(
-            self, key: Hashable, message: MessageProtocol, use_auth: bool = True,
-            use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            self, key: Hashable, message: MessageProtocol, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Send the message to all subscribed peers for the given key
@@ -830,14 +881,20 @@ class UDPNode:
             cipher plugin set on the node will not be used.
         """
         if key not in self.subscriptions:
-            self.logger.debug("No subscribers found for key=%s, skipping notification", key)
+            self.logger.debug(
+                "No subscribers found for key=%s, skipping notification", key
+            )
             return
 
-        self.logger.debug("Notifying %d peers for key=%s", len(self.subscriptions[key]), key)
+        self.logger.debug(
+            "Notifying %d peers for key=%s", len(self.subscriptions[key]), key
+        )
 
         subscribers = self.subscriptions.get(key, set())
         if not subscribers:
-            self.logger.debug("No subscribers found for key=%s, removing from subscriptions", key)
+            self.logger.debug(
+                "No subscribers found for key=%s, removing from subscriptions", key
+            )
             del self.subscriptions[key]
             return
 
@@ -951,7 +1008,8 @@ class UDPNode:
 
     async def begin_peer_advertisement(
             self, every: int = 20, app_id: bytes = b'netaio',
-            peer_timeout: int = 60, auth_plugin: AuthPluginProtocol|None = None,
+            peer_timeout: int = 60, *,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Begin peer advertisement. This starts a task that will
@@ -968,12 +1026,16 @@ class UDPNode:
 
         # start the advertisement loop task
         self._advertise_peer_tasks[app_id] = asyncio.create_task(
-            self._advertise_peer_loop(every, app_id, peer_timeout, auth_plugin, cipher_plugin)
+            self._advertise_peer_loop(
+                every, app_id, peer_timeout,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
         )
 
     async def _advertise_peer_loop(
             self, every: int = 20, app_id: bytes = b'netaio',
-            peer_timeout: int = 60, auth_plugin: AuthPluginProtocol|None = None,
+            peer_timeout: int = 60, *,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Advertise peer loop."""
@@ -1024,7 +1086,8 @@ class UDPNode:
 
     async def manage_peers_automatically(
             self, advertise_every: int = 20, app_id: bytes = b'netaio',
-            peer_timeout: int = 60, auth_plugin: AuthPluginProtocol|None = None,
+            peer_timeout: int = 60, *,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Begins automatic peer management. This starts a task that
@@ -1049,12 +1112,17 @@ class UDPNode:
         assert self.message_type_class.DISCONNECT is not None
 
         # create the handlers
-        @self.on((self.message_type_class.ADVERTISE_PEER, app_id), auth_plugin, cipher_plugin)
+        @self.on(
+            (self.message_type_class.ADVERTISE_PEER, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
         def handle_advertise_peer(message: MessageProtocol, addr: tuple[str, int]):
             self.logger.debug("Received ADVERTISE_PEER message from %s", addr)
 
             if app_id != message.body.uri:
-                self.logger.debug("Ignoring ADVERTISE_PEER message with mismatched app_id")
+                self.logger.debug(
+                    "Ignoring ADVERTISE_PEER message with mismatched app_id"
+                )
                 return
 
             try:
@@ -1075,12 +1143,17 @@ class UDPNode:
                 self.message_type_class.PEER_DISCOVERED
             )
 
-        @self.on((self.message_type_class.PEER_DISCOVERED, app_id), auth_plugin, cipher_plugin)
+        @self.on(
+            (self.message_type_class.PEER_DISCOVERED, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
         def handle_peer_discovered(message: MessageProtocol, addr: tuple[str, int]):
             self.logger.debug("Received PEER_DISCOVERED message from %s", addr)
 
             if app_id != message.body.uri:
-                self.logger.debug("Ignoring PEER_DISCOVERED message with mismatched app_id")
+                self.logger.debug(
+                    "Ignoring PEER_DISCOVERED message with mismatched app_id"
+                )
                 return
 
             try:
@@ -1091,7 +1164,10 @@ class UDPNode:
 
             self.add_or_update_peer(peer.id, peer.data, addr)
 
-        @self.on((self.message_type_class.DISCONNECT, app_id), auth_plugin, cipher_plugin)
+        @self.on(
+            (self.message_type_class.DISCONNECT, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
         def handle_disconnect(message: MessageProtocol, addr: tuple[str, int]):
             self.logger.debug("Received DISCONNECT message from %s", addr)
 
@@ -1108,7 +1184,8 @@ class UDPNode:
             self.remove_peer(addr, peer.id)
 
         await self.begin_peer_advertisement(
-            advertise_every, app_id, peer_timeout, auth_plugin, cipher_plugin
+            advertise_every, app_id, peer_timeout,
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
 
     async def stop_peer_management(self, app_id: bytes = b'netaio'):

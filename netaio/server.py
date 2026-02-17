@@ -37,15 +37,23 @@ class TCPServer:
     local_peer: Peer
     peers: dict[bytes, Peer]
     peer_addrs: dict[tuple[str, int], bytes]
-    handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
-    ephemeral_handlers: dict[Hashable, tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]]
+    handlers: dict[
+        Hashable,
+        tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+    ]
+    ephemeral_handlers: dict[
+        Hashable,
+        tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+    ]
     default_handler: Handler
     header_class: type[HeaderProtocol]
     message_type_class: type[IntEnum]
     auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
-    extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]
+    extract_keys: Callable[
+        [MessageProtocol, tuple[str, int] | None], list[Hashable]
+    ]
     make_error: Callable[[str], MessageProtocol]
     subscriptions: dict[Hashable, set[asyncio.StreamWriter]]
     clients: set[asyncio.StreamWriter]
@@ -55,15 +63,20 @@ class TCPServer:
     handle_auth_error: AuthErrorHandler
 
     def __init__(
-            self, port: int = 8888, interface: str = "0.0.0.0",
+            self, port: int = 8888, interface: str = "0.0.0.0", *,
             local_peer: Peer = None,
             header_class: type[HeaderProtocol] = Header,
             message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
-            keys_extractor: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = keys_extractor,
-            make_error_response: Callable[[str], MessageProtocol] = make_error_response,
+            keys_extractor: Callable[
+                [MessageProtocol, tuple[str, int] | None],
+                list[Hashable]
+            ] = keys_extractor,
+            make_error_response: Callable[
+                [str], MessageProtocol
+            ] = make_error_response,
             default_handler: Handler = not_found_handler,
             logger: logging.Logger = default_server_logger,
             auth_plugin: AuthPluginProtocol = None,
@@ -127,8 +140,7 @@ class TCPServer:
         self.handle_auth_error = auth_error_handler
 
     def add_handler(
-            self, key: Hashable,
-            handler: Handler,
+            self, key: Hashable, handler: Handler, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -147,8 +159,7 @@ class TCPServer:
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def add_ephemeral_handler(
-            self, key: Hashable,
-            handler: Handler,
+            self, key: Hashable, handler: Handler, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -160,7 +171,7 @@ class TCPServer:
         self.ephemeral_handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def on(
-            self, key: Hashable,
+            self, key: Hashable, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -176,12 +187,14 @@ class TCPServer:
             message sent by the handler.
         """
         def decorator(func: Handler):
-            self.add_handler(key, func, auth_plugin, cipher_plugin)
+            self.add_handler(
+                key, func, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             return func
         return decorator
 
     def once(
-            self, key: Hashable,
+            self, key: Hashable, *,
             auth_plugin: AuthPluginProtocol = None,
             cipher_plugin: CipherPluginProtocol = None
         ):
@@ -197,7 +210,11 @@ class TCPServer:
             response message sent by the handler.
         """
         def decorator(func: Handler):
-            self.add_ephemeral_handler(key, func, auth_plugin, cipher_plugin)
+            self.add_ephemeral_handler(
+                key, func,
+                auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
             return func
         return decorator
 
@@ -234,7 +251,7 @@ class TCPServer:
                 del self.subscriptions[key]
 
     async def handle_client(
-            self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+            self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, *,
             use_auth: bool = True, use_cipher: bool = True
         ):
         """Handle a client connection. When a client connects, it is
@@ -252,7 +269,9 @@ class TCPServer:
 
         try:
             while writer and not writer.is_closing():
-                await self.receive(reader, writer, use_auth, use_cipher)
+                await self.receive(
+                    reader, writer, use_auth=use_auth, use_cipher=use_cipher
+                )
         except asyncio.IncompleteReadError:
             self.logger.info("Client disconnected from %s", addr)
             pass  # Client disconnected
@@ -273,7 +292,7 @@ class TCPServer:
             await writer.wait_closed()
 
     async def receive(
-            self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+            self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, *,
             use_auth: bool = True, use_cipher: bool = True,
         ):
         """Receive and process a message from a client. Used by the
@@ -333,7 +352,9 @@ class TCPServer:
                     )
                     response = self.handle_auth_error(self, self.auth_plugin, message)
                     if response is not None:
-                        await self.send(writer, response, use_auth=False, use_cipher=False)
+                        await self.send(
+                            writer, response, use_auth=False, use_cipher=False
+                        )
                         response = None # prevent double sending
                     return
                 else:
@@ -365,7 +386,9 @@ class TCPServer:
             for key in keys:
                 if key in self.handlers or key in self.ephemeral_handlers:
                     if key in self.ephemeral_handlers:
-                        handler, auth_plugin, cipher_plugin = self.ephemeral_handlers.pop(key)
+                        (
+                            handler, auth_plugin, cipher_plugin
+                        ) = self.ephemeral_handlers.pop(key)
                     else:
                         handler, auth_plugin, cipher_plugin = self.handlers[key]
 
@@ -465,10 +488,12 @@ class TCPServer:
                 writer, response, use_auth=False, use_cipher=False
             )
 
-    async def start(self, use_auth: bool = True, use_cipher: bool = True):
+    async def start(self, *, use_auth: bool = True, use_cipher: bool = True):
         """Start the server."""
         self.server: asyncio.Server = await asyncio.start_server(
-            lambda r, w: self.handle_client(r, w, use_auth, use_cipher),
+            lambda r, w: self.handle_client(
+                r, w, use_auth=use_auth, use_cipher=use_cipher
+            ),
             self.interface, self.port
         )
         self.logger.info(f"Server started on {self.interface}:{self.port}")
@@ -482,11 +507,14 @@ class TCPServer:
     async def stop(self):
         self.server.close()
         await self.server.wait_closed()
+
     def prepare_message(
-        self, message: MessageProtocol, use_auth: bool = True,
-        use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
-        cipher_plugin: CipherPluginProtocol|None = None, peer: Peer|None = None,
-    ) -> MessageProtocol|None:
+            self, message: MessageProtocol, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None,
+            peer: Peer|None = None,
+        ) -> MessageProtocol|None:
         """Prepares a message for transmission by invoking all necessary
             plugins.
         """
@@ -549,7 +577,7 @@ class TCPServer:
         return message
 
     async def send(
-            self, client: asyncio.StreamWriter, message: MessageProtocol,
+            self, client: asyncio.StreamWriter, message: MessageProtocol, *,
             collection: set = None, use_auth: bool = True,
             use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
@@ -587,8 +615,9 @@ class TCPServer:
                 collection.discard(client)
 
     async def broadcast(
-            self, message: MessageProtocol, use_auth: bool = True,
-            use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            self, message: MessageProtocol, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Send the message to all connected clients concurrently using
@@ -643,8 +672,9 @@ class TCPServer:
         await asyncio.gather(*tasks, return_exceptions=True)
 
     async def notify(
-            self, key: Hashable, message: MessageProtocol, use_auth: bool = True,
-            use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            self, key: Hashable, message: MessageProtocol, *,
+            use_auth: bool = True,  use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Send the message to all subscribed clients for the given key
@@ -777,7 +807,7 @@ class TCPServer:
                 self.subscriptions[key].remove(writer)
 
     async def manage_peers_automatically(
-            self, app_id: bytes = b'netaio',
+            self, app_id: bytes = b'netaio', *,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
@@ -803,13 +833,20 @@ class TCPServer:
         assert hasattr(self.message_type_class, 'DISCONNECT')
 
         # create the handlers
-        @self.on((self.message_type_class.ADVERTISE_PEER, app_id), auth_plugin, cipher_plugin)
-        def handle_advertise_peer(message: MessageProtocol, writer: asyncio.StreamWriter):
+        @self.on(
+            (self.message_type_class.ADVERTISE_PEER, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
+        def handle_advertise_peer(
+                message: MessageProtocol, writer: asyncio.StreamWriter
+            ):
             addr = writer.get_extra_info("peername")
             self.logger.debug("Received ADVERTISE_PEER message from %s", addr)
 
             if app_id != message.body.uri:
-                self.logger.debug("Ignoring ADVERTISE_PEER message with mismatched app_id")
+                self.logger.debug(
+                    "Ignoring ADVERTISE_PEER message with mismatched app_id"
+                )
                 return
 
             try:
@@ -830,13 +867,20 @@ class TCPServer:
                 self.message_type_class.PEER_DISCOVERED
             )
 
-        @self.on((self.message_type_class.PEER_DISCOVERED, app_id), auth_plugin, cipher_plugin)
-        def handle_peer_discovered(message: MessageProtocol, writer: asyncio.StreamWriter):
+        @self.on(
+            (self.message_type_class.PEER_DISCOVERED, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
+        def handle_peer_discovered(
+                message: MessageProtocol, writer: asyncio.StreamWriter
+            ):
             addr = writer.get_extra_info("peername")
             self.logger.debug("Received PEER_DISCOVERED message from %s", addr)
 
             if app_id != message.body.uri:
-                self.logger.debug("Ignoring PEER_DISCOVERED message with mismatched app_id")
+                self.logger.debug(
+                    "Ignoring PEER_DISCOVERED message with mismatched app_id"
+                )
                 return
 
             try:
@@ -847,7 +891,10 @@ class TCPServer:
 
             self.add_or_update_peer(peer.id, peer.data, addr)
 
-        @self.on((self.message_type_class.DISCONNECT, app_id), auth_plugin, cipher_plugin)
+        @self.on(
+            (self.message_type_class.DISCONNECT, app_id),
+            auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+        )
         def handle_disconnect(message: MessageProtocol, writer: asyncio.StreamWriter):
             addr = writer.get_extra_info("peername")
             self.logger.debug("Received DISCONNECT message from %s", addr)

@@ -16,7 +16,8 @@ class TestUDPE2E(unittest.TestCase):
     def setUpClass(cls):
         netaio.default_client_logger.setLevel(logging.INFO)
         netaio.default_server_logger.setLevel(logging.INFO)
-        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' else '0.0.0.0'
+        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' \
+            else '0.0.0.0'
 
     def test_e2e(self):
         async def run_test():
@@ -128,7 +129,8 @@ class TestUDPE2E(unittest.TestCase):
             assert len(server_log) == 1, len(server_log)
             assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
-            assert response.header.message_type == expected_response.header.message_type, \
+            assert response.header.message_type == \
+                expected_response.header.message_type, \
                 (response.header.message_type, expected_response.header.message_type)
             assert response.body.uri == expected_response.body.uri, \
                 (response.body.uri, expected_response.body.uri)
@@ -143,7 +145,8 @@ class TestUDPE2E(unittest.TestCase):
             assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
             expected_response = client_multicast_msg
-            assert response.header.message_type == expected_response.header.message_type, \
+            assert response.header.message_type == \
+                expected_response.header.message_type, \
                 (response.header.message_type, expected_response.header.message_type)
             assert response.body.uri == expected_response.body.uri, \
                 (response.body.uri, expected_response.body.uri)
@@ -154,8 +157,12 @@ class TestUDPE2E(unittest.TestCase):
             assert len(server_log) == 1, len(server_log)
             assert len(client_log) == 2, len(client_log)
             response = client_log[-1]
-            assert response.header.message_type == expected_subscribe_response.header.message_type, \
-                (response.header.message_type, expected_subscribe_response.header.message_type)
+            assert response.header.message_type == \
+                expected_subscribe_response.header.message_type, \
+                (
+                    response.header.message_type,
+                    expected_subscribe_response.header.message_type
+                )
             assert response.body.uri == expected_subscribe_response.body.uri, \
                 (response.body.uri, expected_subscribe_response.body.uri)
             assert response.body.content == expected_subscribe_response.body.content, \
@@ -168,7 +175,8 @@ class TestUDPE2E(unittest.TestCase):
             assert len(server_log) == 0, len(server_log)
             assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
-            assert response.header.message_type == server_notify_msg.header.message_type, \
+            assert response.header.message_type == \
+                server_notify_msg.header.message_type, \
                 (response.header.message_type, server_notify_msg.header.message_type)
             assert response.body.uri == server_notify_msg.body.uri, \
                 (response.body.uri, server_notify_msg.body.uri)
@@ -182,8 +190,12 @@ class TestUDPE2E(unittest.TestCase):
             assert len(server_log) == 1, len(server_log)
             assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
-            assert response.header.message_type == expected_unsubscribe_response.header.message_type, \
-                (response.header.message_type, expected_unsubscribe_response.header.message_type)
+            assert response.header.message_type == \
+                expected_unsubscribe_response.header.message_type, \
+                (
+                    response.header.message_type,
+                    expected_unsubscribe_response.header.message_type
+                )
             assert response.body.uri == expected_unsubscribe_response.body.uri, \
                 (response.body.uri, expected_unsubscribe_response.body.uri)
             assert response.body.content == expected_unsubscribe_response.body.content, \
@@ -194,7 +206,8 @@ class TestUDPE2E(unittest.TestCase):
             client_log.clear()
             client.send(client_msg, server_addr)
             await asyncio.sleep(0.1)
-            assert len(client_log) == 0, len(client_log) # response error message should be dropped
+            # response error message should be dropped
+            assert len(client_log) == 0, len(client_log)
 
             # set different error handler on client
             def log_auth_error(client, auth_plugin, msg):
@@ -210,7 +223,8 @@ class TestUDPE2E(unittest.TestCase):
             await asyncio.sleep(0.1)
             assert len(client_log) == 1, len(client_log)
             response = client_log[-1]
-            assert response.header.message_type == netaio.MessageType.AUTH_ERROR, response
+            assert response.header.message_type == \
+                netaio.MessageType.AUTH_ERROR, response
 
             # stop nodes
             await server.stop()
@@ -309,32 +323,41 @@ class TestUDPE2E(unittest.TestCase):
 
             assert len(server_log) > 0, len(server_log)
             for msg in server_log:
-                assert msg.header.message_type is netaio.MessageType.ADVERTISE_PEER, msg.header
+                assert msg.header.message_type is \
+                    netaio.MessageType.ADVERTISE_PEER, msg.header
             # drain DISCONNECT messages
             await asyncio.sleep(0.1)
-            assert server_log[-1].header.message_type is netaio.MessageType.DISCONNECT, server_log[-1].header
+            assert server_log[-1].header.message_type is \
+                netaio.MessageType.DISCONNECT, server_log[-1].header
             server_log.clear()
-            # it is a known issue that the client will not receive the ADVERTISE_PEER message
+            # it is a known issue that the client will not receive the
+            # ADVERTISE_PEER message
 
             # begin automatic peer management of server
-            await server.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+            await server.manage_peers_automatically(
+                advertise_every=0.1, peer_timeout=0.3
+            )
 
             # wait some time to prove the server does not add itself as a peer
             await asyncio.sleep(0.2)
             assert len(server.peers) == 0, len(server.peers)
 
             # begin automatic peer management of client
-            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+            await client.manage_peers_automatically(
+                advertise_every=0.1, peer_timeout=0.3
+            )
 
             # wait for peers to be discovered
             await asyncio.sleep(0.2)
 
-            # server should have the client as a peer because of the ADVERTISE_PEER messages
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER messages
             assert len(server.peers) == 1, len(server.peers)
             assert client_peer.id in server.peers, server.peers
             assert server.peers[client_peer.id].data == client_peer.data, \
                 (server.peers[client_peer.id].data, client_peer.data)
-            # client should have the server as a peer because of the PEER_DISCOVERED responses
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED responses
             assert len(client.peers) == 1, len(client.peers)
             assert server_peer.id in client.peers, client.peers
             assert client.peers[server_peer.id].data == server_peer.data, \
@@ -351,9 +374,11 @@ class TestUDPE2E(unittest.TestCase):
             # server should receive the message and respond
             await asyncio.sleep(0.1)
             assert len(server_log) == 1, len(server_log)
-            assert server_log[-1].header.message_type is netaio.MessageType.REQUEST_URI, server_log[-1].header
+            assert server_log[-1].header.message_type is \
+                netaio.MessageType.REQUEST_URI, server_log[-1].header
             assert len(client_log) == 1, len(client_log)
-            assert client_log[-1].header.message_type is netaio.MessageType.RESPOND_URI, client_log[-1].header
+            assert client_log[-1].header.message_type is \
+                netaio.MessageType.RESPOND_URI, client_log[-1].header
 
             # subscribe the client to a topic URI
             client_log.clear()
@@ -366,32 +391,41 @@ class TestUDPE2E(unittest.TestCase):
             # server should receive the message and respond
             await asyncio.sleep(0.1)
             assert len(server_log) == 1, len(server_log)
-            assert server_log[-1].header.message_type is netaio.MessageType.SUBSCRIBE_URI, server_log[-1].header
+            assert server_log[-1].header.message_type is \
+                netaio.MessageType.SUBSCRIBE_URI, server_log[-1].header
             assert len(client_log) == 1, len(client_log)
-            assert client_log[-1].header.message_type is netaio.MessageType.CONFIRM_SUBSCRIBE, client_log[-1].header
+            assert client_log[-1].header.message_type is \
+                netaio.MessageType.CONFIRM_SUBSCRIBE, client_log[-1].header
 
             # client should be subscribed
-            assert len(server.subscriptions.get(b'subscribe/test', set())) == 1, server.subscriptions
+            assert len(server.subscriptions.get(b'subscribe/test', set())) == 1, \
+                server.subscriptions
 
-            # stop peer management on client and wait for the DISCONNECT message to be received
+            # stop peer management on client and wait for the DISCONNECT message
+            # to be received
             await client.stop_peer_management()
             await asyncio.sleep(0.1)
             assert len(server.peers) == 0, len(server.peers)
 
             # client should not be a peer anymore or subscribed to the topic
             assert client_peer.id not in server.peers, server.peers
-            assert len(server.subscriptions.get(b'subscribe/test', set())) == 0, server.subscriptions
+            assert len(server.subscriptions.get(b'subscribe/test', set())) == 0, \
+                server.subscriptions
 
             # begin automatic peer management
-            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+            await client.manage_peers_automatically(
+                advertise_every=0.1, peer_timeout=0.3
+            )
 
             # wait for peers to be discovered
             await asyncio.sleep(0.2)
 
-            # server should have the client as a peer because of the ADVERTISE_PEER messages
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER messages
             assert len(server.peers) == 1, len(server.peers)
             assert b'client' in server.peers, server.peers
-            # client should have the server as a peer because of the PEER_DISCOVERED responses
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED responses
             assert len(client.peers) == 1, len(client.peers)
             assert b'server' in client.peers, client.peers
 
@@ -418,7 +452,9 @@ class TestUDPE2E(unittest.TestCase):
             default_server_handler = lambda msg, addr: server_log.append(msg)
             default_client_handler = lambda msg, addr: client_log.append(msg)
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
-            auth_plugin2 = netaio.HMACAuthPlugin(config={"secret": "test2", "hmac_field": "hmac2"})
+            auth_plugin2 = netaio.HMACAuthPlugin(
+                config={"secret": "test2", "hmac_field": "hmac2"}
+            )
             cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
             cipher_plugin2 = netaio.Sha256StreamCipherPlugin(config={
                 "key": "test2",
@@ -430,7 +466,9 @@ class TestUDPE2E(unittest.TestCase):
                 interface=self.local_ip,
                 port=self.PORT, default_handler=default_server_handler,
                 logger=netaio.default_server_logger,
-                local_peer=netaio.Peer(addrs={(self.local_ip, self.PORT)}, id=b'server', data=b'abc'),
+                local_peer=netaio.Peer(
+                    addrs={(self.local_ip, self.PORT)}, id=b'server', data=b'abc'
+                ),
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 ignore_own_ip=False
             )
@@ -438,7 +476,9 @@ class TestUDPE2E(unittest.TestCase):
                 interface=self.local_ip,
                 port=self.PORT+1, default_handler=default_client_handler,
                 logger=netaio.default_client_logger,
-                local_peer=netaio.Peer(addrs={(self.local_ip, self.PORT+1)}, id=b'client', data=b'def'),
+                local_peer=netaio.Peer(
+                    addrs={(self.local_ip, self.PORT+1)}, id=b'client', data=b'def'
+                ),
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
                 ignore_own_ip=False
             )
@@ -465,13 +505,19 @@ class TestUDPE2E(unittest.TestCase):
 
             assert len(server_log) > 0, len(server_log)
             for msg in server_log:
-                assert msg.header.message_type is netaio.MessageType.ADVERTISE_PEER, msg.header
+                assert msg.header.message_type is \
+                    netaio.MessageType.ADVERTISE_PEER, msg.header
             server_log.clear()
-            # it is a known issue that the client will not receive the ADVERTISE_PEER message
+            # it is a known issue that the client will not receive the
+            # ADVERTISE_PEER message
 
             # begin automatic peer management
-            await server.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
-            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+            await server.manage_peers_automatically(
+                advertise_every=0.1, peer_timeout=0.3
+            )
+            await client.manage_peers_automatically(
+                advertise_every=0.1, peer_timeout=0.3
+            )
 
             # wait for peers to be discovered
             await asyncio.sleep(0.2)
@@ -479,10 +525,12 @@ class TestUDPE2E(unittest.TestCase):
             # stop peer management on client
             await client.stop_peer_management()
 
-            # server should have the client as a peer because of the ADVERTISE_PEER messages
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER messages
             assert len(server.peers) == 1, len(server.peers)
             assert b'client' in server.peers, server.peers
-            # client should have the server as a peer because of the PEER_DISCOVERED responses
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED responses
             assert len(client.peers) == 1, len(client.peers)
             assert b'server' in client.peers, client.peers
 
@@ -508,10 +556,12 @@ class TestUDPE2E(unittest.TestCase):
             # stop peer management on client
             await client.stop_peer_management()
 
-            # server should have the client as a peer because of the ADVERTISE_PEER messages
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER messages
             assert len(server.peers) == 1, len(server.peers)
             assert b'client' in server.peers, server.peers
-            # client should have the server as a peer because of the PEER_DISCOVERED responses
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED responses
             assert len(client.peers) == 1, len(client.peers)
             assert b'server' in client.peers, client.peers
 
@@ -568,16 +618,26 @@ class TestUDPE2E(unittest.TestCase):
                 logger=netaio.default_client_logger
             )
 
-            @server.on(netaio.MessageType.REQUEST_URI, server_auth_plugin, server_cipher_plugin)
-            def server_handle_request_uri(message: netaio.Message, _: tuple[str, int]):
+            @server.on(
+                netaio.MessageType.REQUEST_URI,
+                auth_plugin=server_auth_plugin, cipher_plugin=server_cipher_plugin
+            )
+            def server_handle_request_uri(
+                    message: netaio.Message, _: tuple[str, int]
+                ):
                 server_log.append(message)
                 return netaio.Message.prepare(
                     netaio.Body.prepare(b'some content for u', uri=message.body.uri),
                     netaio.MessageType.RESPOND_URI
                 )
 
-            @client.on(netaio.MessageType.RESPOND_URI, client_auth_plugin, client_cipher_plugin)
-            def client_handle_respond_uri(message: netaio.Message, _: tuple[str, int]):
+            @client.on(
+                netaio.MessageType.RESPOND_URI,
+                auth_plugin=client_auth_plugin, cipher_plugin=client_cipher_plugin
+            )
+            def client_handle_respond_uri(
+                    message: netaio.Message, _: tuple[str, int]
+                ):
                 client_log.append(message)
 
             # Start the server and client
@@ -591,19 +651,25 @@ class TestUDPE2E(unittest.TestCase):
             client.port = self.PORT
 
             # enable automatic peer management of peer data
-            await server.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
-            await client.manage_peers_automatically(advertise_every=0.1, peer_timeout=0.3)
+            await server.manage_peers_automatically(
+                advertise_every=0.1, peer_timeout=0.3
+            )
+            await client.manage_peers_automatically(
+                advertise_every=0.1, peer_timeout=0.3
+            )
 
             # wait for peers to be discovered
             await asyncio.sleep(0.2)
 
-            # server should have the client as a peer because of the ADVERTISE_PEER message
+            # server should have the client as a peer because of the
+            # ADVERTISE_PEER message
             assert len(server.peers) == 1, len(server.peers)
             assert client_peer.id in server.peers, server.peers
             assert server.peers[client_peer.id].data == client_peer.data, \
                 (server.peers[client_peer.id].data, client_peer.data)
             client_addr = list(server.peers[client_peer.id].addrs)[0]
-            # client should have the server as a peer because of the PEER_DISCOVERED response
+            # client should have the server as a peer because of the
+            # PEER_DISCOVERED response
             assert len(client.peers) == 1, len(client.peers)
             assert server_peer.id in client.peers, client.peers
             assert client.peers[server_peer.id].data == server_peer.data, \
@@ -611,23 +677,32 @@ class TestUDPE2E(unittest.TestCase):
             server_addr = list(client.peers[server_peer.id].addrs)[0]
 
             # send request to publish from client to server
-            client.send(netaio.Message.prepare(
-                netaio.Body.prepare(b'pls gibs me dat', uri=b'something'),
-                netaio.MessageType.REQUEST_URI
-            ), server_addr, auth_plugin=client_auth_plugin, cipher_plugin=client_cipher_plugin)
+            client.send(
+                netaio.Message.prepare(
+                    netaio.Body.prepare(b'pls gibs me dat', uri=b'something'),
+                    netaio.MessageType.REQUEST_URI
+                ),
+                server_addr,
+                auth_plugin=client_auth_plugin,
+                cipher_plugin=client_cipher_plugin
+            )
             await asyncio.sleep(0.1)
 
             # server should have received the message and responded
             assert len(server_log) == 1, len(server_log)
-            assert server_log[-1].header.message_type is netaio.MessageType.REQUEST_URI, server_log[-1].header
+            assert server_log[-1].header.message_type is \
+                netaio.MessageType.REQUEST_URI, server_log[-1].header
             assert server_log[-1].body.uri == b'something', server_log[-1].body.uri
-            assert server_log[-1].body.content == b'pls gibs me dat', server_log[-1].body.content
+            assert server_log[-1].body.content == b'pls gibs me dat', \
+                server_log[-1].body.content
 
             # client should have received the response from the server
             assert len(client_log) == 1, len(client_log)
-            assert client_log[-1].header.message_type is netaio.MessageType.RESPOND_URI, client_log[-1].header
+            assert client_log[-1].header.message_type is \
+                netaio.MessageType.RESPOND_URI, client_log[-1].header
             assert client_log[-1].body.uri == b'something', client_log[-1].body.uri
-            assert client_log[-1].body.content == b'some content for u', client_log[-1].body.content
+            assert client_log[-1].body.content == b'some content for u', \
+                client_log[-1].body.content
 
             # close client and stop server
             await client.stop()
@@ -769,7 +844,9 @@ class TestUDPE2E(unittest.TestCase):
 
             # test node.request: timeout case
             with self.assertRaises(TimeoutError):
-                response = await client.request(b'not found', server_addr, timeout=1.0)
+                response = await client.request(
+                    b'not found', server_addr, timeout=1.0
+                )
 
             # add server handler for NOT_FOUND
             @server.on(netaio.MessageType.REQUEST_URI)
@@ -782,7 +859,8 @@ class TestUDPE2E(unittest.TestCase):
             # now request a bad uri
             response = await client.request(b'not found', server_addr)
             assert response is not None
-            assert response.header.message_type is netaio.MessageType.NOT_FOUND, response
+            assert response.header.message_type is \
+                netaio.MessageType.NOT_FOUND, response
 
             # now test create happy path and error case
             @server.on(netaio.MessageType.CREATE_URI)
@@ -863,7 +941,8 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' else '0.0.0.0'
+        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' \
+            else '0.0.0.0'
         netaio.default_server_logger.setLevel(logging.INFO)
         netaio.default_client_logger.setLevel(logging.INFO)
 
@@ -895,12 +974,18 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
                 server_log.append(message)
                 return message
 
-            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            @server.on(
+                netaio.MessageType.PUBLISH_URI,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             def server_publish(message: netaio.Message, _: tuple[str, int]):
                 server_log.append(message)
                 return message
 
-            @client.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            @client.on(
+                netaio.MessageType.PUBLISH_URI,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             def client_publish(message: netaio.Message, _: tuple[str, int]):
                 client_log.append(message)
 
@@ -932,7 +1017,10 @@ class TestUDPE2EWithoutDefaultPlugins(unittest.TestCase):
                 (response.encode().hex(), echo_msg.encode().hex())
 
             # send to protected route
-            client.send(publish_msg, server_addr, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin)
+            client.send(
+                publish_msg, server_addr,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+            )
             await asyncio.sleep(0.1)
             assert len(client_log) == 2, len(client_log)
             response = client_log[-1]
@@ -958,7 +1046,8 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' else '0.0.0.0'
+        cls.local_ip = netaio.node.get_ip() if platform.system() == 'Windows' \
+            else '0.0.0.0'
         netaio.default_server_logger.setLevel(logging.INFO)
         netaio.default_client_logger.setLevel(logging.INFO)
 
@@ -983,13 +1072,15 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
             server = netaio.UDPNode(
                 interface=self.local_ip,
                 port=self.PORT, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
-                default_handler=default_server_handler, logger=netaio.default_server_logger,
+                default_handler=default_server_handler,
+                logger=netaio.default_server_logger,
                 ignore_own_ip=False
             )
             client = netaio.UDPNode(
                 interface=self.local_ip,
                 port=self.PORT+1, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
-                default_handler=default_client_handler, logger=netaio.default_client_logger,
+                default_handler=default_client_handler,
+                logger=netaio.default_client_logger,
                 ignore_own_ip=False
             )
             server_addr = (self.local_ip, self.PORT)
@@ -999,12 +1090,18 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
                 server_log.append(message)
                 return message
 
-            @server.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            @server.on(
+                netaio.MessageType.PUBLISH_URI,
+                auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
             def server_publish(message: netaio.Message, _: tuple[str, int]):
                 server_log.append(message)
                 return message
 
-            @client.on(netaio.MessageType.PUBLISH_URI, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            @client.on(
+                netaio.MessageType.PUBLISH_URI,
+                auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
             def client_publish(message: netaio.Message, _: tuple[str, int]):
                 client_log.append(message)
 
@@ -1040,7 +1137,10 @@ class TestUDPE2ETwoLayersOfPlugins(unittest.TestCase):
                 (response.header.message_type, echo_msg.header.message_type)
 
             # send to twice-protected route
-            client.send(publish_msg, server_addr, auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2)
+            client.send(
+                publish_msg, server_addr,
+                auth_plugin=auth_plugin2, cipher_plugin=cipher_plugin2
+            )
             await asyncio.sleep(0.1)
             assert len(client_log) == 2, len(client_log)
             response = client_log[-1]
