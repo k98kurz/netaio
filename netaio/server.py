@@ -4,6 +4,7 @@ from .common import (
     Body,
     Message,
     MessageType,
+    MessageTypeClassProtocol,
     HeaderProtocol,
     AuthFieldsProtocol,
     BodyProtocol,
@@ -15,13 +16,14 @@ from .common import (
     keys_extractor,
     make_error_response,
     auth_error_handler,
-    Handler,
+    AnyHandler,
     AuthErrorHandler,
     DefaultPeerPlugin,
     default_server_logger,
+    Handler,
 )
 from enum import IntEnum
-from typing import Callable, Coroutine, Hashable
+from typing import Callable, Coroutine, Hashable, Any, cast
 import asyncio
 import logging
 
@@ -34,20 +36,20 @@ class TCPServer:
     """TCP server class."""
     port: int
     interface: str
-    local_peer: Peer
+    local_peer: Peer | None
     peers: dict[bytes, Peer]
     peer_addrs: dict[tuple[str, int], bytes]
     handlers: dict[
         Hashable,
-        tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+        tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
     ]
     ephemeral_handlers: dict[
         Hashable,
-        tuple[Handler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+        tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
     ]
-    default_handler: Handler
+    default_handler: AnyHandler
     header_class: type[HeaderProtocol]
-    message_type_class: type[IntEnum]
+    message_type_class: type[Any]
     auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
@@ -58,15 +60,16 @@ class TCPServer:
     subscriptions: dict[Hashable, set[asyncio.StreamWriter]]
     clients: set[asyncio.StreamWriter]
     logger: logging.Logger
-    auth_plugin: AuthPluginProtocol
-    cipher_plugin: CipherPluginProtocol
+    auth_plugin: AuthPluginProtocol | None
+    cipher_plugin: CipherPluginProtocol | None
+    peer_plugin: PeerPluginProtocol | None
     handle_auth_error: AuthErrorHandler
 
     def __init__(
             self, port: int = 8888, interface: str = "0.0.0.0", *,
-            local_peer: Peer = None,
+            local_peer: Peer | None = None,
             header_class: type[HeaderProtocol] = Header,
-            message_type_class: type[IntEnum] = MessageType,
+            message_type_class: type[Any] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
@@ -77,11 +80,11 @@ class TCPServer:
             make_error_response: Callable[
                 [str], MessageProtocol
             ] = make_error_response,
-            default_handler: Handler = not_found_handler,
+            default_handler: AnyHandler = not_found_handler,
             logger: logging.Logger = default_server_logger,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None,
-            peer_plugin: PeerPluginProtocol = None,
+            auth_plugin: AuthPluginProtocol | None = None,
+            cipher_plugin: CipherPluginProtocol | None = None,
+            peer_plugin: PeerPluginProtocol | None = None,
             auth_error_handler: AuthErrorHandler = auth_error_handler,
         ):
         """Initialize the TCPServer.
@@ -140,9 +143,9 @@ class TCPServer:
         self.handle_auth_error = auth_error_handler
 
     def add_handler(
-            self, key: Hashable, handler: Handler, *,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            self, key: Hashable, handler: AnyHandler, *,
+            auth_plugin: AuthPluginProtocol | None = None,
+            cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
@@ -159,9 +162,9 @@ class TCPServer:
         self.handlers[key] = (handler, auth_plugin, cipher_plugin)
 
     def add_ephemeral_handler(
-            self, key: Hashable, handler: Handler, *,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            self, key: Hashable, handler: AnyHandler, *,
+            auth_plugin: AuthPluginProtocol | None = None,
+            cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Register an ephemeral handler for a specific key. The handler
             will be removed either after it is called the first time.
@@ -172,8 +175,8 @@ class TCPServer:
 
     def on(
             self, key: Hashable, *,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol | None = None,
+            cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a handler for a specific key. The
             handler must accept a MessageProtocol object as an argument
@@ -186,7 +189,7 @@ class TCPServer:
             These plugins will also be used for preparing any response
             message sent by the handler.
         """
-        def decorator(func: Handler):
+        def decorator(func: AnyHandler):
             self.add_handler(
                 key, func, auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
             )
@@ -195,8 +198,8 @@ class TCPServer:
 
     def once(
             self, key: Hashable, *,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            auth_plugin: AuthPluginProtocol | None = None,
+            cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a one-time handler for a specific key.
             The handler must accept a MessageProtocol object as an
@@ -209,7 +212,7 @@ class TCPServer:
             server. These plugins will also be used for preparing any
             response message sent by the handler.
         """
-        def decorator(func: Handler):
+        def decorator(func: AnyHandler):
             self.add_ephemeral_handler(
                 key, func,
                 auth_plugin=auth_plugin,
@@ -306,8 +309,8 @@ class TCPServer:
         self.logger.info("Client connected from %s", addr)
         self.clients.add(writer)
         header_length = self.header_class.header_length()
-        peer_id = self.peer_addrs.get(addr, None)
-        peer = self.peers.get(peer_id, None)
+        peer_id = self.peer_addrs.get(addr)
+        peer = self.peers.get(peer_id) if peer_id is not None else None
         auth_plugin = None
         cipher_plugin = None
         header_bytes = await reader.readexactly(header_length)
@@ -337,7 +340,7 @@ class TCPServer:
                 "Invalid message received from %s",
                 addr
             )
-            response = self.make_error("invalid message")
+            response: MessageProtocol | None = self.make_error("invalid message")
         else:
             # outer auth
             if use_auth and self.auth_plugin is not None:
@@ -350,7 +353,9 @@ class TCPServer:
                     self.logger.warning(
                         "Invalid auth_fields received from %s", addr
                     )
-                    response = self.handle_auth_error(self, self.auth_plugin, message)
+                    response = self.handle_auth_error(
+                        self, self.auth_plugin, message
+                    )
                     if response is not None:
                         await self.send(
                             writer, response, use_auth=False, use_cipher=False
@@ -434,16 +439,22 @@ class TCPServer:
                             return
 
                     self.logger.debug("Calling handler for key=%s", key)
-                    response = handler(message, writer)
-                    if isinstance(response, Coroutine):
-                        response = await response
+                    tcp_handler = cast(Handler, handler)
+                    response_or_coro: MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None = tcp_handler(message, writer)
+                    if isinstance(response_or_coro, Coroutine):
+                        response_or_coro = await response_or_coro
+                    response = response_or_coro if isinstance(response_or_coro, MessageProtocol) else None
                     break
             else:
                 self.logger.warning(
                     "No handler found for keys=%s, calling default handler",
                     keys
                 )
-                response = self.default_handler(message, writer)
+                tcp_default_handler = cast(Handler, self.default_handler)
+                default_response_or_coro: MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None = tcp_default_handler(message, writer)
+                if isinstance(default_response_or_coro, Coroutine):
+                    default_response_or_coro = await default_response_or_coro
+                response = default_response_or_coro if isinstance(default_response_or_coro, MessageProtocol) else None
 
         if response is not None:
             # inner cipher
@@ -529,7 +540,7 @@ class TCPServer:
                 self.logger.warning(
                     "Error encrypting message; dropping", exc_info=True
                 )
-                return
+                return None
 
         # inner auth
         if auth_plugin is not None:
@@ -543,7 +554,7 @@ class TCPServer:
                 self.logger.warning(
                     "Error making message; dropping", exc_info=True
                 )
-                return
+                return None
 
         # outer cipher
         if use_cipher and self.cipher_plugin is not None:
@@ -556,7 +567,7 @@ class TCPServer:
                 self.logger.warning(
                     "Error encrypting message; dropping", exc_info=True
                 )
-                return
+                return None
 
         # outer auth
         if use_auth and self.auth_plugin is not None:
@@ -572,13 +583,13 @@ class TCPServer:
                 self.logger.warning(
                     "Error making message; dropping", exc_info=True
                 )
-                return
+                return None
 
         return message
 
     async def send(
             self, client: asyncio.StreamWriter, message: MessageProtocol, *,
-            collection: set = None, use_auth: bool = True,
+            collection: set[Any] | None = None, use_auth: bool = True,
             use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
@@ -595,81 +606,24 @@ class TCPServer:
         """
         addr = client.get_extra_info("peername")
         peer_id = self.peer_addrs.get(addr, None)
-        peer = self.peers.get(peer_id, None)
-        message = self.prepare_message(
+        peer = self.peers.get(peer_id) if peer_id is not None else None
+        prepared_msg: MessageProtocol | None = self.prepare_message(
             message, use_auth=use_auth, use_cipher=use_cipher,
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
             peer=peer,
         )
-        if not message:
+        if not prepared_msg:
             return
 
         try:
             self.logger.debug("Sending message to %s", addr)
-            client.write(message.encode())
+            client.write(prepared_msg.encode())
             await client.drain()
         except Exception as e:
             self.logger.error("Error sending to client:", exc_info=True)
             if collection is not None:
                 self.logger.info("Removing client %s from collection", addr)
                 collection.discard(client)
-
-    async def broadcast(
-            self, message: MessageProtocol, *,
-            use_auth: bool = True, use_cipher: bool = True,
-            auth_plugin: AuthPluginProtocol|None = None,
-            cipher_plugin: CipherPluginProtocol|None = None
-        ):
-        """Send the message to all connected clients concurrently using
-            asyncio.gather. If an auth plugin is provided, it will be
-            used to authorize the message in addition to any auth plugin
-            that is set on the server. If a cipher plugin is provided,
-            it will be used to encrypt the message in addition to any
-            cipher plugin that is set on the server. If use_auth is
-            False, the auth plugin set on the server will not be used. If
-            use_cipher is False, the cipher plugin set on the
-            server will not be used.
-        """
-        self.logger.debug("Broadcasting message to all clients")
-
-        # check if any plugin is peer-specific
-        peer_specific = False
-        if use_auth and self.auth_plugin and self.auth_plugin.is_peer_specific():
-            peer_specific = True
-        if use_cipher and self.cipher_plugin and self.cipher_plugin.is_peer_specific():
-            peer_specific = True
-        if auth_plugin and auth_plugin.is_peer_specific():
-            peer_specific = True
-        if cipher_plugin and cipher_plugin.is_peer_specific():
-            peer_specific = True
-
-        if peer_specific:
-            # for peer-specific plugins, send unique message to each client
-            tasks = [
-                self.send(
-                    client, message.copy(), collection=self.clients,
-                    use_auth=use_auth, use_cipher=use_cipher,
-                    auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
-                )
-                for client in self.clients
-            ]
-        else:
-            # optimize for non-peer-specific plugins by doing all calculations once
-            message = self.prepare_message(
-                message, use_auth=use_auth, use_cipher=use_cipher,
-                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
-            )
-            if not message:
-                return
-            # create coroutines
-            tasks = [
-                self.send(
-                    client, message, collection=self.clients,
-                    use_auth=False, use_cipher=False,
-                )
-                for client in self.clients
-            ]
-        await asyncio.gather(*tasks, return_exceptions=True)
 
     async def notify(
             self, key: Hashable, message: MessageProtocol, *,
@@ -706,13 +660,15 @@ class TCPServer:
 
         # check if any plugin is peer-specific
         peer_specific = False
-        if use_auth and self.auth_plugin.is_peer_specific():
+        if use_auth and self.auth_plugin is not None and \
+                self.auth_plugin.is_peer_specific():
             peer_specific = True
-        if use_cipher and self.cipher_plugin.is_peer_specific():
+        if use_cipher and self.cipher_plugin is not None and \
+                self.cipher_plugin.is_peer_specific():
             peer_specific = True
-        if auth_plugin and auth_plugin.is_peer_specific():
+        if auth_plugin is not None and auth_plugin.is_peer_specific():
             peer_specific = True
-        if cipher_plugin and cipher_plugin.is_peer_specific():
+        if cipher_plugin is not None and cipher_plugin.is_peer_specific():
             peer_specific = True
 
         if peer_specific:
@@ -727,16 +683,16 @@ class TCPServer:
             ]
         else:
             # optimize for non-peer-specific plugins by doing all calculations once
-            message = self.prepare_message(
+            prepared_msg: MessageProtocol | None = self.prepare_message(
                 message, use_auth=use_auth, use_cipher=use_cipher,
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
             )
-            if not message:
+            if not prepared_msg:
                 return
             # create coroutines
             tasks = [
                 self.send(
-                    client, message, collection=self.clients,
+                    client, prepared_msg, collection=self.clients,
                     use_auth=False, use_cipher=False,
                 )
                 for client in subscribers
@@ -754,7 +710,7 @@ class TCPServer:
             True if a PEER_DISCOVERED message should be sent (False if
             it is the local peer).
         """
-        if peer_id == self.local_peer.id:
+        if self.local_peer is not None and peer_id == self.local_peer.id:
             self.logger.debug("Ignoring local peer.")
             return False
         if peer_id in self.peers:
@@ -782,10 +738,10 @@ class TCPServer:
         """
         peer = None
         if peer_id is not None:
-            peer = self.peers.get(peer_id, None)
+            peer = self.peers.get(peer_id) if peer_id is not None else None
         if addr is not None and peer is None:
             peer_id = self.peer_addrs.get(addr, None)
-            peer = self.peers.get(peer_id, None)
+        peer = self.peers.get(peer_id) if peer_id is not None else None
         return peer
 
     def remove_peer(self, writer: asyncio.StreamWriter, peer_id: bytes):
@@ -850,15 +806,28 @@ class TCPServer:
                 return
 
             try:
-                peer = self.peer_plugin.unpack(message.body.content)
+                peer = self.peer_plugin.unpack(message.body.content) if \
+                    self.peer_plugin is not None else None
             except Exception as e:
                 self.logger.error("Error unpacking peer data: %s", e)
+                return
+
+            if peer is None:
+                self.logger.error("peer_plugin is None or unpack returned None")
+                return
+
+            if peer.id is None or peer.data is None:
+                self.logger.error("peer.id or peer.data is None")
                 return
 
             if not self.add_or_update_peer(peer.id, peer.data, addr):
                 return
 
             # prepare the response
+            if self.peer_plugin is None or self.local_peer is None:
+                self.logger.error("peer_plugin or local_peer is None")
+                return
+
             return self.message_class.prepare(
                 self.body_class.prepare(
                     self.peer_plugin.pack(self.local_peer),
@@ -884,9 +853,18 @@ class TCPServer:
                 return
 
             try:
-                peer = self.peer_plugin.unpack(message.body.content)
+                peer = self.peer_plugin.unpack(message.body.content) if \
+                    self.peer_plugin is not None else None
             except Exception as e:
                 self.logger.error("Error unpacking peer data: %s", e)
+                return
+
+            if peer is None:
+                self.logger.error("peer_plugin is None or unpack returned None")
+                return
+
+            if peer.id is None or peer.data is None:
+                self.logger.error("peer.id or peer.data is None")
                 return
 
             self.add_or_update_peer(peer.id, peer.data, addr)
@@ -904,9 +882,18 @@ class TCPServer:
                 return
 
             try:
-                peer = self.peer_plugin.unpack(message.body.content)
+                peer = self.peer_plugin.unpack(message.body.content) if \
+                    self.peer_plugin is not None else None
             except Exception as e:
                 self.logger.error("Error unpacking peer id: %s", e)
+                return
+
+            if peer is None:
+                self.logger.error("peer_plugin is None or unpack returned None")
+                return
+
+            if peer.id is None:
+                self.logger.error("peer.id is None")
                 return
 
             self.remove_peer(writer, peer.id)

@@ -13,6 +13,7 @@ from .common import (
     Body,
     Peer,
 )
+from typing import Any
 from .crypto import sha256, hmac, check_hmac, IV_SIZE
 from enum import IntEnum
 from os import urandom
@@ -59,10 +60,12 @@ class HMACAuthPlugin:
         if len(nonce) != IV_SIZE:
             nonce = urandom(IV_SIZE)
         ts = auth_fields.fields.get(self.ts_field, int(time()))
+        ts_int = ts if isinstance(ts, int) else int.from_bytes(ts, "big")
+        ts_bytes = ts_int.to_bytes(4, "big")
         auth_fields.fields.update({
             self.nonce_field: nonce,
-            self.ts_field: ts,
-            self.hmac_field: hmac(self.secret, nonce + ts.to_bytes(4, "big") + body.encode())
+            self.ts_field: ts_bytes,
+            self.hmac_field: hmac(self.secret, nonce + ts_bytes + body.encode())
         })
 
     def check(
@@ -80,16 +83,17 @@ class HMACAuthPlugin:
         mac = auth_fields.fields.get(self.hmac_field, None)
         if ts == 0 or nonce is None or mac is None:
             return False
+        ts_bytes = ts.to_bytes(4, "big") if isinstance(ts, int) else ts
         return check_hmac(
             self.secret,
-            nonce + ts.to_bytes(4, "big") + body.encode(),
+            nonce + ts_bytes + body.encode(),
             mac
         )
 
     def error(
             self,
-            message_class: type[MessageProtocol] = Message,
-            message_type_class: type[IntEnum] = MessageType,
+            message_class: type[Any] = Message,
+            message_type_class: type[Any] = MessageType,
             header_class: type[HeaderProtocol] = Header,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body
