@@ -51,9 +51,9 @@ class Sha256StreamCipherPlugin:
             content = ciphertext
 
         message_type = message.header.message_type
-        auth_data = message.auth_data.fields.copy()
-        auth_data[self.iv_field] = iv
-        auth_data = message.auth_data.__class__(auth_data)
+        fields_dict = message.auth_data.fields.copy()
+        fields_dict[self.iv_field] = iv
+        auth_data = message.auth_data.__class__(fields_dict)
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, auth_data)
 
@@ -84,8 +84,8 @@ class Sha256StreamCipherPlugin:
             uri = message.body.uri
 
         message_type = message.header.message_type
-        auth_data = message.auth_data.fields.copy()
-        auth_data = message.auth_data.__class__(auth_data)
+        fields_dict = message.auth_data.fields.copy()
+        auth_data = message.auth_data.__class__(fields_dict)
         body = message.body.prepare(content, uri)
         return message.prepare(body, message_type, auth_data)
 

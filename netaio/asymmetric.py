@@ -9,6 +9,7 @@ from .common import (
     make_error_response,
     Message,
     MessageType,
+    MessageTypeClassProtocol,
     Header,
     AuthFields,
     Body,
@@ -20,7 +21,7 @@ from nacl.signing import SigningKey, VerifyKey
 from os import urandom
 from random import randint
 from time import time
-from typing import Callable
+from typing import Any, Callable
 import tapescript
 
 
@@ -85,19 +86,22 @@ class TapescriptAuthPlugin:
             dict to produce a witness.
         """
         nonce = auth_fields.fields.get(self.nonce_field, urandom(16))
-        ts = auth_fields.fields.get(self.ts_field, int(time()))
+        ts_raw = auth_fields.fields.get(self.ts_field, int(time()))
+        ts = ts_raw if isinstance(ts_raw, int) else int.from_bytes(ts_raw, 'big')
+        ts_bytes = ts.to_bytes(4, 'big')
         witness = self.witness_func(
             self.seed,
             {
                 'sigfield1': body.encode(),
                 'sigfield2': nonce,
-                'sigfield3': ts.to_bytes(4, 'big'),
+                'sigfield3': ts_bytes,
             },
         )
+        witness_bytes = witness if isinstance(witness, bytes) else witness.bytes
         auth_fields.fields.update({
             self.nonce_field: nonce,
-            self.ts_field: ts,
-            self.witness_field: witness.bytes,
+            self.ts_field: ts_bytes,
+            self.witness_field: witness_bytes,
         })
 
     def check(
@@ -110,16 +114,17 @@ class TapescriptAuthPlugin:
             and self.use_peer_lock is True, that locking script will be
             used instead of the plugin's locking script.
         """
-        ts = auth_fields.fields.get(self.ts_field, 0)
+        ts_raw = auth_fields.fields.get(self.ts_field, 0)
+        ts = ts_raw if isinstance(ts_raw, int) else int.from_bytes(ts_raw, 'big')
         nonce = auth_fields.fields.get(self.nonce_field, None)
         witness = auth_fields.fields.get(self.witness_field, None)
         if ts == 0 or nonce is None or witness is None:
             return False
 
         lock = self.lock
-        if peer is not None and self.use_peer_lock:
+        if peer is not None and self.use_peer_lock and peer_plugin is not None:
             peer_data = peer_plugin.parse_data(peer)
-            if 'lock' in peer_data:
+            if isinstance(peer_data, dict) and 'lock' in peer_data:
                 lock = peer_data['lock']
 
         return tapescript.run_auth_scripts(
@@ -135,8 +140,8 @@ class TapescriptAuthPlugin:
 
     def error(
             self,
-            message_class: type[MessageProtocol] = Message,
-            message_type_class: type[IntEnum] = MessageType,
+            message_class: type[Any] = Message,
+            message_type_class: type[Any] = MessageType,
             header_class: type[HeaderProtocol] = Header,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body
@@ -200,10 +205,10 @@ class X25519CipherPlugin(CipherPluginProtocol):
             plaintext += message.body.uri
         plaintext += message.body.content
 
-        peer_data = peer_plugin.parse_data(peer)
-        if 'pubkey' not in peer_data:
+        peer_data_raw = peer_plugin.parse_data(peer)
+        if not isinstance(peer_data_raw, dict) or 'pubkey' not in peer_data_raw:
             raise ValueError("peer pubkey not found")
-        pubkey = PublicKey(peer_data['pubkey'])
+        pubkey = PublicKey(peer_data_raw['pubkey'])
         ciphertext = Box(self.key, pubkey).encrypt(plaintext)
 
         if self.encrypt_uri:
@@ -242,10 +247,10 @@ class X25519CipherPlugin(CipherPluginProtocol):
                 node.logger.debug('Decrypting content')
             ciphertext = message.body.content
 
-        peer_data = peer_plugin.parse_data(peer)
-        if 'pubkey' not in peer_data:
+        peer_data_raw = peer_plugin.parse_data(peer)
+        if not isinstance(peer_data_raw, dict) or 'pubkey' not in peer_data_raw:
             raise ValueError("peer pubkey not found")
-        pubkey = PublicKey(peer_data['pubkey'])
+        pubkey = PublicKey(peer_data_raw['pubkey'])
         content = Box(self.key, pubkey).decrypt(ciphertext)
 
         if self.encrypt_uri:

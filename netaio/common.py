@@ -11,6 +11,8 @@ from typing import (
     Any,
     NamedTuple,
     Awaitable,
+    ClassVar,
+    TypeVar,
 )
 from zlib import crc32
 import asyncio
@@ -18,6 +20,23 @@ import logging
 import packify
 import socket
 import struct
+
+
+@runtime_checkable
+class MessageTypeClassProtocol(Protocol):
+    """Protocol for message type classes with standard attributes."""
+    REQUEST_URI: ClassVar[int]
+    RESPOND_URI: ClassVar[int]
+    CREATE_URI: ClassVar[int]
+    UPDATE_URI: ClassVar[int]
+    DELETE_URI: ClassVar[int]
+    OK: ClassVar[int]
+    ERROR: ClassVar[int]
+    AUTH_ERROR: ClassVar[int]
+    NOT_FOUND: ClassVar[int]
+    ADVERTISE_PEER: ClassVar[int]
+    PEER_DISCOVERED: ClassVar[int]
+    DISCONNECT: ClassVar[int]
 
 
 @runtime_checkable
@@ -38,7 +57,7 @@ class HeaderProtocol(Protocol):
         ...
 
     @property
-    def message_type(self) -> MessageType:
+    def message_type(self) -> IntEnum:
         """At a minimum, a Header must have body_length, auth_length,
             message_type, and checksum properties.
         """
@@ -62,7 +81,10 @@ class HeaderProtocol(Protocol):
         ...
 
     @classmethod
-    def decode(cls, data: bytes) -> HeaderProtocol:
+    def decode(
+            cls, data: bytes,
+            message_type_factory: Callable[[int], IntEnum] | None = None
+        ) -> HeaderProtocol:
         """Decode the header from the data."""
         ...
 
@@ -77,6 +99,10 @@ class AuthFieldsProtocol(Protocol):
     @property
     def fields(self) -> dict[str, bytes]:
         """At a minimum, an AuthFields must have fields property."""
+        ...
+
+    def __init__(self, fields: dict[str, bytes] = ...) -> None:
+        """Initialize auth fields with optional fields dict."""
         ...
 
     @classmethod
@@ -140,6 +166,14 @@ class MessageProtocol(Protocol):
         """A Message must have a body property."""
         ...
 
+    def __init__(
+            self, header: HeaderProtocol,
+            auth_data: AuthFieldsProtocol,
+            body: BodyProtocol
+        ) -> None:
+        """Initialize the message with header, auth_data, and body."""
+        ...
+
     def check(self) -> bool:
         """Check if the message is valid."""
         ...
@@ -154,8 +188,8 @@ class MessageProtocol(Protocol):
 
     @classmethod
     def prepare(
-            cls, body: BodyProtocol, message_type: MessageType,
-            auth_data: AuthFieldsProtocol = None
+            cls, body: BodyProtocol, message_type: int,
+            auth_data: AuthFieldsProtocol | None = None
         ) -> MessageProtocol:
         """Prepare a message from a body."""
         ...
@@ -188,7 +222,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def message_type_class(self) -> type[MessageType]:
+    def message_type_class(self) -> type[MessageTypeClassProtocol]:
         """A class implementing this protocol must have a message_type_class
             property referencing the message type class to use for parsing
             received messages.
@@ -220,7 +254,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def handlers(self) -> dict[Hashable, tuple[Handler|UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
+    def handlers(self) -> dict[Hashable, tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
         """A class implementing this protocol must have a handlers property
             referencing a dictionary of handler functions, keyed by a hashable
             object, that will be called when a message with the corresponding
@@ -229,7 +263,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def ephemeral_handlers(self) -> dict[Hashable, tuple[Handler|UDPHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
+    def ephemeral_handlers(self) -> dict[Hashable, tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
         """A class implementing this protocol must have an ephemeral_handlers
             property referencing a dictionary of one-time handler functions,
             keyed by a hashable object, that will be called when a message
@@ -238,7 +272,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def default_handler(self) -> Handler|UDPHandler:
+    def default_handler(self) -> AnyHandler:
         """A class implementing this protocol must have a default_handler
             property referencing the default handler to use for messages
             that do not match any registered handler keys.
@@ -270,7 +304,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def auth_plugin(self) -> AuthPluginProtocol:
+    def auth_plugin(self) -> AuthPluginProtocol | None:
         """A class implementing this protocol must have an auth_plugin
             property referencing an auth plugin for
             authenticating/authorizing messages.
@@ -278,7 +312,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def cipher_plugin(self) -> CipherPluginProtocol:
+    def cipher_plugin(self) -> CipherPluginProtocol | None:
         """A class implementing this protocol must have a cipher_plugin
             property referencing a cipher plugin for encrypting and
             decrypting messages.
@@ -297,7 +331,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     def add_handler(
-            self, key: Hashable, handler: Handler|UDPHandler,
+            self, key: Hashable, handler: AnyHandler, *,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
@@ -314,7 +348,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     def add_ephemeral_handler(
-            self, key: Hashable, handler: Handler|UDPHandler,
+            self, key: Hashable, handler: AnyHandler, *,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
@@ -326,9 +360,9 @@ class NetworkNodeProtocol(Protocol):
 
     def on(
             self,
-            key: Hashable,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            key: Hashable, *,
+            auth_plugin: AuthPluginProtocol | None = None,
+            cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a handler for a specific key. The handler must
             accept a MessageProtocol object as an argument and return a
@@ -344,9 +378,9 @@ class NetworkNodeProtocol(Protocol):
 
     def once(
             self,
-            key: Hashable,
-            auth_plugin: AuthPluginProtocol = None,
-            cipher_plugin: CipherPluginProtocol = None
+            key: Hashable, *,
+            auth_plugin: AuthPluginProtocol | None = None,
+            cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a one-time handler for a specific key.
             The handler must accept a MessageProtocol object as an
@@ -403,7 +437,7 @@ class MessageType(IntEnum):
 @dataclass
 class Header:
     """Default header class."""
-    message_type: MessageType
+    message_type: IntEnum
     auth_length: int
     body_length: int
     checksum: int
@@ -533,8 +567,8 @@ class Body:
 class Message:
     """Default message class."""
     header: Header
-    auth_data: AuthFields
-    body: Body
+    auth_data: AuthFieldsProtocol
+    body: BodyProtocol
 
     def check(self) -> bool:
         """Check if the message is valid."""
@@ -578,14 +612,14 @@ class Message:
 
     @classmethod
     def prepare(
-            cls, body: BodyProtocol, message_type: MessageType|IntEnum,
-            auth_data: AuthFields|None = None
+            cls, body: BodyProtocol, message_type: int,
+            auth_data: AuthFieldsProtocol | None = None
         ) -> Message:
         """Prepare a message from a body and optional arguments."""
         auth_data = AuthFields() if auth_data is None else auth_data
         return cls(
             header=Header(
-                message_type=message_type,
+                message_type=Header.message_type_class(message_type),
                 auth_length=len(auth_data.encode()),
                 body_length=len(body.encode()),
                 checksum=crc32(body.encode())
@@ -657,11 +691,11 @@ class AuthPluginProtocol(Protocol):
 
     def error(
             self,
-            message_class: type[MessageProtocol] = Message,
-            message_type_class: type[IntEnum] = MessageType,
-            header_class: type[HeaderProtocol] = Header,
-            auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
-            body_class: type[BodyProtocol] = Body
+            message_class: type[MessageProtocol] = ...,
+            message_type_class: type[Any] = ...,
+            header_class: type[HeaderProtocol] = ...,
+            auth_fields_class: type[AuthFieldsProtocol] = ...,
+            body_class: type[BodyProtocol] = ...
         ) -> MessageProtocol:
         """Make an error message."""
         ...
@@ -763,7 +797,8 @@ class PeerPluginProtocol(Protocol):
 
 
 Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
-UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None]
+UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
+AnyHandler = Handler | UDPHandler
 AuthErrorHandler = Callable[[NetworkNodeProtocol, AuthPluginProtocol, MessageProtocol|None], MessageProtocol|None]
 TimeoutErrorHandler = Callable[
     [NetworkNodeProtocol, str, tuple[str, int] | None, TimeoutError, dict[str, Any]],
@@ -817,9 +852,9 @@ def keys_extractor(
 
 def make_error_response(
         msg: str,
-        message_class: type[MessageProtocol] = Message,
-        message_type_class: type[IntEnum] = MessageType,
-        body_class: type[BodyProtocol] = Body
+        message_class: type[Any] = Message,
+        message_type_class: type[Any] = MessageType,
+        body_class: type[Any] = Body
     ) -> MessageProtocol:
     """Make an error response message."""
     if "not found" in msg:
@@ -841,13 +876,16 @@ def make_error_response(
 
 def auth_error_handler(
         node: NetworkNodeProtocol, auth_plugin: AuthPluginProtocol,
-        msg: MessageProtocol
+        msg: MessageProtocol|None
     ) -> MessageProtocol|None:
     """Called when the auth check call fails for a message. If the
         message that failed the auth check was an error message, do
         not send a response. Otherwise, send the error message returned
         by the auth plugin.
     """
+    if msg is None:
+        node.logger.debug("No message provided to auth_error_handler")
+        return None
     node.logger.debug(f"Message auth failed for message with type {msg.header.message_type.name}")
     if 'ERROR' in msg.header.message_type.name.upper():
         node.logger.debug("Message is an error message, not sending a response")
