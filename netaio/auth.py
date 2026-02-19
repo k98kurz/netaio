@@ -13,7 +13,6 @@ from .common import (
     Body,
     Peer,
 )
-from typing import Any
 from .crypto import sha256, hmac, check_hmac, IV_SIZE
 from enum import IntEnum
 from os import urandom
@@ -92,7 +91,7 @@ class HMACAuthPlugin:
 
     def error(
             self,
-            message_class: type[Any] = Message,
+            message_class: type[MessageProtocol] = Message,
             message_type_class: type[IntEnum] = MessageType,
             header_class: type[HeaderProtocol] = Header,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
