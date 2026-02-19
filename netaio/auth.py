@@ -64,7 +64,7 @@ class HMACAuthPlugin:
         auth_fields.fields.update({
             self.nonce_field: nonce,
             self.ts_field: ts_bytes,
-            self.hmac_field: hmac(self.secret, nonce + ts_bytes + body.encode())
+            self.hmac_field: hmac(self.secret, nonce, ts_bytes + body.encode())
         })
 
     def check(
@@ -85,7 +85,8 @@ class HMACAuthPlugin:
         ts_bytes = ts.to_bytes(4, "big") if isinstance(ts, int) else ts
         return check_hmac(
             self.secret,
-            nonce + ts_bytes + body.encode(),
+            nonce,
+            ts_bytes + body.encode(),
             mac
         )
 
