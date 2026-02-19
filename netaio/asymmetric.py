@@ -21,7 +21,7 @@ from nacl.signing import SigningKey, VerifyKey
 from os import urandom
 from random import randint
 from time import time
-from typing import Any, Callable
+from typing import Callable
 import tapescript
 
 
@@ -140,7 +140,7 @@ class TapescriptAuthPlugin:
 
     def error(
             self,
-            message_class: type[Any] = Message,
+            message_class: type[MessageProtocol] = Message,
             message_type_class: type[IntEnum] = MessageType,
             header_class: type[HeaderProtocol] = Header,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,

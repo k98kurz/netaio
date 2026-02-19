@@ -30,29 +30,29 @@ class HeaderProtocol(Protocol):
     """Shows what a Header class should have and do."""
     @property
     def body_length(self) -> int:
-        """At a minimum, a Header must have body_length, auth_length,
-            message_type, and checksum properties.
+        """At a minimum, a Header must have `body_length`, `auth_length`,
+            `message_type`, and `checksum` properties.
         """
         ...
 
     @property
     def auth_length(self) -> int:
-        """At a minimum, a Header must have body_length, auth_length,
-            message_type, and checksum properties.
+        """At a minimum, a Header must have `body_length`, `auth_length`,
+            `message_type`, and `checksum` properties.
         """
         ...
 
     @property
     def message_type(self) -> IntEnum:
-        """At a minimum, a Header must have body_length, auth_length,
-            message_type, and checksum properties.
+        """At a minimum, a Header must have `body_length`, `auth_length`,
+            `message_type`, and `checksum` properties.
         """
         ...
 
     @property
     def checksum(self) -> int:
-        """At a minimum, a Header must have body_length, auth_length,
-            message_type, and checksum properties.
+        """At a minimum, a Header must have `body_length`, `auth_length`,
+            `message_type`, and `checksum` properties.
         """
         ...
 
@@ -71,11 +71,11 @@ class HeaderProtocol(Protocol):
             cls, data: bytes,
             message_type_class: type[IntEnum] | None = None
         ) -> HeaderProtocol:
-        """Decode the header from the data."""
+        """Decode the header from the `data`."""
         ...
 
     def encode(self) -> bytes:
-        """Encode the header into a bytes object."""
+        """Encode the header into a `bytes` object."""
         ...
 
 
@@ -84,20 +84,20 @@ class AuthFieldsProtocol(Protocol):
     """Shows what an AuthFields class should have and do."""
     @property
     def fields(self) -> dict[str, bytes]:
-        """At a minimum, an AuthFields must have fields property."""
+        """At a minimum, an AuthFields must have `fields` property."""
         ...
 
     def __init__(self, fields: dict[str, bytes] = ...) -> None:
-        """Initialize auth fields with optional fields dict."""
+        """Initialize auth fields with optional `fields` dict."""
         ...
 
     @classmethod
     def decode(cls, data: bytes) -> AuthFieldsProtocol:
-        """Decode the auth fields from the data."""
+        """Decode the auth fields from the `data`."""
         ...
 
     def encode(self) -> bytes:
-        """Encode the auth fields into a bytes object."""
+        """Encode the auth fields into a `bytes` object."""
         ...
 
 
@@ -106,31 +106,40 @@ class BodyProtocol(Protocol):
     """Shows what a Body class should have and do."""
     @property
     def content(self) -> bytes:
-        """At a minimum, a Body must have content, uri, and uri_length properties."""
+        """At a minimum, a `Body` must have `content`, `uri`, and
+            `uri_length` properties.
+        """
         ...
 
     @property
     def uri(self) -> bytes:
-        """At a minimum, a Body must have content, uri, and uri_length properties."""
+        """At a minimum, a `Body` must have `content`, `uri`, and
+            `uri_length` properties.
+        """
         ...
 
     @property
     def uri_length(self) -> int:
-        """At a minimum, a Body must have content, uri, and uri_length properties."""
+        """At a minimum, a `Body` must have `content`, `uri`, and
+            `uri_length` properties.
+        """
         ...
 
     @classmethod
     def decode(cls, data: bytes) -> BodyProtocol:
-        """Decode the body from the data."""
+        """Decode the body from the `data`."""
         ...
 
     def encode(self) -> bytes:
-        """Encode the body into a bytes object."""
+        """Encode the body into a `bytes` object."""
         ...
 
     @classmethod
-    def prepare(cls, content: bytes, uri: bytes = b'', overhead: int = 0, *args, **kwargs) -> BodyProtocol:
-        """Prepare a body from content and optional arguments."""
+    def prepare(
+            cls, content: bytes, uri: bytes = b'', overhead: int = 0,
+            *args, **kwargs
+        ) -> BodyProtocol:
+        """Prepare a body from `content` and optional arguments."""
         ...
 
 
@@ -139,17 +148,17 @@ class MessageProtocol(Protocol):
     """Shows what a Message class should have and do."""
     @property
     def header(self) -> HeaderProtocol:
-        """A Message must have a header property."""
+        """A `Message` must have a `header` property."""
         ...
 
     @property
     def auth_data(self) -> AuthFieldsProtocol:
-        """A Message must have an auth_data property."""
+        """A `Message` must have an `auth_data` property."""
         ...
 
     @property
     def body(self) -> BodyProtocol:
-        """A Message must have a body property."""
+        """A `Message` must have a `body` property."""
         ...
 
     def __init__(
@@ -157,7 +166,7 @@ class MessageProtocol(Protocol):
             auth_data: AuthFieldsProtocol,
             body: BodyProtocol
         ) -> None:
-        """Initialize the message with header, auth_data, and body."""
+        """Initialize the message with `header`, `auth_data`, and `body`."""
         ...
 
     def check(self) -> bool:
@@ -165,7 +174,7 @@ class MessageProtocol(Protocol):
         ...
 
     def encode(self) -> bytes:
-        """Encode the message into a bytes object."""
+        """Encode the message into a `bytes` object."""
         ...
 
     def copy(self) -> MessageProtocol:
@@ -186,7 +195,7 @@ class NetworkNodeProtocol(Protocol):
     """For type-hinting objects that handle networking."""
     @property
     def port(self) -> int:
-        """A class implementing this protocol must have a port property
+        """A class implementing this protocol must have a `port` property
             representing either the port to listen on or the port to
             connect to.
         """
@@ -194,14 +203,14 @@ class NetworkNodeProtocol(Protocol):
 
     @property
     def local_peer(self) -> Peer|None:
-        """A class implementing this protocol must have a local_peer
+        """A class implementing this protocol must have a `local_peer`
             property containing the local peer data.
         """
         ...
 
     @property
     def header_class(self) -> type[HeaderProtocol]:
-        """A class implementing this protocol must have a header_class
+        """A class implementing this protocol must have a `header_class`
             property referencing the header class to use for parsing
             received messages.
         """
@@ -209,23 +218,23 @@ class NetworkNodeProtocol(Protocol):
 
     @property
     def message_type_class(self) -> type[IntEnum]:
-        """A class implementing this protocol must have a message_type_class
-            property referencing the message type class to use for parsing
-            received messages.
+        """A class implementing this protocol must have a
+            `message_type_class` property referencing the message type
+            class to use for parsing received messages.
         """
         ...
 
     @property
     def auth_fields_class(self) -> type[AuthFieldsProtocol]:
-        """A class implementing this protocol must have an auth_fields_class
-            property referencing the auth fields class to use for parsing
-            received messages.
+        """A class implementing this protocol must have an
+            `auth_fields_class` property referencing the auth fields
+            class to use for parsing received messages.
         """
         ...
 
     @property
     def body_class(self) -> type[BodyProtocol]:
-        """A class implementing this protocol must have a body_class
+        """A class implementing this protocol must have a `body_class`
             property referencing the body class to use for parsing
             received messages.
         """
@@ -233,7 +242,7 @@ class NetworkNodeProtocol(Protocol):
 
     @property
     def message_class(self) -> type[MessageProtocol]:
-        """A class implementing this protocol must have a message_class
+        """A class implementing this protocol must have a `message_class`
             property referencing the message class to use for parsing
             received messages.
         """
@@ -244,10 +253,10 @@ class NetworkNodeProtocol(Protocol):
             Hashable,
             tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
         ]:
-        """A class implementing this protocol must have a handlers property
-            referencing a dictionary of handler functions, keyed by a hashable
-            object, that will be called when a message with the corresponding
-            key is received.
+        """A class implementing this protocol must have a `handlers`
+            property referencing a dictionary of handler functions, keyed
+            by a hashable object, that will be called when a message with
+            the corresponding key is received.
         """
         ...
 
@@ -256,18 +265,20 @@ class NetworkNodeProtocol(Protocol):
             Hashable,
             tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
         ]:
-        """A class implementing this protocol must have an ephemeral_handlers
-            property referencing a dictionary of one-time handler functions,
-            keyed by a hashable object, that will be called when a message
-            with corresponding key is received and then removed.
+        """A class implementing this protocol must have an
+            `ephemeral_handlers` property referencing a dictionary of
+            one-time handler functions, keyed by a hashable object, that
+            will be called when a message with corresponding key is
+            received and then removed.
         """
         ...
 
     @property
     def default_handler(self) -> AnyHandler:
-        """A class implementing this protocol must have a default_handler
-            property referencing the default handler to use for messages
-            that do not match any registered handler keys.
+        """A class implementing this protocol must have a
+            `default_handler` property referencing the default handler to
+            use for messages that do not match any registered handler
+            keys.
         """
         ...
 
@@ -356,15 +367,15 @@ class NetworkNodeProtocol(Protocol):
             auth_plugin: AuthPluginProtocol | None = None,
             cipher_plugin: CipherPluginProtocol | None = None
         ):
-        """Decorator to register a handler for a specific key. The handler must
-            accept a MessageProtocol object as an argument and return a
-            MessageProtocol or None. If an auth plugin is provided, it
-            will be used to check the message in addition to any auth
-            plugin that is set on the node. If a cipher plugin is
-            provided, it will be used to decrypt the message in addition
-            to any cipher plugin that is set on the node. These
-            plugins will also be used for preparing any response
-            message sent by the handler.
+        """Decorator to register a handler for a specific key. The
+            handler must accept a MessageProtocol object as an argument
+            and return a MessageProtocol or None. If an auth plugin is
+            provided, it will be used to check the message in addition to
+            any auth plugin that is set on the node. If a cipher plugin
+            is provided, it will be used to decrypt the message in
+            addition to any cipher plugin that is set on the node. These
+            plugins will also be used for preparing any response message
+            sent by the handler.
         """
         ...
 
@@ -500,7 +511,7 @@ class Header:
             cls, data: bytes,
             message_type_class: type[IntEnum] | None = None
         ) -> Header:
-        """Decode the header from the data."""
+        """Decode the header from the `data`."""
         excess = False
         fstr = cls.struct_fstring()
         if len(data) > cls.header_length():
@@ -595,7 +606,8 @@ class Body:
             The 104 value is for IP encapsulation and other known
             sources of overhead.)
         """
-        if len(content) + len(uri) >= 2**16 - Header.header_length() - overhead - 104:
+        if len(content) + len(uri) >= \
+            2**16 - Header.header_length() - overhead - 104:
             raise ValueError("Content + uri is too long for encapsulation")
 
         return cls(
@@ -621,7 +633,7 @@ class Message:
             cls, data: bytes,
             message_type_class: type[IntEnum] | None = None
         ) -> Message:
-        """Decode the message from the data. Raises ValueError if the
+        """Decode the message from the `data`. Raises `ValueError` if the
             checksum does not match.
         """
         header_data = data[:Header.header_length()]
@@ -734,7 +746,7 @@ class AuthPluginProtocol(Protocol):
     def error(
             self,
             message_class: type[MessageProtocol] = ...,
-            message_type_class: type[Any] = ...,
+            message_type_class: type[IntEnum] = ...,
             header_class: type[HeaderProtocol] = ...,
             auth_fields_class: type[AuthFieldsProtocol] = ...,
             body_class: type[BodyProtocol] = ...
@@ -818,7 +830,10 @@ class PeerPluginProtocol(Protocol):
         """Parse a peer's data. Must return a dictionary or namedtuple."""
         ...
 
-    def encode_data(self, peer_data: dict[str, Any]|NamedTuple, peer_id: bytes|None = None) -> bytes:
+    def encode_data(
+            self, peer_data: dict[str, Any]|NamedTuple,
+            peer_id: bytes|None = None
+        ) -> bytes:
         """Encode a peer's data. Implementation may reference or include
             the peer_id, but it should gracefully handle an empty
             peer_id.
@@ -878,7 +893,9 @@ class DefaultPeerPlugin:
         """Parse a peer's data. Must return a dictionary or namedtuple."""
         return packify.unpack(peer.data)
 
-    def encode_data(self, peer_data: dict[str, Any]|NamedTuple, peer_id: bytes|None = None) -> bytes:
+    def encode_data(
+            self, peer_data: dict[str, Any]|NamedTuple, peer_id: bytes|None = None
+        ) -> bytes:
         """Encode a peer's data. Ignores peer_id."""
         return packify.pack(peer_data)
 
@@ -912,7 +929,7 @@ def make_error_response(
         msg: str,
         message_class: type[MessageProtocol] = Message,
         message_type_class: type[IntEnum] = MessageType,
-        body_class: type[Any] = Body
+        body_class: type[BodyProtocol] = Body
     ) -> MessageProtocol:
     """Make an error response message."""
     if "not found" in msg:
@@ -941,7 +958,9 @@ def auth_error_handler(
     if msg is None:
         node.logger.debug("No message provided to auth_error_handler")
         return None
-    node.logger.debug(f"Message auth failed for message with type {msg.header.message_type.name}")
+    node.logger.debug(
+        f"Message auth failed for message with type {msg.header.message_type.name}"
+    )
     if 'ERROR' in msg.header.message_type.name.upper():
         node.logger.debug("Message is an error message, not sending a response")
         return None
@@ -975,7 +994,9 @@ default_server_logger = logging.getLogger("netaio.server")
 default_server_logger.setLevel(logging.INFO)
 if not default_server_logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     handler.setFormatter(formatter)
     default_server_logger.addHandler(handler)
     del handler
@@ -984,7 +1005,9 @@ default_client_logger = logging.getLogger("netaio.client")
 default_client_logger.setLevel(logging.INFO)
 if not default_client_logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     handler.setFormatter(formatter)
     default_client_logger.addHandler(handler)
     del handler
@@ -993,7 +1016,9 @@ default_node_logger = logging.getLogger("netaio.node")
 default_node_logger.setLevel(logging.INFO)
 if not default_node_logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     handler.setFormatter(formatter)
     default_node_logger.addHandler(handler)
     del handler
