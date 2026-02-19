@@ -9,7 +9,7 @@ from .common import (
     make_error_response,
     Message,
     MessageType,
-    MessageTypeClassProtocol,
+    validate_message_type_class,
     Header,
     AuthFields,
     Body,
@@ -141,7 +141,7 @@ class TapescriptAuthPlugin:
     def error(
             self,
             message_class: type[Any] = Message,
-            message_type_class: type[Any] = MessageType,
+            message_type_class: type[IntEnum] = MessageType,
             header_class: type[HeaderProtocol] = Header,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body

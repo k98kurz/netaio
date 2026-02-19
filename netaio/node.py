@@ -5,7 +5,7 @@ from .common import (
     Body,
     Message,
     MessageType,
-    MessageTypeClassProtocol,
+    validate_message_type_class,
     HeaderProtocol,
     AuthFieldsProtocol,
     BodyProtocol,
@@ -21,6 +21,7 @@ from .common import (
     AnyHandler,
     AuthErrorHandler,
     TimeoutErrorHandler,
+    TimeoutContext,
     DefaultPeerPlugin,
     default_node_logger,
     UDPHandler,
@@ -46,7 +47,7 @@ class UDPNode:
     peers: dict[bytes, Peer]
     peer_addrs: dict[tuple[str, int], bytes]
     header_class: type[HeaderProtocol]
-    message_type_class: type[Any]
+    message_type_class: type[IntEnum]
     auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
@@ -79,7 +80,7 @@ class UDPNode:
             multicast_group: str = '224.0.0.1',
             local_peer: Peer | None = None,
             header_class: type[HeaderProtocol] = Header,
-            message_type_class: type[Any] = MessageType,
+            message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
             message_class: type[MessageProtocol] = Message,
@@ -145,6 +146,7 @@ class UDPNode:
         self.multicast_group = multicast_group
         self.local_peer = local_peer
         self.header_class = header_class
+        validate_message_type_class(message_type_class)
         self.message_type_class = message_type_class
         self.auth_fields_class = auth_fields_class
         self.body_class = body_class
@@ -200,7 +202,7 @@ class UDPNode:
         data = data[self.header_class.header_length():]
         header: HeaderProtocol = self.header_class.decode(
             header_bytes,
-            message_type_factory=self.message_type_class
+            message_type_class=self.message_type_class
         )
 
         auth_bytes = data[:header.auth_length]
@@ -299,16 +301,18 @@ class UDPNode:
                     "Calling handler with message and addr for key=%s", key
                 )
                 udp_handler = cast(UDPHandler, handler)
-                response_or_coro: MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None = udp_handler(message, addr)
-                response = response_or_coro if isinstance(response_or_coro, MessageProtocol) else None
+                response_or_coro = udp_handler(message, addr)
+                response = response_or_coro if \
+                    isinstance(response_or_coro, MessageProtocol) else None
                 break
         else:
             self.logger.warning(
                 "No handler found for keys=%s, calling default handler", keys
             )
             udp_default_handler = cast(UDPHandler, self.default_handler)
-            default_response_or_coro: MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None = udp_default_handler(message, addr)
-            response = default_response_or_coro if isinstance(default_response_or_coro, MessageProtocol) else None
+            default_response_or_coro = udp_default_handler(message, addr)
+            response = default_response_or_coro if \
+                isinstance(default_response_or_coro, MessageProtocol) else None
 
         if response is not None:
             # if the sender is a peer, update that peer timestamp
@@ -613,20 +617,38 @@ class UDPNode:
             and content to send CREATE_URI, UPDATE_URI, or DELETE_URI messages.
         """
         result = []
-        message_type = message_type or self.message_type_class.REQUEST_URI
+        message_type = message_type or \
+            self.message_type_class.REQUEST_URI # type: ignore
 
         keys = [
-            (self.message_type_class.AUTH_ERROR, uri, server),
-            (self.message_type_class.ERROR, uri, server),
+            (
+                self.message_type_class.AUTH_ERROR, # type: ignore
+                uri, server
+            ),
+            (
+                self.message_type_class.ERROR, # type: ignore
+                uri, server
+            ),
         ]
 
-        if message_type == self.message_type_class.REQUEST_URI:
-            keys.append((self.message_type_class.RESPOND_URI, uri, server))
+        if message_type == \
+            self.message_type_class.REQUEST_URI: # type: ignore
+            keys.append((
+                self.message_type_class.RESPOND_URI, # type: ignore
+                uri, server
+            ))
         else:
-            keys.append((self.message_type_class.OK, uri, server))
+            keys.append((
+                self.message_type_class.OK, # type: ignore
+                uri, server
+            ))
 
-        if message_type != self.message_type_class.CREATE_URI:
-            keys.append((self.message_type_class.NOT_FOUND, uri, server))
+        if message_type != \
+            self.message_type_class.CREATE_URI: # type: ignore
+            keys.append((
+                self.message_type_class.NOT_FOUND, # type: ignore
+                uri, server
+            ))
 
         event = asyncio.Event()
 
@@ -667,7 +689,7 @@ class UDPNode:
                 f"Request for URI {uri.decode('utf-8', errors='replace')} @ " +
                 f"{server} timed out after {timeout}s"
             )
-            context = {
+            context: TimeoutContext = {
                 'uri': uri,
                 'timeout': timeout,
                 'server': server,
@@ -703,7 +725,7 @@ class UDPNode:
             use_cipher=use_cipher,
             auth_plugin=auth_plugin,
             cipher_plugin=cipher_plugin,
-            message_type=self.message_type_class.CREATE_URI,
+            message_type=self.message_type_class.CREATE_URI, # type: ignore
             content=data
         )
 
@@ -731,7 +753,7 @@ class UDPNode:
             use_cipher=use_cipher,
             auth_plugin=auth_plugin,
             cipher_plugin=cipher_plugin,
-            message_type=self.message_type_class.UPDATE_URI,
+            message_type=self.message_type_class.UPDATE_URI, # type: ignore
             content=data
         )
 
@@ -759,7 +781,7 @@ class UDPNode:
             use_cipher=use_cipher,
             auth_plugin=auth_plugin,
             cipher_plugin=cipher_plugin,
-            message_type=self.message_type_class.DELETE_URI
+            message_type=self.message_type_class.DELETE_URI # type: ignore
         )
 
     def set_timeout_handler(self, handler: TimeoutErrorHandler):
@@ -773,7 +795,7 @@ class UDPNode:
             timeout_type: str,
             server: tuple[str, int] | None,
             error: TimeoutError,
-            context: dict[str, Any]
+            context: TimeoutContext
     ):
         """Invoke the timeout error handler with sync/async handling."""
         if self.handle_timeout_error is None:
@@ -1037,10 +1059,6 @@ class UDPNode:
             set or if the message_type_class does not contain the
             'ADVERTISE_PEER' message type.
         """
-        # preconditions
-        assert self.local_peer is not None
-        assert self.message_type_class.ADVERTISE_PEER is not None
-
         # start the advertisement loop task
         self._advertise_peer_tasks[app_id] = asyncio.create_task(
             self._advertise_peer_loop(
@@ -1068,14 +1086,14 @@ class UDPNode:
                 self.peer_plugin.pack(self.local_peer),
                 app_id
             ),
-            self.message_type_class.ADVERTISE_PEER,
+            self.message_type_class.ADVERTISE_PEER, # type: ignore
         )
         disconnect_msg = self.message_class.prepare(
             self.body_class.prepare(
                 self.peer_plugin.pack(self.local_peer),
                 app_id
             ),
-            self.message_type_class.DISCONNECT
+            self.message_type_class.DISCONNECT # type: ignore
         )
         while True:
             try:
@@ -1128,15 +1146,12 @@ class UDPNode:
             'ADVERTISE_PEER', 'PEER_DISCOVERED', and 'DISCONNECT'
             message types.
         """
-        # preconditions
-        assert self.local_peer is not None
-        assert self.message_type_class.ADVERTISE_PEER is not None
-        assert self.message_type_class.PEER_DISCOVERED is not None
-        assert self.message_type_class.DISCONNECT is not None
-
         # create the handlers
         @self.on(
-            (self.message_type_class.ADVERTISE_PEER, app_id),
+            (
+                self.message_type_class.ADVERTISE_PEER, # type: ignore
+                app_id
+            ),
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
         def handle_advertise_peer(message: MessageProtocol, addr: tuple[str, int]):
@@ -1176,11 +1191,14 @@ class UDPNode:
                     self.peer_plugin.pack(self.local_peer),
                     app_id
                 ),
-                self.message_type_class.PEER_DISCOVERED
+                self.message_type_class.PEER_DISCOVERED # type: ignore
             )
 
         @self.on(
-            (self.message_type_class.PEER_DISCOVERED, app_id),
+            (
+                self.message_type_class.PEER_DISCOVERED, # type: ignore
+                app_id
+            ),
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
         def handle_peer_discovered(message: MessageProtocol, addr: tuple[str, int]):
@@ -1210,7 +1228,10 @@ class UDPNode:
             self.add_or_update_peer(peer.id, peer.data, addr)
 
         @self.on(
-            (self.message_type_class.DISCONNECT, app_id),
+            (
+                self.message_type_class.DISCONNECT, # type: ignore
+                app_id
+            ),
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
         def handle_disconnect(message: MessageProtocol, addr: tuple[str, int]):
@@ -1246,9 +1267,18 @@ class UDPNode:
         """Stop automatic peer management by stopping peer advertisement
             and removing the handlers.
         """
-        self.remove_handler((self.message_type_class.ADVERTISE_PEER, app_id))
-        self.remove_handler((self.message_type_class.PEER_DISCOVERED, app_id))
-        self.remove_handler((self.message_type_class.DISCONNECT, app_id))
+        self.remove_handler((
+            self.message_type_class.ADVERTISE_PEER, # type: ignore
+            app_id
+        ))
+        self.remove_handler((
+            self.message_type_class.PEER_DISCOVERED, # type: ignore
+            app_id
+        ))
+        self.remove_handler((
+            self.message_type_class.DISCONNECT, # type: ignore
+            app_id
+        ))
         await self.stop_peer_advertisement()
 
     async def stop(self):
