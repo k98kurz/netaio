@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from time import time
 from typing import (
+    cast,
     Hashable,
     Protocol,
     runtime_checkable,
@@ -13,6 +14,8 @@ from typing import (
     Awaitable,
     ClassVar,
     TypeVar,
+    TypedDict,
+    Sequence,
 )
 from zlib import crc32
 import asyncio
@@ -20,23 +23,6 @@ import logging
 import packify
 import socket
 import struct
-
-
-@runtime_checkable
-class MessageTypeClassProtocol(Protocol):
-    """Protocol for message type classes with standard attributes."""
-    REQUEST_URI: ClassVar[int]
-    RESPOND_URI: ClassVar[int]
-    CREATE_URI: ClassVar[int]
-    UPDATE_URI: ClassVar[int]
-    DELETE_URI: ClassVar[int]
-    OK: ClassVar[int]
-    ERROR: ClassVar[int]
-    AUTH_ERROR: ClassVar[int]
-    NOT_FOUND: ClassVar[int]
-    ADVERTISE_PEER: ClassVar[int]
-    PEER_DISCOVERED: ClassVar[int]
-    DISCONNECT: ClassVar[int]
 
 
 @runtime_checkable
@@ -83,7 +69,7 @@ class HeaderProtocol(Protocol):
     @classmethod
     def decode(
             cls, data: bytes,
-            message_type_factory: Callable[[int], IntEnum] | None = None
+            message_type_class: type[IntEnum] | None = None
         ) -> HeaderProtocol:
         """Decode the header from the data."""
         ...
@@ -222,7 +208,7 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def message_type_class(self) -> type[MessageTypeClassProtocol]:
+    def message_type_class(self) -> type[IntEnum]:
         """A class implementing this protocol must have a message_type_class
             property referencing the message type class to use for parsing
             received messages.
@@ -254,7 +240,10 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def handlers(self) -> dict[Hashable, tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
+    def handlers(self) -> dict[
+            Hashable,
+            tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+        ]:
         """A class implementing this protocol must have a handlers property
             referencing a dictionary of handler functions, keyed by a hashable
             object, that will be called when a message with the corresponding
@@ -263,7 +252,10 @@ class NetworkNodeProtocol(Protocol):
         ...
 
     @property
-    def ephemeral_handlers(self) -> dict[Hashable, tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]]:
+    def ephemeral_handlers(self) -> dict[
+            Hashable,
+            tuple[AnyHandler, AuthPluginProtocol|None, CipherPluginProtocol|None]
+        ]:
         """A class implementing this protocol must have an ephemeral_handlers
             property referencing a dictionary of one-time handler functions,
             keyed by a hashable object, that will be called when a message
@@ -408,11 +400,17 @@ class NetworkNodeProtocol(Protocol):
 
 
 class MessageType(IntEnum):
-    """Some default message types: REQUEST_URI, RESPOND_URI, CREATE_URI,
-        UPDATE_URI, DELETE_URI, SUBSCRIBE_URI, UNSUBSCRIBE_URI,
-        PUBLISH_URI, NOTIFY_URI, ADVERTISE_PEER, OK, CONFIRM_SUBSCRIBE,
-        CONFIRM_UNSUBSCRIBE, PEER_DISCOVERED, ERROR, AUTH_ERROR,
-        NOT_FOUND, DISCONNECT.
+    """Some default message types: `REQUEST_URI`, `RESPOND_URI`,
+        `CREATE_URI`, `UPDATE_URI`, `DELETE_URI`, `SUBSCRIBE_URI`,
+        `UNSUBSCRIBE_URI`, `PUBLISH_URI`, `NOTIFY_URI`, `ADVERTISE_PEER`,
+        `OK`, `CONFIRM_SUBSCRIBE`, `CONFIRM_UNSUBSCRIBE`,
+        `PEER_DISCOVERED`, `ERROR`, `AUTH_ERROR`, `NOT_FOUND`,
+        `DISCONNECT`.
+
+        To create a custom `IntEnum` for custom network protocols, use
+        the `make_message_type_class` function to create the type, or
+        use `validate_message_type_class` function to validate one made
+        with declarative syntax.
     """
     REQUEST_URI = 0
     RESPOND_URI = 1
@@ -433,6 +431,50 @@ class MessageType(IntEnum):
     NOT_FOUND = 24
     DISCONNECT = 30
 
+def make_message_type_class(
+        name: str, new_message_types: dict[str, int]
+    ) -> type[IntEnum]:
+    """Makes a valid `IntEnum` that is essentially a subclass of
+        MessageType, containing all the required default message types.
+        Raises `ValueError` if one of the `new_message_types` attempts
+        to overwrite a built-in message type for forward-compabitility
+        between uses of this library.
+    """
+    default_message_types = {m.name: m.value for m in MessageType}
+    for k in default_message_types:
+        if k in new_message_types:
+            raise ValueError(f'cannot overwrite default message type {k}')
+    return cast(
+        type[IntEnum],
+        IntEnum(name, {**default_message_types, **new_message_types})
+    )
+
+def validate_message_type_class(
+        message_type_class: type[IntEnum], *,
+        suppress_errors: bool = False
+    ) -> bool:
+    """Validates a message type class. Raises `ValueError` for missing
+        or redefined default message types or `TypeError` for a
+        non-`type[IntEnum]` if `suppress_errors` is not made `True`.
+        Returns `True` if it is valid and `False` otherwise.
+    """
+    mtcname = message_type_class.__name__
+    if not issubclass(message_type_class, IntEnum):
+        if suppress_errors: return False
+        raise TypeError(f'{mtcname} is not a subclass of IntEnum')
+    mtypes = {m.name: m.value for m in message_type_class}
+    for m in MessageType:
+        if m.name not in mtypes:
+            if suppress_errors: return False
+            raise ValueError(f'{mtcname} is missing required {m.name}')
+        if mtypes[m.name] != m.value:
+            if suppress_errors: return False
+            raise ValueError(
+                f'{mtcname} redefined required {m.name} from {m.value} to '
+                f'{mtypes[m.name]}'
+            )
+    return True
+
 
 @dataclass
 class Header:
@@ -441,7 +483,7 @@ class Header:
     auth_length: int
     body_length: int
     checksum: int
-    message_type_class = MessageType
+    message_type_class: type[IntEnum] = MessageType
 
     @staticmethod
     def header_length() -> int:
@@ -456,7 +498,7 @@ class Header:
     @classmethod
     def decode(
             cls, data: bytes,
-            message_type_factory: Callable[[int], IntEnum]|None = None
+            message_type_class: type[IntEnum] | None = None
         ) -> Header:
         """Decode the header from the data."""
         excess = False
@@ -476,11 +518,11 @@ class Header:
                 data
             )
 
-        if message_type_factory is None:
-            message_type_factory = cls.message_type_class
+        if message_type_class is None:
+            message_type_class = cls.message_type_class
 
         return cls(
-            message_type=message_type_factory(message_type),
+            message_type=message_type_class(message_type),
             auth_length=auth_length,
             body_length=body_length,
             checksum=checksum
@@ -577,14 +619,14 @@ class Message:
     @classmethod
     def decode(
             cls, data: bytes,
-            message_type_factory: Callable[[int], IntEnum]|None = None
+            message_type_class: type[IntEnum] | None = None
         ) -> Message:
         """Decode the message from the data. Raises ValueError if the
             checksum does not match.
         """
         header_data = data[:Header.header_length()]
         data = data[Header.header_length():]
-        header = Header.decode(header_data, message_type_factory)
+        header = Header.decode(header_data, message_type_class)
         auth_data = AuthFields.decode(data[:header.auth_length])
         body = Body.decode(data[header.auth_length:])
 
@@ -796,12 +838,28 @@ class PeerPluginProtocol(Protocol):
         ...
 
 
-Handler = Callable[[MessageProtocol, asyncio.StreamWriter], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
-UDPHandler = Callable[[MessageProtocol, tuple[str, int]], MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]]
+class TimeoutContext(TypedDict):
+    uri: bytes
+    timeout: float
+    server: tuple[str, int]
+    keys: Sequence[Hashable]
+
+
+Handler = Callable[
+    [MessageProtocol, asyncio.StreamWriter],
+    MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]
+]
+UDPHandler = Callable[
+    [MessageProtocol, tuple[str, int]],
+    MessageProtocol | None | Coroutine[Any, Any, MessageProtocol | None]
+]
 AnyHandler = Handler | UDPHandler
-AuthErrorHandler = Callable[[NetworkNodeProtocol, AuthPluginProtocol, MessageProtocol|None], MessageProtocol|None]
+AuthErrorHandler = Callable[
+    [NetworkNodeProtocol, AuthPluginProtocol, MessageProtocol|None],
+    MessageProtocol|None
+]
 TimeoutErrorHandler = Callable[
-    [NetworkNodeProtocol, str, tuple[str, int] | None, TimeoutError, dict[str, Any]],
+    [NetworkNodeProtocol, str, tuple[str, int] | None, TimeoutError, TimeoutContext],
     Awaitable[None] | None
 ]
 
@@ -852,20 +910,17 @@ def keys_extractor(
 
 def make_error_response(
         msg: str,
-        message_class: type[Any] = Message,
-        message_type_class: type[Any] = MessageType,
+        message_class: type[MessageProtocol] = Message,
+        message_type_class: type[IntEnum] = MessageType,
         body_class: type[Any] = Body
     ) -> MessageProtocol:
     """Make an error response message."""
     if "not found" in msg:
-        assert 'NOT_FOUND' in dir(message_type_class)
-        message_type = message_type_class.NOT_FOUND
+        message_type = message_type_class.NOT_FOUND # type: ignore
     elif "auth" in msg:
-        assert 'AUTH_ERROR' in dir(message_type_class)
-        message_type = message_type_class.AUTH_ERROR
+        message_type = message_type_class.AUTH_ERROR # type: ignore
     else:
-        assert 'ERROR' in dir(message_type_class)
-        message_type = message_type_class.ERROR
+        message_type = message_type_class.ERROR # type: ignore
 
     body = body_class.prepare(
         content=msg.encode(),

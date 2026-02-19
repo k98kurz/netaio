@@ -93,7 +93,7 @@ class HMACAuthPlugin:
     def error(
             self,
             message_class: type[Any] = Message,
-            message_type_class: type[Any] = MessageType,
+            message_type_class: type[IntEnum] = MessageType,
             header_class: type[HeaderProtocol] = Header,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body

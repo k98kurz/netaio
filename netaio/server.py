@@ -4,7 +4,7 @@ from .common import (
     Body,
     Message,
     MessageType,
-    MessageTypeClassProtocol,
+    validate_message_type_class,
     HeaderProtocol,
     AuthFieldsProtocol,
     BodyProtocol,
@@ -49,7 +49,7 @@ class TCPServer:
     ]
     default_handler: AnyHandler
     header_class: type[HeaderProtocol]
-    message_type_class: type[Any]
+    message_type_class: type[IntEnum]
     auth_fields_class: type[AuthFieldsProtocol]
     body_class: type[BodyProtocol]
     message_class: type[MessageProtocol]
@@ -68,11 +68,11 @@ class TCPServer:
     def __init__(
             self, port: int = 8888, interface: str = "0.0.0.0", *,
             local_peer: Peer | None = None,
-            header_class: type[HeaderProtocol] = Header,
-            message_type_class: type[Any] = MessageType,
+            header_class: type[HeaderProtocol] | None = None,
+            message_type_class: type[IntEnum] = MessageType,
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body,
-            message_class: type[MessageProtocol] = Message,
+            message_class: type[MessageProtocol] | None = None,
             keys_extractor: Callable[
                 [MessageProtocol, tuple[str, int] | None],
                 list[Hashable]
@@ -128,11 +128,12 @@ class TCPServer:
         self.ephemeral_handlers = {}
         self.subscriptions = {}
         self.clients = set()
-        self.header_class = header_class
+        self.header_class = header_class or Header
+        validate_message_type_class(message_type_class)
         self.message_type_class = message_type_class
         self.auth_fields_class = auth_fields_class
         self.body_class = body_class
-        self.message_class = message_class
+        self.message_class = message_class or Message
         self.extract_keys = keys_extractor
         self.make_error = make_error_response
         self.default_handler = default_handler
@@ -314,18 +315,18 @@ class TCPServer:
         auth_plugin = None
         cipher_plugin = None
         header_bytes = await reader.readexactly(header_length)
-        header: HeaderProtocol = self.header_class.decode(
+        header = self.header_class.decode(
             header_bytes,
-            message_type_factory=self.message_type_class
+            message_type_class=self.message_type_class
         )
 
         auth_bytes = await reader.readexactly(header.auth_length)
-        auth: AuthFieldsProtocol = self.auth_fields_class.decode(auth_bytes)
+        auth = self.auth_fields_class.decode(auth_bytes)
 
         body_bytes = await reader.readexactly(header.body_length)
-        body: BodyProtocol = self.body_class.decode(body_bytes)
+        body = self.body_class.decode(body_bytes)
 
-        message: MessageProtocol = self.message_class(
+        message = self.message_class(
             header=header,
             auth_data=auth,
             body=body
@@ -334,13 +335,14 @@ class TCPServer:
             "Received message with checksum=%s from %s",
             message.header.checksum, addr
         )
+        response: MessageProtocol | None = None
 
         if not message.check():
             self.logger.debug(
                 "Invalid message received from %s",
                 addr
             )
-            response: MessageProtocol | None = self.make_error("invalid message")
+            response = self.make_error("invalid message")
         else:
             # outer auth
             if use_auth and self.auth_plugin is not None:
@@ -440,10 +442,11 @@ class TCPServer:
 
                     self.logger.debug("Calling handler for key=%s", key)
                     tcp_handler = cast(Handler, handler)
-                    response_or_coro: MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None = tcp_handler(message, writer)
+                    response_or_coro = tcp_handler(message, writer)
                     if isinstance(response_or_coro, Coroutine):
                         response_or_coro = await response_or_coro
-                    response = response_or_coro if isinstance(response_or_coro, MessageProtocol) else None
+                    response = response_or_coro if \
+                        isinstance(response_or_coro, MessageProtocol) else None
                     break
             else:
                 self.logger.warning(
@@ -451,10 +454,11 @@ class TCPServer:
                     keys
                 )
                 tcp_default_handler = cast(Handler, self.default_handler)
-                default_response_or_coro: MessageProtocol | Coroutine[Any, Any, MessageProtocol | None] | None = tcp_default_handler(message, writer)
+                default_response_or_coro = tcp_default_handler(message, writer)
                 if isinstance(default_response_or_coro, Coroutine):
                     default_response_or_coro = await default_response_or_coro
-                response = default_response_or_coro if isinstance(default_response_or_coro, MessageProtocol) else None
+                response = default_response_or_coro if \
+                    isinstance(default_response_or_coro, MessageProtocol) else None
 
         if response is not None:
             # inner cipher
@@ -589,8 +593,9 @@ class TCPServer:
 
     async def send(
             self, client: asyncio.StreamWriter, message: MessageProtocol, *,
-            collection: set[Any] | None = None, use_auth: bool = True,
-            use_cipher: bool = True, auth_plugin: AuthPluginProtocol|None = None,
+            collection: set[asyncio.StreamWriter] | None = None,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Helper coroutine to send a message to a client. On error, it
@@ -683,7 +688,7 @@ class TCPServer:
             ]
         else:
             # optimize for non-peer-specific plugins by doing all calculations once
-            prepared_msg: MessageProtocol | None = self.prepare_message(
+            prepared_msg = self.prepare_message(
                 message, use_auth=use_auth, use_cipher=use_cipher,
                 auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
             )
@@ -782,15 +787,12 @@ class TCPServer:
             message_type_class does not contain 'ADVERTISE_PEER',
             'PEER_DISCOVERED', and 'DISCONNECT' message types.
         """
-        # preconditions
-        assert self.local_peer is not None
-        assert hasattr(self.message_type_class, 'ADVERTISE_PEER')
-        assert hasattr(self.message_type_class, 'PEER_DISCOVERED')
-        assert hasattr(self.message_type_class, 'DISCONNECT')
-
         # create the handlers
         @self.on(
-            (self.message_type_class.ADVERTISE_PEER, app_id),
+            (
+                self.message_type_class.ADVERTISE_PEER, # type: ignore
+                app_id
+            ),
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
         def handle_advertise_peer(
@@ -833,11 +835,14 @@ class TCPServer:
                     self.peer_plugin.pack(self.local_peer),
                     app_id
                 ),
-                self.message_type_class.PEER_DISCOVERED
+                self.message_type_class.PEER_DISCOVERED # type: ignore
             )
 
         @self.on(
-            (self.message_type_class.PEER_DISCOVERED, app_id),
+            (
+                self.message_type_class.PEER_DISCOVERED, # type: ignore
+                app_id
+            ),
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
         def handle_peer_discovered(
@@ -870,7 +875,10 @@ class TCPServer:
             self.add_or_update_peer(peer.id, peer.data, addr)
 
         @self.on(
-            (self.message_type_class.DISCONNECT, app_id),
+            (
+                self.message_type_class.DISCONNECT, # type: ignore
+                app_id
+            ),
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
         def handle_disconnect(message: MessageProtocol, writer: asyncio.StreamWriter):
@@ -900,9 +908,15 @@ class TCPServer:
 
     async def stop_peer_management(self, app_id: bytes = b'netaio'):
         """Stops automatic peer management by removing the handlers."""
-        self.remove_handler((self.message_type_class.ADVERTISE_PEER, app_id))
-        self.remove_handler((self.message_type_class.PEER_DISCOVERED, app_id))
-        self.remove_handler((self.message_type_class.DISCONNECT, app_id))
+        self.remove_handler(
+            (self.message_type_class.ADVERTISE_PEER, app_id) # type: ignore
+        )
+        self.remove_handler(
+            (self.message_type_class.PEER_DISCOVERED, app_id) # type: ignore
+        )
+        self.remove_handler(
+            (self.message_type_class.DISCONNECT, app_id) # type: ignore
+        )
 
     def set_logger(self, logger: logging.Logger):
         """Replace the current logger."""

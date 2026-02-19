@@ -26,18 +26,19 @@ class TestMisc(unittest.TestCase):
         assert decoded.message_type is TestMessageType.TEST
 
     def test_message_type_class_injection(self):
-        class TestMessageType(IntEnum):
-            TEST = 100
-
-        netaio.Header.message_type_class = TestMessageType
+        TestMessageType = netaio.make_message_type_class(
+            "TestMessageType",
+            {"TEST": 100}
+        )
         header = netaio.Header(
             message_type=TestMessageType.TEST,
             auth_length=0,
             body_length=0,
-            checksum=0
+            checksum=0,
+            message_type_class=TestMessageType,
         )
         data = header.encode()
-        decoded = netaio.Header.decode(data, message_type_factory=TestMessageType)
+        decoded = netaio.Header.decode(data, message_type_class=TestMessageType)
         assert decoded.message_type is TestMessageType.TEST
 
     def test_Message_encoding_decoding_and_copying(self):
