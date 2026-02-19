@@ -2,9 +2,7 @@ from hashlib import sha256
 from os import urandom
 from struct import pack, unpack
 
-
 IV_SIZE = 16
-
 
 def xor(b1: bytes, b2: bytes) -> bytes:
     """XOR two equal-length byte strings together."""
@@ -13,18 +11,24 @@ def xor(b1: bytes, b2: bytes) -> bytes:
         b3.append(b1[i] ^ b2[i])
     return bytes(b3)
 
+def derive_key(*parts: bytes) -> bytes:
+    """Derives a one-time key from parts."""
+    pad = b''.join([sha256(p).digest() for p in parts])
+    return sha256(pad).digest()
+
 def keystream(key: bytes, iv: bytes, length: int, start: int = 0) -> bytes:
     """Get a keystream of bytes. If start is specified, it will skip
       that many bytes; if it is a multiple of 32, it will skip those
       hashes.
     """
+    key = derive_key(key, iv, b'enc')
     data = b''
     counter = 0
     if start // 32 > 0:
         counter = start // 32
         start -= 32 * counter
     while len(data) < length + start:
-        data += sha256(iv+key+counter.to_bytes(4, 'big')).digest()
+        data += sha256(key+counter.to_bytes(4, 'big')).digest()
         counter += 1
     data = data[start:]
     return data[:length]
@@ -45,32 +49,29 @@ def decrypt(key: bytes, iv: bytes, ct: bytes) -> bytes:
     """Decrypt the iv+ciphertext. Return the plaintext."""
     return symcrypt(key, iv, ct)
 
-
-def hmac(key: bytes, message: bytes) -> bytes:
+def hmac(key: bytes, iv: bytes, message: bytes) -> bytes:
     """Create an hmac according to rfc 2104 specifications."""
     # set up variables
-    B, L = 136 , len(message)
-    L = L if L < 32 else 32
-    ipad_byte = bytes.fromhex('36')
-    opad_byte = bytes.fromhex('5c')
-    null_byte = bytes.fromhex('00')
-    ipad = b''.join([ipad_byte for i in range(B)])
-    opad = b''.join([opad_byte for i in range(B)])
+    B = 136
+    ipad_byte = 0x36
+    opad_byte = 0x5c
+    null_byte = 0x00
+    ipad = bytes([ipad_byte] * B)
+    opad = bytes([opad_byte] * B)
 
-    # if key length is greater than digest length, hash it first
-    key = key if len(key) <= L else sha256(key).digest()
+    key = derive_key(key, iv, b'mac')
 
-    # if key length is less than block length, pad it with null bytes
-    key = key + b''.join(null_byte for _ in range(B - len(key)))
+    # pad key with null bytes
+    key = key + bytes([null_byte] * (B - len(key)))
 
     # compute and return the hmac
     partial = sha256(xor(key, ipad) + message).digest()
     return sha256(xor(key, opad) + partial).digest()
 
-def check_hmac(key: bytes, message: bytes, mac: bytes) -> bool:
-    """Check an hmac. Timing-attack safe implementation."""
+def check_hmac(key: bytes, iv: bytes, message: bytes, mac: bytes) -> bool:
+    """Check an hmac."""
     # first compute the proper hmac
-    computed = hmac(key, message)
+    computed = hmac(key, iv, message)
 
     # if it is the wrong length, reject
     if len(mac) != len(computed):
@@ -83,13 +84,13 @@ def check_hmac(key: bytes, message: bytes, mac: bytes) -> bool:
 
     return diff == 0
 
-def seal(key: bytes, plaintext: bytes, iv: bytes | None = None) -> bytes:
+def seal(key: bytes, plaintext: bytes) -> bytes:
     """Generate an iv, encrypt a message, and create an hmac all in one."""
-    iv, ct = encrypt(key, plaintext, iv)
+    iv, ct = encrypt(key, plaintext)
     return pack(
         f'{IV_SIZE}s32s{len(ct)}s',
         iv,
-        hmac(key, ct),
+        hmac(key, iv, ct),
         ct
     )
 
@@ -97,7 +98,7 @@ def unseal(key: bytes, ciphergram: bytes) -> bytes:
     """Checks hmac, then decrypts the message."""
     iv, ac, ct = unpack(f'{IV_SIZE}s32s{len(ciphergram)-32-IV_SIZE}s', ciphergram)
 
-    if not check_hmac(key, ct, ac):
+    if not check_hmac(key, iv, ct, ac):
         raise Exception('HMAC authentication failed')
 
     return decrypt(key, iv, ct)
