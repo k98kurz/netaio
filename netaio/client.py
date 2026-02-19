@@ -34,11 +34,11 @@ import logging
 
 class TCPClient:
     """TCP client class with multi-server connection support. A single
-    TCPClient can connect to multiple servers simultaneously. Each server
-    connection has its own receive loop that can be started and stopped
-    independently. Use `connect()` to establish connections,
-    `start_receive_loop()` to begin receiving from a server, and `close()`
-    to disconnect.
+        TCPClient can connect to multiple servers simultaneously. Each
+        server connection has its own receive loop that can be started
+        and stopped independently. Use `connect()` to establish
+        connections, `start_receive_loop()` to begin receiving from a
+        server, and `close()` to disconnect.
     """
     hosts: dict[tuple[str, int], tuple[asyncio.StreamReader, asyncio.StreamWriter]]
     default_host: tuple[str, int]
