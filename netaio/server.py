@@ -630,6 +630,63 @@ class TCPServer:
                 self.logger.info("Removing client %s from collection", addr)
                 collection.discard(client)
 
+    async def broadcast(
+            self, message: MessageProtocol, *,
+            use_auth: bool = True, use_cipher: bool = True,
+            auth_plugin: AuthPluginProtocol|None = None,
+            cipher_plugin: CipherPluginProtocol|None = None
+        ):
+        """Send the message to all connected clients concurrently using
+            asyncio.gather. If an auth plugin is provided, it will be
+            used to authorize the message in addition to any auth plugin
+            that is set on the server. If a cipher plugin is provided,
+            it will be used to encrypt the message in addition to any
+            cipher plugin that is set on the server. If use_auth is
+            False, the auth plugin set on the server will not be used. If
+            use_cipher is False, the cipher plugin set on the
+            server will not be used.
+        """
+        self.logger.debug("Broadcasting message to all clients")
+
+        # check if any plugin is peer-specific
+        peer_specific = False
+        if use_auth and self.auth_plugin and self.auth_plugin.is_peer_specific():
+            peer_specific = True
+        if use_cipher and self.cipher_plugin and self.cipher_plugin.is_peer_specific():
+            peer_specific = True
+        if auth_plugin and auth_plugin.is_peer_specific():
+            peer_specific = True
+        if cipher_plugin and cipher_plugin.is_peer_specific():
+            peer_specific = True
+
+        if peer_specific:
+            # for peer-specific plugins, send unique message to each client
+            tasks = [
+                self.send(
+                    client, message.copy(), collection=self.clients,
+                    use_auth=use_auth, use_cipher=use_cipher,
+                    auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
+                )
+                for client in self.clients
+            ]
+        else:
+            # optimize for non-peer-specific plugins by doing all calculations once
+            message = self.prepare_message(
+                message, use_auth=use_auth, use_cipher=use_cipher,
+                auth_plugin=auth_plugin, cipher_plugin=cipher_plugin,
+            ) # type: ignore
+            if not message:
+                return
+            # create coroutines
+            tasks = [
+                self.send(
+                    client, message, collection=self.clients,
+                    use_auth=False, use_cipher=False,
+                )
+                for client in self.clients
+            ]
+        await asyncio.gather(*tasks, return_exceptions=True)
+
     async def notify(
             self, key: Hashable, message: MessageProtocol, *,
             use_auth: bool = True,  use_cipher: bool = True,
