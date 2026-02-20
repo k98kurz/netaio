@@ -149,9 +149,9 @@ class TCPServer:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Register a handler for a specific key. The handler must
-            accept a MessageProtocol object as an argument and return a
-            MessageProtocol, None, or a Coroutine that resolves to
-            MessageProtocol | None. If an auth plugin is provided, it
+            accept a `MessageProtocol` object as an argument and return a
+            `MessageProtocol`, `None`, or a `Coroutine` that resolves to
+            `MessageProtocol | None`. If an auth plugin is provided, it
             will be used to check the message in addition to any auth
             plugin that is set on the server. If a cipher plugin is
             provided, it will be used to decrypt the message in addition
@@ -180,9 +180,9 @@ class TCPServer:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a handler for a specific key. The
-            handler must accept a MessageProtocol object as an argument
-            and return a MessageProtocol, None, or a Coroutine that
-            resolves to a MessageProtocol or None. If an auth plugin is
+            handler must accept a `MessageProtocol` object as an argument
+            and return a `MessageProtocol`, `None`, or a `Coroutine` that
+            resolves to a `MessageProtocol | None`. If an auth plugin is
             provided, it will be used to check the message in addition
             to any auth plugin that is set on the server. If a cipher
             plugin is provided, it will be used to decrypt the message in
@@ -203,15 +203,15 @@ class TCPServer:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a one-time handler for a specific key.
-            The handler must accept a MessageProtocol object as an
-            argument and return a MessageProtocol, None, or a Coroutine
-            that resolves to a MessageProtocol or None. If an auth
-            plugin is provided, it will be used to check the message in
-            addition to any auth plugin that is set on the server. If a
-            cipher plugin is provided, it will be used to decrypt the
-            message in addition to any cipher plugin that is set on the
-            server. These plugins will also be used for preparing any
-            response message sent by the handler.
+            The handler must accept a `MessageProtocol` object as an
+            argument and return a `MessageProtocol`, `None`, or a
+            `Coroutine` that resolves to a `MessageProtocol | None`. If
+            an auth plugin is provided, it will be used to check the
+            message in addition to any auth plugin that is set on the
+            server. If a cipher plugin is provided, it will be used to
+            decrypt the message in addition to any cipher plugin that is
+            set on the server. These plugins will also be used for
+            preparing any response message sent by the handler.
         """
         def decorator(func: AnyHandler):
             self.add_ephemeral_handler(
@@ -262,9 +262,9 @@ class TCPServer:
             added to the clients set. The client is then read from using
             the receive method coroutine until the connection is lost.
             The receive method calls the proper handlers if they are
-            defined and the message is valid. If use_auth is False, the
-            auth plugin set on the server will not be used. If
-            use_cipher is False, the cipher plugin set on the server
+            defined and the message is valid. If `use_auth` is `False`,
+            the auth plugin set on the server will not be used. If
+            `use_cipher` is `False`, the cipher plugin set on the server
             will not be used.
         """
         addr = writer.get_extra_info("peername")
@@ -300,11 +300,11 @@ class TCPServer:
             use_auth: bool = True, use_cipher: bool = True,
         ):
         """Receive and process a message from a client. Used by the
-            handle_client coroutine. Calls the proper handlers if they
-            are defined and the message is valid. If use_auth is False,
-            the auth plugin set on the server will not be used. If
-            use_cipher is False, the cipher plugin set on the server
-            will not be used.
+            `handle_client` coroutine. Calls the proper handlers if they
+            are defined and the message is valid. If `use_auth` is
+            `False`, the auth plugin set on the server will not be used.
+            If `use_cipher` is `False`, the cipher plugin set on the
+            server will not be used.
         """
         addr = writer.get_extra_info("peername")
         self.logger.info("Client connected from %s", addr)
@@ -520,6 +520,7 @@ class TCPServer:
             raise
 
     async def stop(self):
+        """Stops the server."""
         self.server.close()
         await self.server.wait_closed()
 
@@ -604,9 +605,9 @@ class TCPServer:
             to authorize the message in addition to any auth plugin that
             is set on the server. If a cipher plugin is provided, it
             will be used to encrypt the message in addition to any
-            cipher plugin that is set on the server. If use_auth is
-            False, the auth plugin set on the server will not be used.
-            If use_cipher is False, the cipher plugin set on the
+            cipher plugin that is set on the server. If `use_auth` is
+            `False`, the auth plugin set on the server will not be used.
+            If `use_cipher` is `False`, the cipher plugin set on the
             server will not be used.
         """
         addr = client.get_extra_info("peername")
@@ -637,13 +638,13 @@ class TCPServer:
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Send the message to all connected clients concurrently using
-            asyncio.gather. If an auth plugin is provided, it will be
+            `asyncio.gather`. If an auth plugin is provided, it will be
             used to authorize the message in addition to any auth plugin
             that is set on the server. If a cipher plugin is provided,
             it will be used to encrypt the message in addition to any
-            cipher plugin that is set on the server. If use_auth is
-            False, the auth plugin set on the server will not be used. If
-            use_cipher is False, the cipher plugin set on the
+            cipher plugin that is set on the server. If `use_auth` is
+            `False`, the auth plugin set on the server will not be used.
+            If `use_cipher` is `False`, the cipher plugin set on the
             server will not be used.
         """
         if len(self.clients) == 0:
@@ -697,13 +698,13 @@ class TCPServer:
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Send the message to all subscribed clients for the given key
-            concurrently using asyncio.gather. If an auth plugin is
+            concurrently using `asyncio.gather`. If an auth plugin is
             provided, it will be used to authorize the message in
             addition to any auth plugin that is set on the server. If a
             cipher plugin is provided, it will be used to encrypt the
             message in addition to any cipher plugin that is set on
-            the server. If use_auth is False, the auth plugin set on the
-            server will not be used. If use_cipher is False, the
+            the server. If `use_auth` is `False`, the auth plugin set on
+            the server will not be used. If `use_cipher` is `False`, the
             cipher plugin set on the server will not be used.
         """
         if key not in self.subscriptions:
@@ -770,8 +771,8 @@ class TCPServer:
         ) -> bool:
         """Add or update a peer in the peer list. If the peer is the
             local peer, it will not be added to the peer list. Returns
-            True if a PEER_DISCOVERED message should be sent (False if
-            it is the local peer).
+            `True` if a `PEER_DISCOVERED` message should be sent (`False`
+            if it is the local peer).
         """
         if self.local_peer is not None and peer_id == self.local_peer.id:
             self.logger.debug("Ignoring local peer.")
@@ -795,9 +796,10 @@ class TCPServer:
     def get_peer(
             self, addr: tuple[str, int]|None = None, peer_id: bytes|None = None
         ) -> Peer|None:
-        """Get a peer from the peer list if addr or peer_id is provided
-            and if it exists. Prefers peer_id if both are provided but
-            will fall back to addr if the provided peer_id is not found.
+        """Get a peer from the peer list if `addr` or `peer_id` is
+            provided and if it exists. Prefers `peer_id` if both are
+            provided but will fall back to `addr` if the provided
+            `peer_id` is not found.
         """
         peer = None
         if peer_id is not None:
@@ -831,20 +833,26 @@ class TCPServer:
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Begins automatic peer management. This registers 3 handlers:
-            1) for the 'ADVERTISE_PEER' message, which will add the peer
-            to the peer list and send a 'PEER_DISCOVERED' message to
-            reciprocate; 2) for the 'PEER_DISCOVERED' message type which
+            1) for the `ADVERTISE_PEER` message, which will add the peer
+            to the peer list and send a `PEER_DISCOVERED` message to
+            reciprocate; 2) for the `PEER_DISCOVERED` message type which
             will add the peer to the peer list; and 3) for the
-            'DISCONNECT' message which will remove the peer from the
-            local peer list. Then, it will send an 'ADVERTISE_PEER'
+            `DISCONNECT` message which will remove the peer from the
+            local peer list. Then, it will send an `ADVERTISE_PEER`
             message to each client that has already connected to it. For
             new connections, the client is expected to introduce itself
             before the server responds with its peer data; it will not
-            send an 'ADVERTISE_PEER' message to newly connected clients.
-            Raises AssertionError if `local_peer` is not set or if the
-            message_type_class does not contain 'ADVERTISE_PEER',
-            'PEER_DISCOVERED', and 'DISCONNECT' message types.
+            send an `ADVERTISE_PEER` message to newly connected clients.
+            Raises `AssertionError` if `local_peer` is not set or if the
+            `message_type_class` does not contain `ADVERTISE_PEER`,
+            `PEER_DISCOVERED`, and `DISCONNECT` message types.
         """
+        # preconditions
+        assert self.local_peer is not None
+        assert hasattr(self.message_type_class, 'ADVERTISE_PEER')
+        assert hasattr(self.message_type_class, 'PEER_DISCOVERED')
+        assert hasattr(self.message_type_class, 'DISCONNECT')
+
         # create the handlers
         @self.on(
             (

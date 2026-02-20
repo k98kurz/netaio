@@ -125,10 +125,10 @@ class TCPClient:
             auth plugin is an anti-spam plugin and messages that fail
             the auth check should just be dropped).
             `timeout_error_handler` is a function that handles timeout
-            errors. It is called with (self, timeout_type, server, error,
-            context) and can perform recovery actions like reconnecting
-            or logging. The TimeoutError is always raised after the
-            handler completes.
+            errors. It is called with (`self`, `timeout_type`, `server`,
+            `error`, `context`) and can perform recovery actions like
+            reconnecting or logging. The `TimeoutError` is always raised
+            after the handler completes.
         """
         self.hosts = {}
         self.default_host = (host, port)
@@ -166,9 +166,9 @@ class TCPClient:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Register a handler for a specific key. The handler must
-            accept a MessageProtocol object as an argument and return
-            MessageProtocol, None, or a Coroutine that resolves to
-            MessageProtocol | None. If an auth plugin is provided, it
+            accept a `MessageProtocol` object as an argument and return
+            `MessageProtocol`, `None`, or a `Coroutine` that resolves to
+            `MessageProtocol | None`. If an auth plugin is provided, it
             will be used to check the message in addition to any auth
             plugin that is set on the client. If a cipher plugin is
             provided, it will be used to decrypt the message in addition
@@ -196,9 +196,9 @@ class TCPClient:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a handler for a specific key. The
-            handler must accept a MessageProtocol object as an argument
-            and return a MessageProtocol, None, or a Coroutine that
-            resolves to a MessageProtocol or None. If an auth plugin is
+            handler must accept a `MessageProtocol` object as an argument
+            and return a `MessageProtocol`, `None`, or a `Coroutine` that
+            resolves to a `MessageProtocol | None`. If an auth plugin is
             provided, it will be used to check the message in addition
             to any auth plugin that is set on the client. If a cipher
             plugin is provided, it will be used to decrypt the message
@@ -218,14 +218,14 @@ class TCPClient:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a one-time handler for a specific key.
-            The handler must accept a MessageProtocol object as an
-            argument and return a MessageProtocol, None, or a Coroutine
-            that resolves to a MessageProtocol or None. If an auth
-            plugin is provided, it will be used to check the message in
-            addition to any auth plugin that is set on the client. If a
-            cipher plugin is provided, it will be used to decrypt the
-            message in addition to any cipher plugin that is set on the
-            client.
+            The handler must accept a `MessageProtocol` object as an
+            argument and return a `MessageProtocol`, `None`, or a
+            `Coroutine` that resolves to a `MessageProtocol | None`. If
+            an auth plugin is provided, it will be used to check the
+            message in addition to any auth plugin that is set on the
+            client. If a cipher plugin is provided, it will be used to
+            decrypt the message in addition to any cipher plugin that is
+            set on the client.
         """
         def decorator(func: AnyHandler):
             self.add_ephemeral_handler(
@@ -247,12 +247,10 @@ class TCPClient:
             del self.ephemeral_handlers[key]
 
     async def connect(self, host: str | None = None, port: int | None = None):
-        """Connect to a server.
-
-            Establishes a TCP connection to specified host and port. The
-            connection is stored in the hosts dict. To receive messages from
-            this server, start a receive loop via `start_receive_loop()`.
-            Multiple servers can be connected to simultaneously.
+        """Connect to a server. The connection is stored in the hosts
+            dict. To receive messages from this server, start a receive
+            loop via `start_receive_loop()`. Multiple servers can be
+            connected to simultaneously.
         """
         host = host or self.default_host[0]
         port = port or self.default_host[1]
@@ -269,15 +267,15 @@ class TCPClient:
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ):
-        """Send a message to the server. If use_auth is True and an auth
-            plugin is set, it will be called to set the auth fields on
-            the message. If an auth plugin is provided, it will be used
-            to authorize the message in addition to any auth plugin that
-            is set on the client. If a cipher plugin is provided, it
+        """Send a message to the server. If `use_auth` is `True` and an
+            auth plugin is set, it will be called to set the auth fields
+            on the message. If an auth plugin is provided, it will be
+            used to authorize the message in addition to any auth plugin
+            that is set on the client. If a cipher plugin is provided, it
             will be used to encrypt the message in addition to any
-            cipher plugin that is set on the client. If use_auth is
-            False, the auth plugin set on the client will not be used.
-            If use_cipher is False, the cipher plugin set on the
+            cipher plugin that is set on the client. If `use_auth` is
+            `False`, the auth plugin set on the client will not be used.
+            If `use_cipher` is `False`, the cipher plugin set on the
             client will not be used.
         """
         server = server or self.default_host
@@ -340,17 +338,17 @@ class TCPClient:
             message_type: int|None = None,
             content: bytes = b'',
         ) -> MessageProtocol:
-        """Send a request message and wait for a response.
-            Sets ephemeral handlers for OK, RESPOND_URI, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types, then sends a message to the connected server.
-            Waits until a response (success or error) is received or timeout is
-            reached. If it times out, removes all ephemeral handlers and raises
-            a TimeoutError. If a response is received, returns that message
-            (caller should check message.header.message_type to determine success
-            or error).
-
-            When message_type is None (default), sends REQUEST_URI. Use message_type
-            and content to send CREATE_URI, UPDATE_URI, or DELETE_URI messages.
+        """Send a request message and wait for a response. Sets ephemeral
+            handlers for `OK`, `RESPOND_URI`, `AUTH_ERROR`, `ERROR`, and
+            `NOT_FOUND` message types, then sends a message to the
+            connected server. Waits until a response (success or error)
+            is received or timeout is reached. If it times out, removes
+            all ephemeral handlers and raises a `TimeoutError`. If a
+            response is received, returns that message (caller should
+            check `message.header.message_type` to determine success or
+            error). When `message_type` is `None` (default), sends
+            `REQUEST_URI`. Use `message_type` and content to send
+            `CREATE_URI`, `UPDATE_URI`, or `DELETE_URI` messages.
         """
         result = []
         event = asyncio.Event()
@@ -472,15 +470,16 @@ class TCPClient:
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Send a CREATE_URI message and wait for an OK response.
-            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types using `add_ephemeral_handler`, then
-            sends a CREATE_URI message to the connected server. Waits until
-            either a response (success or error) is received or timeout is
-            reached. If it times out, removes all ephemeral handlers and
-            raises a TimeoutError. If a response is received, returns that
-            message (caller should check message.header.message_type to
-            determine if it's a success or error response).
+        """Send a `CREATE_URI` message and wait for an OK response.
+            Sets ephemeral handlers for `OK`, `AUTH_ERROR`, `ERROR`, and
+            `NOT_FOUND` message types using `add_ephemeral_handler`, then
+            sends a `CREATE_URI` message to the connected server. Waits
+            until either a response (success or error) is received or
+            timeout is reached. If it times out, removes all ephemeral
+            handlers and raises a `TimeoutError`. If a response is
+            received, returns that message (caller should check
+            `message.header.message_type` to determine if it's a success
+            or error response).
         """
         return await self.request(
             uri=uri,
@@ -502,15 +501,16 @@ class TCPClient:
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Send an UPDATE_URI message and wait for an OK response.
-            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types using `add_ephemeral_handler`, then
-            sends an UPDATE_URI message to the connected server. Waits until
-            either a response (success or error) is received or timeout is
-            reached. If it times out, removes all ephemeral handlers and
-            raises a TimeoutError. If a response is received, returns that
-            message (caller should check message.header.message_type to
-            determine if it's a success or error response).
+        """Send an `UPDATE_URI` message and wait for an `OK` response.
+            Sets ephemeral handlers for `OK`, `AUTH_ERROR`, `ERROR`, and
+            `NOT_FOUND` message types using `add_ephemeral_handler`, then
+            sends an `UPDATE_URI` message to the connected server. Waits
+            until either a response (success or error) is received or
+            timeout is reached. If it times out, removes all ephemeral
+            handlers and raises a `TimeoutError`. If a response is
+            received, returns that message (caller should check
+            `message.header.message_type` to determine if it's a success
+            or error response).
         """
         return await self.request(
             uri=uri,
@@ -532,15 +532,16 @@ class TCPClient:
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Send a DELETE_URI message and wait for an OK response.
-            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types using `add_ephemeral_handler`, then
-            sends a DELETE_URI message to the connected server. Waits until
-            either a response (success or error) is received or timeout is
-            reached. If it times out, removes all ephemeral handlers and
-            raises a TimeoutError. If a response is received, returns that
-            message (caller should check message.header.message_type to
-            determine if it's a success or error response).
+        """Send a `DELETE_URI` message and wait for an `OK` response.
+            Sets ephemeral handlers for `OK`, `AUTH_ERROR`, `ERROR`, and
+            `NOT_FOUND` message types using `add_ephemeral_handler`, then
+            sends a `DELETE_URI` message to the connected server. Waits
+            until either a response (success or error) is received or
+            timeout is reached. If it times out, removes all ephemeral
+            handlers and raises a `TimeoutError`. If a response is
+            received, returns that message (caller should check
+            `message.header.message_type` to determine if it's a success
+            or error response).
         """
         return await self.request(
             uri=uri,
@@ -562,14 +563,14 @@ class TCPClient:
         """Receive a message from the server. If a handler was
             registered for the message key, the handler will be called
             with the message as an argument, and the result will be
-            returned if it is not None; otherwise, the received message
+            returned if it is not `None`; otherwise, the received message
             will be returned. If the message checksum fails, the message
-            will be discarded and None will be returned. If an auth
+            will be discarded and `None` will be returned. If an auth
             plugin is set, it will be checked before the message handler
             is called, and if the check fails, the message will be
-            discarded and None will be returned. If use_auth is False,
-            the auth plugin set on the client will not be used. If
-            use_cipher is False, the cipher plugin set on the
+            discarded and `None` will be returned. If `use_auth` is
+            `False`, the auth plugin set on the client will not be used.
+            If `use_cipher` is `False`, the cipher plugin set on the
             client will not be used. If an auth plugin is provided, it
             will be used to check the message in addition to any auth
             plugin that is set on the client. If a cipher plugin is
@@ -709,18 +710,18 @@ class TCPClient:
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Receive messages from the server indefinitely. Use with
-            asyncio.create_task() to run concurrently, then use
-            task.cancel() to stop. If use_auth is False, the auth plugin
-            set on the client will not be used. If use_cipher is
-            False, the cipher plugin set on the client will not be
+            `asyncio.create_task()` to run concurrently, then use
+            `task.cancel()` to stop. If use_auth is False, the auth
+            plugin set on the client will not be used. If `use_cipher`
+            is `False`, the cipher plugin set on the client will not be
             used. If an auth plugin is provided, it will be used to
             check the message in addition to any auth plugin that is set
             on the client. If a cipher plugin is provided, it will be
             used to decrypt the message in addition to any cipher
             plugin that is set on the client.
 
-            Note: This method is typically called via start_receive_loop()
-            for better lifecycle management.
+            Note: This method is typically called via
+            `start_receive_loop()` for better lifecycle management.
         """
         actual_server = server or self.default_host
         try:
@@ -749,14 +750,10 @@ class TCPClient:
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> tuple[asyncio.Task, bool]:
-        """Start a receive loop for a specific server.
-
-            Starts a receive loop that will continue receiving messages from
-            specified server indefinitely until stopped. If a receive loop
-            is already running for this server, returns the existing task.
-
-            Returns: asyncio.Task object for the receive loop, which can be
-                cancelled via task.cancel() when no longer needed.
+        """Start a receive loop for a specific server which will continue
+            receiving messages from specified server indefinitely until
+            stopped. If a receive loop is already running for this
+            server, returns the existing task.
         """
         server = server or self.default_host
         was_running = False
@@ -791,10 +788,9 @@ class TCPClient:
     async def stop_receive_loop(
             self, server: tuple[str, int] | None = None
         ) -> bool:
-        """Stop the receive loop for a specific server.
-
-            Cancels and waits for the receive loop task to complete. Returns
-            True if a receive loop was stopped, False if no receive loop was
+        """Stop the receive loop for a specific server by cancelling
+            and waiting for the  task to complete. Returns `True` if a
+            receive loop was stopped, `False` if no receive loop was
             running for this server.
         """
         server = server or self.default_host
@@ -816,10 +812,8 @@ class TCPClient:
         return True
 
     async def stop_all_receive_loops(self) -> int:
-        """Stop all running receive loops.
-
-            Cancels and waits for all receive loop tasks to complete.
-            Returns number of receive loops that were stopped.
+        """Stop all running receive loops. Returns number of receive
+            loops that were stopped.
         """
         async with self._receive_loop_lock:
             tasks_to_cancel = list(self._receive_loop_tasks.values())
@@ -841,20 +835,17 @@ class TCPClient:
         return count
 
     async def get_receive_loops(self) -> dict[tuple[str, int], asyncio.Task]:
-        """Get a copy of all active receive loop tasks.
-
-            Returns a dictionary mapping server addresses to their
-            receive loop tasks. Useful for monitoring and debugging.
+        """Get a copy of all active receive loop tasks. Returns a
+            dictionary mapping server addresses to their receive loop
+            tasks.
         """
         async with self._receive_loop_lock:
             return self._receive_loop_tasks.copy()
 
     async def close(self, server: tuple[str, int] | None = None):
-        """Close the connection to the server.
-
-            Cancels any running receive loop for the server and closes
-            the connection. Pass a `server` argument to disconnect from
-            a non-default server.
+        """Close the connection to the server. Cancels any running
+            receive loop for the server and closes the connection. Pass a
+            `server` argument to disconnect from a non-default server.
         """
         server = server or self.default_host
         self.logger.info("Closing connection to server...")
@@ -883,8 +874,8 @@ class TCPClient:
         ) -> bool:
         """Add or update a peer in the peer list. If the peer is the
             local peer, it will not be added to the peer list. Returns
-            True if a PEER_DISCOVERED message should be sent (False if
-            it is the local peer).
+            `True` if a `PEER_DISCOVERED` message should be sent (`False`
+            if it is the local peer).
         """
         if self.local_peer is not None and peer_id == self.local_peer.id:
             self.logger.debug("Ignoring local peer.")
@@ -908,9 +899,10 @@ class TCPClient:
     def get_peer(
             self, addr: tuple[str, int]|None = None, peer_id: bytes|None = None
         ) -> Peer|None:
-        """Get a peer from the peer list if addr or peer_id is provided
-            and if it exists. Prefers peer_id if both are provided but
-            will fall back to addr if the provided peer_id is not found.
+        """Get a peer from the peer list if `addr` or `peer_id` is
+            provided and if it exists. Prefers `peer_id` if both are
+            provided but will fall back to `addr` if the provided
+            `peer_id` is not found.
         """
         peer = None
         if peer_id is not None:
@@ -937,18 +929,24 @@ class TCPClient:
         ):
         """Begins automatic peer management: when the client connects to
             a server, it will send its local_peer data. This also
-            registers 3 handlers: 1) for the 'ADVERTISE_PEER' message,
+            registers 3 handlers: 1) for the `ADVERTISE_PEER` message,
             which will add the peer to the peer list and send a
-            'PEER_DISCOVERED' message to reciprocate; 2) for the
-            'PEER_DISCOVERED' message type which will add the peer to
-            the peer list; and 3) for the 'DISCONNECT' message which
+            `PEER_DISCOVERED` message to reciprocate; 2) for the
+            `PEER_DISCOVERED` message type which will add the peer to
+            the peer list; and 3) for the `DISCONNECT` message which
             will remove the peer from the local peer list. Then, it will
-            send an 'ADVERTISE_PEER' message to each server it has
-            already connected to. Raises AssertionError if `local_peer`
+            send an `ADVERTISE_PEER` message to each server it has
+            already connected to. Raises `AssertionError` if `local_peer`
             is not set or if the message_type_class does not contain
-            'ADVERTISE_PEER', 'PEER_DISCOVERED', and 'DISCONNECT'
+            `ADVERTISE_PEER`, `PEER_DISCOVERED`, and `DISCONNECT`
             message types.
         """
+        # preconditions
+        assert self.local_peer is not None
+        assert hasattr(self.message_type_class, 'ADVERTISE_PEER')
+        assert hasattr(self.message_type_class, 'PEER_DISCOVERED')
+        assert hasattr(self.message_type_class, 'DISCONNECT')
+
         # set enable flag
         self._enable_automatic_peer_management = True
 
@@ -1126,7 +1124,7 @@ class TCPClient:
 
     async def stop_peer_management(self, app_id: bytes = b'netaio'):
         """Stops automatic peer management by disabling the feature,
-            sending a DISCONNECT message, and removing the handlers.
+            sending a `DISCONNECT` message, and removing the handlers.
         """
         self._enable_automatic_peer_management = False
         self.remove_handler((
@@ -1186,26 +1184,10 @@ class TCPClient:
 
 class AutoReconnectTimeoutHandler:
     """Bundled timeout handler that automatically reconnects to server.
-
-    This handler runs as a side effect when a timeout occurs, attempting to
-    re-establish the connection so subsequent requests can succeed. The original
-    TimeoutError is always raised after the handler completes.
-
-    Constructor Parameters:
-        connect_timeout: Timeout in seconds for each connect attempt
-        max_retries: Maximum number of reconnect attempts
-        delay: Delay in seconds between retry attempts
-        on_reconnect: Optional callback invoked on successful reconnect,
-                      called with client, server, and attempt_number arguments
-
-    Usage:
-        handler = AutoReconnectTimeoutHandler(
-            connect_timeout=5.0,
-            max_retries=3,
-            delay=1.0,
-            on_reconnect=lambda client, server, attempt: ...
-        )
-        client.set_timeout_handler(handler)
+        Runs as a side effect when a timeout occurs, attempting to
+        re-establish the connection so subsequent requests can succeed.
+        The original TimeoutError is always raised after the handler
+        completes.
     """
 
     def __init__(
@@ -1231,17 +1213,10 @@ class AutoReconnectTimeoutHandler:
         error: TimeoutError,
         context: dict[str, Any]
     ) -> None:
-        """Attempt to reconnect after a timeout.
-
-        Args:
-            client: The TCPClient instance that experienced the timeout
-            timeout_type: Type of timeout that occurred
-            server: The server address (host, port) or None for default
-            error: The TimeoutError that was raised
-            context: Additional context about the timeout
-
-        Returns:
-            None - the TimeoutError is always raised by request() after this
+        """Attempt to reconnect after a request timeout. Only handles
+            `request_timeout` type, other timeout types are ignored. Retries
+            connection up to `max_retries` times with `delay` between
+            attempts, calling `on_reconnect` callback on success.
         """
         if timeout_type != 'request_timeout':
             return

@@ -133,11 +133,11 @@ class UDPNode:
             auth plugin is an anti-spam plugin and messages that fail
             the auth check should just be dropped).
             `timeout_error_handler` is a function that handles timeout
-            errors. It is called with (self, timeout_type, server, error,
-            context) and can perform recovery actions or logging. The
-            TimeoutError is always raised after the handler completes.
-            If `ignore_own_ip` is True, messages from the local IP
-            address will be ignored.
+            errors. It is called with (`self`, `timeout_type`, `addr`,
+            `error`, `context`) and can perform recovery actions or
+            logging. The `TimeoutError` is always raised after the
+            handler completes. If `ignore_own_ip` is `True`, messages
+            from the local IP address will be ignored.
         """
         self.peers = {}
         self.peer_addrs = {}
@@ -172,7 +172,7 @@ class UDPNode:
     def connection_made(self, transport: asyncio.DatagramTransport):
         """Called when a connection is made. The argument is the
             transport representing the pipe connection. When the
-            connection is closed, connection_lost() is called. This is
+            connection is closed, `connection_lost()` is called. This is
             called when the UDPNode successfully joins the multicast
             group.
         """
@@ -365,14 +365,14 @@ class UDPNode:
             self.send(response, addr, use_auth=False, use_cipher=False)
 
     def error_received(self, exc: Exception):
-        """Called when a send or receive operation raises an OSError.
-            (Other than BlockingIOError or InterruptedError.)
+        """Called when a send or receive operation raises an `OSError`.
+            (Other than `BlockingIOError` or `InterruptedError`.)
         """
         self.logger.error(f"Error received: {exc}")
 
     def connection_lost(self, _: Exception):
         """Called when the connection is lost or closed. The argument is
-            an exception object or None (the latter meaning a regular
+            an exception object or `None` (the latter meaning a regular
             EOF is received or the connection was aborted or closed).
         """
         self.logger.info("Connection closed")
@@ -383,9 +383,9 @@ class UDPNode:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Register a handler for a specific key. The handler must
-            accept a MessageProtocol object as an argument and return a
-            MessageProtocol or None. If an auth plugin is provided, it
-            will be used to check the message in addition to any auth
+            accept a `MessageProtocol` object as an argument and return a
+            `MessageProtocol` or `None`. If an auth plugin is provided,
+            it will be used to check the message in addition to any auth
             plugin that is set on the node. If a cipher plugin is
             provided, it will be used to decrypt the message in addition
             to any cipher plugin that is set on the node. These
@@ -412,13 +412,13 @@ class UDPNode:
             auth_plugin: AuthPluginProtocol | None = None,
             cipher_plugin: CipherPluginProtocol | None = None
         ):
-        """Decorator to register a handler for a specific key. The handler must
-            accept a MessageProtocol object as an argument and return a
-            MessageProtocol or None. If an auth plugin is provided, it
-            will be used to check the message in addition to any auth
-            plugin that is set on the node. If a cipher plugin is
-            provided, it will be used to decrypt the message in addition
-            to any cipher plugin that is set on the node. These
+        """Decorator to register a handler for a specific key. The
+            handler must accept a `MessageProtocol` object as an argument
+            and return a `MessageProtocol` or `None`. If an auth plugin
+            is provided, it will be used to check the message in addition
+            to any auth plugin that is set on the node. If a cipher
+            plugin is provided, it will be used to decrypt the message in
+            addition to any cipher plugin that is set on the node. These
             plugins will also be used for preparing any response
             message sent by the handler.
         """
@@ -435,8 +435,8 @@ class UDPNode:
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a one-time handler for a specific key.
-            The handler must accept a MessageProtocol object as an
-            argument and return a MessageProtocol or None. If an auth
+            The handler must accept a `MessageProtocol` object as an
+            argument and return a `MessageProtocol` or `None`. If an auth
             plugin is provided, it will be used to check the message in
             addition to any auth plugin that is set on the node. If a
             cipher plugin is provided, it will be used to decrypt the
@@ -552,7 +552,7 @@ class UDPNode:
 
     async def start(self):
         """Start the UDPNode. When a datagram is received, the
-            datagram_received method is called.
+            `datagram_received` method is called.
         """
         loop = asyncio.get_running_loop()
         self.transport, protocol = await loop.create_datagram_endpoint(
@@ -573,9 +573,9 @@ class UDPNode:
             the message in addition to any auth plugin that is set on
             the node. If a cipher plugin is provided, it will be used to
             encrypt the message in addition to any cipher plugin that is
-            set on the node. If use_auth is False, the auth plugin set
-            on the node will not be used. If use_cipher is False, the
-            cipher plugin set on the node will not be used.
+            set on the node. If `use_auth` is `False`, the auth plugin
+            set on the node will not be used. If `use_cipher` is `False`,
+            the cipher plugin set on the node will not be used.
         """
         peer_id = self.peer_addrs.get(addr, None)
         peer = self.peers.get(peer_id) if peer_id is not None else None
@@ -596,7 +596,7 @@ class UDPNode:
 
     async def request(
             self, uri: bytes,
-            server: tuple[str, int], *,
+            addr: tuple[str, int], *,
             timeout: float = 10.0,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
@@ -605,16 +605,18 @@ class UDPNode:
             content: bytes = b'',
         ) -> MessageProtocol:
         """Send a request message and wait for a response.
-            Sets ephemeral handlers for OK, RESPOND_URI, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types, then sends a message to the specified
-            address. Waits until a response (success or error) is received or
-            timeout is reached. If it times out, removes all ephemeral
-            handlers and raises a TimeoutError. If a response is received,
-            returns that message (caller should check message.header.message_type
+            Sets ephemeral handlers for `OK`, `RESPOND_URI`,
+            `AUTH_ERROR`, `ERROR`, and `NOT_FOUND` message types, then
+            sends a message to the specified address. Waits until a
+            response (success or error) is received or timeout is
+            reached. If it times out, removes all ephemeral handlers and
+            raises a `TimeoutError`. If a response is received, returns
+            that message (caller should check `message.header.message_type`
             to determine success or error).
 
-            When message_type is None (default), sends REQUEST_URI. Use message_type
-            and content to send CREATE_URI, UPDATE_URI, or DELETE_URI messages.
+            When message_type is `None` (default), sends `REQUEST_URI`. Use
+            `message_type` and content to send `CREATE_URI`, `UPDATE_URI`,
+            or `DELETE_URI` messages.
         """
         result = []
         message_type = message_type or \
@@ -623,11 +625,11 @@ class UDPNode:
         keys = [
             (
                 self.message_type_class.AUTH_ERROR, # type: ignore
-                uri, server
+                uri, addr
             ),
             (
                 self.message_type_class.ERROR, # type: ignore
-                uri, server
+                uri, addr
             ),
         ]
 
@@ -635,19 +637,19 @@ class UDPNode:
             self.message_type_class.REQUEST_URI: # type: ignore
             keys.append((
                 self.message_type_class.RESPOND_URI, # type: ignore
-                uri, server
+                uri, addr
             ))
         else:
             keys.append((
                 self.message_type_class.OK, # type: ignore
-                uri, server
+                uri, addr
             ))
 
         if message_type != \
             self.message_type_class.CREATE_URI: # type: ignore
             keys.append((
                 self.message_type_class.NOT_FOUND, # type: ignore
-                uri, server
+                uri, addr
             ))
 
         event = asyncio.Event()
@@ -675,7 +677,7 @@ class UDPNode:
             request_body, message_type
         )
         self.send(
-            request_message, server,
+            request_message, addr,
             use_auth=use_auth, use_cipher=use_cipher,
             auth_plugin=auth_plugin, cipher_plugin=cipher_plugin
         )
@@ -687,39 +689,40 @@ class UDPNode:
                 self.remove_ephemeral_handler(key)
             error = TimeoutError(
                 f"Request for URI {uri.decode('utf-8', errors='replace')} @ " +
-                f"{server} timed out after {timeout}s"
+                f"{addr} timed out after {timeout}s"
             )
             context: TimeoutContext = {
                 'uri': uri,
                 'timeout': timeout,
-                'server': server,
+                'server': addr,
                 'keys': keys
             }
             await self._invoke_timeout_handler(
-                'request_timeout', server, error, context
+                'request_timeout', addr, error, context
             )
             raise error
 
         return result[0]
 
     async def create(
-            self, uri: bytes, data: bytes, server: tuple[str, int], *,
+            self, uri: bytes, data: bytes, addr: tuple[str, int], *,
             timeout: float = 10.0,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Send a CREATE_URI message and wait for an OK response.
-            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types, then sends a CREATE_URI message
+        """Send a `CREATE_URI` message and wait for an `OK` response.
+            Sets ephemeral handlers for `OK`, `AUTH_ERROR`, `ERROR`, and
+            `NOT_FOUND` message types, then sends a `CREATE_URI` message
             to the specified address. Waits until a response (success or
             error) is received or timeout is reached. If it times out,
-            removes all ephemeral handlers and raises a TimeoutError. If a
-            response is received, returns that message (caller should check
-            message.header.message_type to determine success or error).
+            removes all ephemeral handlers and raises a `TimeoutError`.
+            If a response is received, returns that message (caller
+            should check `message.header.message_type` to determine
+            success or error).
         """
         return await self.request(
-            uri, server,
+            uri, addr,
             timeout=timeout,
             use_auth=use_auth,
             use_cipher=use_cipher,
@@ -731,23 +734,24 @@ class UDPNode:
 
     async def update(
             self, uri: bytes, data: bytes,
-            server: tuple[str, int], *,
+            addr: tuple[str, int], *,
             timeout: float = 10.0,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Send an UPDATE_URI message and wait for an OK response.
-            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types, then sends an UPDATE_URI message
+        """Send an `UPDATE_URI` message and wait for an `OK` response.
+            Sets ephemeral handlers for `OK`, `AUTH_ERROR`, `ERROR`, and
+            `NOT_FOUND` message types, then sends an `UPDATE_URI` message
             to the specified address. Waits until a response (success or
             error) is received or timeout is reached. If it times out,
-            removes all ephemeral handlers and raises a TimeoutError. If a
-            response is received, returns that message (caller should check
-            message.header.message_type to determine success or error).
+            removes all ephemeral handlers and raises a `TimeoutError`.
+            If a response is received, returns that message (caller
+            should check `message.header.message_type` to determine
+            success or error).
         """
         return await self.request(
-            uri, server,
+            uri, addr,
             timeout=timeout,
             use_auth=use_auth,
             use_cipher=use_cipher,
@@ -759,23 +763,24 @@ class UDPNode:
 
     async def delete(
             self, uri: bytes,
-            server: tuple[str, int], *,
+            addr: tuple[str, int], *,
             timeout: float = 10.0,
             use_auth: bool = True, use_cipher: bool = True,
             auth_plugin: AuthPluginProtocol|None = None,
             cipher_plugin: CipherPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Send a DELETE_URI message and wait for an OK response.
-            Sets ephemeral handlers for OK, AUTH_ERROR, ERROR, and
-            NOT_FOUND message types, then sends a DELETE_URI message
+        """Send a `DELETE_URI` message and wait for an `OK` response.
+            Sets ephemeral handlers for `OK`, `AUTH_ERROR`, `ERROR`, and
+            `NOT_FOUND` message types, then sends a `DELETE_URI` message
             to the specified address. Waits until a response (success or
             error) is received or timeout is reached. If it times out,
-            removes all ephemeral handlers and raises a TimeoutError. If a
-            response is received, returns that message (caller should check
-            message.header.message_type to determine success or error).
+            removes all ephemeral handlers and raises a `TimeoutError`.
+            If a response is received, returns that message (caller
+            should check `message.header.message_type` to determine
+            success or error).
         """
         return await self.request(
-            uri, server,
+            uri, addr,
             timeout=timeout,
             use_auth=use_auth,
             use_cipher=use_cipher,
@@ -793,16 +798,16 @@ class UDPNode:
     async def _invoke_timeout_handler(
             self,
             timeout_type: str,
-            server: tuple[str, int] | None,
+            addr: tuple[str, int] | None,
             error: TimeoutError,
             context: TimeoutContext
-    ):
+        ):
         """Invoke the timeout error handler with sync/async handling."""
         if self.handle_timeout_error is None:
             return
 
         result = self.handle_timeout_error(
-            self, timeout_type, server, error, context
+            self, timeout_type, addr, error, context
         )
 
         if isinstance(result, Coroutine):
@@ -829,8 +834,8 @@ class UDPNode:
             addition to any auth plugin that is set on the node. If a
             cipher plugin is provided, it will be used to encrypt the
             message in addition to any cipher plugin that is set on the
-            node. If use_auth is False, the auth plugin set on the
-            node will not be used. If use_cipher is False, the cipher
+            node. If `use_auth` is `False`, the auth plugin set on the
+            node will not be used. If `use_cipher` is `False`, the cipher
             plugin set on the node will not be used.
         """
         if len(self.peers) == 0:
@@ -891,8 +896,8 @@ class UDPNode:
             addition to any auth plugin that is set on the node. If a
             cipher plugin is provided, it will be used to encrypt the
             message in addition to any cipher plugin that is set on the
-            node. If use_auth is False, the auth plugin set on the
-            node will not be used. If use_cipher is False, the cipher
+            node. If `use_auth` is `False`, the auth plugin set on the
+            node will not be used. If `use_cipher` is `False`, the cipher
             plugin set on the node will not be used.
         """
         self.logger.debug("Multicasting message to the multicast group")
@@ -912,13 +917,13 @@ class UDPNode:
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Send the message to all subscribed peers for the given key
-            concurrently using asyncio.gather. If an auth plugin is
+            concurrently using `asyncio.gather`. If an auth plugin is
             provided, it will be used to authorize the message in
             addition to any auth plugin that is set on the node. If a
             cipher plugin is provided, it will be used to encrypt the
             message in addition to any cipher plugin that is set on
-            the node. If use_auth is False, the auth plugin set on the
-            node will not be used. If use_cipher is False, the
+            the node. If `use_auth` is `False`, the auth plugin set on
+            the node will not be used. If `use_cipher` is `False`, the
             cipher plugin set on the node will not be used.
         """
         if key not in self.subscriptions:
@@ -979,8 +984,8 @@ class UDPNode:
         ) -> bool:
         """Add or update a peer in the peer list. If the peer is the
             local peer, it will not be added to the peer list. Returns
-            True if a PEER_DISCOVERED message should be sent (False if
-            it is the local peer).
+            `True` if a `PEER_DISCOVERED` message should be sent (`False`
+            if it is the local peer).
         """
         if self.local_peer is not None and peer_id == self.local_peer.id:
             self.logger.debug("Ignoring local peer.")
@@ -1005,8 +1010,9 @@ class UDPNode:
             self, addr: tuple[str, int]|None = None, peer_id: bytes|None = None
         ) -> Peer|None:
         """Get a peer from the peer list if addr or peer_id is provided
-            and if it exists. Prefers peer_id if both are provided but
-            will fall back to addr if the provided peer_id is not found.
+            and if it exists. Prefers `peer_id` if both are provided but
+            will fall back to `addr` if the provided `peer_id` is not
+            found in the known peers.
         """
         peer = None
         if peer_id is not None:
@@ -1057,9 +1063,13 @@ class UDPNode:
             multicast group, and it will use the `app_id` as a URI to
             identify the application. The loop will drop any peers that
             have timed out. Raises AssertionError if `local_peer` is not
-            set or if the message_type_class does not contain the
-            'ADVERTISE_PEER' message type.
+            set or if the `message_type_class` does not contain the
+            `ADVERTISE_PEER` message type.
         """
+        # preconditions
+        assert self.local_peer is not None
+        assert hasattr(self.message_type_class, 'ADVERTISE_PEER')
+
         # start the advertisement loop task
         self._advertise_peer_tasks[app_id] = asyncio.create_task(
             self._advertise_peer_loop(
@@ -1136,17 +1146,23 @@ class UDPNode:
             will advertise the local peer every `advertise_every` seconds
             to the multicast group, and it will use the `app_id` as a URI
             to identify the application. Also registers 3 handlers: 1) for
-            the 'ADVERTISE_PEER' message type which will add the peer to
-            the peer list and respond with a 'PEER_DISCOVERED' message
-            to reciprocate; 2) for the 'PEER_DISCOVERED' message that
+            the `ADVERTISE_PEER` message type which will add the peer to
+            the peer list and respond with a `PEER_DISCOVERED` message
+            to reciprocate; 2) for the `PEER_DISCOVERED` message that
             will add the peer to the peer list; and 3) for the
-            'DISCONNECT' message which will remove the peer from the
+            `DISCONNECT` message which will remove the peer from the
             local peer list. The loop will also drop any peers that have
-            timed out. Raises AssertionError if `local_peer` is not set
+            timed out. Raises `AssertionError` if `local_peer` is not set
             or if the message_type_class does not contain
-            'ADVERTISE_PEER', 'PEER_DISCOVERED', and 'DISCONNECT'
+            `ADVERTISE_PEER`, `PEER_DISCOVERED`, and `DISCONNECT`
             message types.
         """
+        # preconditions
+        assert self.local_peer is not None
+        assert hasattr(self.message_type_class, 'ADVERTISE_PEER')
+        assert hasattr(self.message_type_class, 'PEER_DISCOVERED')
+        assert hasattr(self.message_type_class, 'DISCONNECT')
+
         # create the handlers
         @self.on(
             (

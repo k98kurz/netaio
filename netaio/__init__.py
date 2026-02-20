@@ -1,4 +1,4 @@
-from .client import TCPClient
+from .client import TCPClient, AutoReconnectTimeoutHandler
 from .server import TCPServer
 from .node import UDPNode
 from .common import (
@@ -33,6 +33,5 @@ from .common import (
 from .auth import HMACAuthPlugin
 from .cipher import Sha256StreamCipherPlugin
 from .version import version
-from .client import AutoReconnectTimeoutHandler
 
 
