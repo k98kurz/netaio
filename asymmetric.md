@@ -95,4 +95,13 @@ a new message with the decrypted body.
 
 Used for optimization. Returns `True`.
 
+## Functions
+
+### `validate_message_type_class(message_type_class: type[IntEnum], /, *, suppress_errors: bool = False) -> bool:`
+
+Validates a message type class. Raises `ValueError` for missing or redefined
+default message types or `TypeError` for a non-`type[IntEnum]` if
+`suppress_errors` is not made `True`. Returns `True` if it is valid and `False`
+otherwise.
+
 
