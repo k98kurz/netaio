@@ -160,7 +160,7 @@ class TestTCPE2E(unittest.TestCase):
             await server.notify(b'subscribe/test', server_notify_msg)
 
             # get notification from first client
-            response = await client.receive_once(use_auth=False)
+            response = await client.receive_once()
             assert response.header.message_type == \
                 server_notify_msg.header.message_type, \
                 (response.header.message_type, server_notify_msg.header.message_type)
@@ -170,7 +170,7 @@ class TestTCPE2E(unittest.TestCase):
                 (response.body.content, server_notify_msg.body.content)
 
             # get notification from second client
-            response = await second_client.receive_once(use_auth=False)
+            response = await second_client.receive_once()
             assert response.header.message_type == \
                 server_notify_msg.header.message_type, \
                 (response.header.message_type, server_notify_msg.header.message_type)
@@ -961,6 +961,100 @@ class TestTCPE2E(unittest.TestCase):
 
         print()
         print(f'{self.__class__.__name__}.test_multi_server_receive_loop_lifecycle')
+        asyncio.run(run_test())
+
+    def test_server_broadcast(self):
+        async def run_test():
+            auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
+            cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
+
+            server = netaio.TCPServer(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            second_client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+            third_client = netaio.TCPClient(
+                port=self.PORT, auth_plugin=auth_plugin,
+                cipher_plugin=cipher_plugin
+            )
+
+            broadcast_msg = netaio.Message.prepare(
+                netaio.Body.prepare(b'broadcast hello', uri=b'broadcast'),
+                netaio.MessageType.NOTIFY_URI
+            )
+
+            server_task = asyncio.create_task(server.start())
+            await asyncio.sleep(0.1)
+
+            # test broadcast when no clients are connected (should not crash)
+            await server.broadcast(broadcast_msg)
+
+            # connect clients
+            await client.connect()
+            await second_client.connect()
+            await third_client.connect()
+
+            # broadcast to all connected clients
+            await server.broadcast(broadcast_msg)
+
+            # verify all clients received the broadcast
+            response = await client.receive_once()
+            assert response is not None
+            assert response.body.content == b'broadcast hello', \
+                response.body.content
+            assert response.body.uri == b'broadcast', response.body.uri
+
+            response = await second_client.receive_once()
+            assert response is not None
+            assert response.body.content == b'broadcast hello', \
+                response.body.content
+            assert response.body.uri == b'broadcast', response.body.uri
+
+            response = await third_client.receive_once()
+            assert response is not None
+            assert response.body.content == b'broadcast hello', \
+                response.body.content
+            assert response.body.uri == b'broadcast', response.body.uri
+
+            # broadcast with use_auth=False, use_cipher=False
+            await server.broadcast(broadcast_msg, use_auth=False, use_cipher=False)
+
+            response = await client.receive_once(use_auth=False, use_cipher=False)
+            assert response is not None
+            assert response.body.content == b'broadcast hello', \
+                response.body.content
+            assert response.body.uri == b'broadcast', response.body.uri
+            response = await second_client.receive_once(use_auth=False, use_cipher=False)
+            assert response is not None
+            assert response.body.content == b'broadcast hello', \
+                response.body.content
+            assert response.body.uri == b'broadcast', response.body.uri
+            response = await third_client.receive_once(use_auth=False, use_cipher=False)
+            assert response is not None
+            assert response.body.content == b'broadcast hello', \
+                response.body.content
+            assert response.body.uri == b'broadcast', response.body.uri
+
+            # close clients and cancel server
+            await client.close()
+            await second_client.close()
+            await third_client.close()
+            server_task.cancel()
+
+            try:
+                await server_task
+            except asyncio.CancelledError:
+                pass
+
+        print()
+        print(f'{self.__class__.__name__}.test_server_broadcast')
         asyncio.run(run_test())
 
 

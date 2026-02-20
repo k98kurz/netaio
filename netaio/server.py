@@ -646,6 +646,9 @@ class TCPServer:
             use_cipher is False, the cipher plugin set on the
             server will not be used.
         """
+        if len(self.clients) == 0:
+            self.logger.debug("Skipping broadcast -- no clients")
+            return
         self.logger.debug("Broadcasting message to all clients")
 
         # check if any plugin is peer-specific
@@ -722,15 +725,13 @@ class TCPServer:
 
         # check if any plugin is peer-specific
         peer_specific = False
-        if use_auth and self.auth_plugin is not None and \
-                self.auth_plugin.is_peer_specific():
+        if use_auth and self.auth_plugin and self.auth_plugin.is_peer_specific():
             peer_specific = True
-        if use_cipher and self.cipher_plugin is not None and \
-                self.cipher_plugin.is_peer_specific():
+        if use_cipher and self.cipher_plugin and self.cipher_plugin.is_peer_specific():
             peer_specific = True
-        if auth_plugin is not None and auth_plugin.is_peer_specific():
+        if auth_plugin and auth_plugin.is_peer_specific():
             peer_specific = True
-        if cipher_plugin is not None and cipher_plugin.is_peer_specific():
+        if cipher_plugin and cipher_plugin.is_peer_specific():
             peer_specific = True
 
         if peer_specific:

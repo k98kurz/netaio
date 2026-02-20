@@ -833,6 +833,9 @@ class UDPNode:
             node will not be used. If use_cipher is False, the cipher
             plugin set on the node will not be used.
         """
+        if len(self.peers) == 0:
+            self.logger.debug("Skipping broadcast -- no peers")
+            return
         self.logger.debug("Broadcasting message to all peers")
         messages = []
         peer_ids = set()
@@ -924,10 +927,6 @@ class UDPNode:
             )
             return
 
-        self.logger.debug(
-            "Notifying %d peers for key=%s", len(self.subscriptions[key]), key
-        )
-
         subscribers = self.subscriptions.get(key, set())
         if not subscribers:
             self.logger.debug(
@@ -935,6 +934,8 @@ class UDPNode:
             )
             del self.subscriptions[key]
             return
+
+        self.logger.debug("Notifying %d peers for key=%s", len(subscribers), key)
 
         # check if any plugin is peer-specific
         peer_specific = False

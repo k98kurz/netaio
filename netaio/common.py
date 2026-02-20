@@ -775,15 +775,15 @@ class CipherPluginProtocol(Protocol):
             node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
             peer_plugin: PeerPluginProtocol|None = None,
         ) -> MessageProtocol:
-        """Encrypt the message body, setting values in the header or
-            auth_data as necessary. Returns a new message with the
-            encrypted body and updated auth_data. Optional args peer and
-            peer_plugin will be provided if they are available. The
-            local peer information will be stored in node.local_peer if
-            it exists. If peer, peer_plugin, or node.local_peer are
-            required for functionality but are not provided, or in the
-            case of an encryption failure, this method should raise an
-            exception.
+        """Encrypt the message `body`, setting values in the `header` or
+            `auth_data` as necessary. Returns a new message with the
+            encrypted `body` and updated `auth_data`. Optional args
+            `peer` and `peer_plugin` will be provided if they are
+            available. The local peer information will be stored in
+            `node.local_peer` if it exists. If `peer`, `peer_plugin`, or
+            `node.local_peer` are  required for functionality but are not
+            provided, or in the case of an encryption failure, this
+            method should raise an exception.
         """
         ...
 
