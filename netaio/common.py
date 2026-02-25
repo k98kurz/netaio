@@ -286,7 +286,7 @@ class NetworkNodeProtocol(Protocol):
     def extract_keys(
         self,
     ) -> Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]]:
-        """A class implementing this protocol must have an extract_keys
+        """A class implementing this protocol must have an `extract_keys`
             property referencing a function that extracts the keys used
             for routing/choosing responses from a message.
         """
@@ -294,21 +294,21 @@ class NetworkNodeProtocol(Protocol):
 
     @property
     def make_error(self) -> Callable[[str], MessageProtocol]:
-        """A class implementing this protocol must have a make_error
+        """A class implementing this protocol must have a `make_error`
             property referencing a function that makes error messages.
         """
         ...
 
     @property
     def logger(self) -> logging.Logger:
-        """A class implementing this protocol must have a logger property
-            referencing a logger for logging messages.
+        """A class implementing this protocol must have a `logger`
+            property referencing a logger for logging messages.
         """
         ...
 
     @property
     def auth_plugin(self) -> AuthPluginProtocol | None:
-        """A class implementing this protocol must have an auth_plugin
+        """A class implementing this protocol must have an `auth_plugin`
             property referencing an auth plugin for
             authenticating/authorizing messages.
         """
@@ -316,7 +316,7 @@ class NetworkNodeProtocol(Protocol):
 
     @property
     def cipher_plugin(self) -> CipherPluginProtocol | None:
-        """A class implementing this protocol must have a cipher_plugin
+        """A class implementing this protocol must have a `cipher_plugin`
             property referencing a cipher plugin for encrypting and
             decrypting messages.
         """
@@ -325,7 +325,7 @@ class NetworkNodeProtocol(Protocol):
     @property
     def handle_auth_error(self) -> AuthErrorHandler:
         """A class implementing this protocol must have a
-            handle_auth_error property referencing a function that is
+            `handle_auth_error` property referencing a function that is
             called when the auth check fails for a received message. If
             the function returns a message, that message will be sent as
             a response to the sender of the message that failed the auth
@@ -339,8 +339,8 @@ class NetworkNodeProtocol(Protocol):
             cipher_plugin: CipherPluginProtocol|None = None
         ):
         """Register a handler for a specific key. The handler must
-            accept a MessageProtocol object as an argument and return a
-            MessageProtocol or None. If an auth plugin is provided, it
+            accept a `MessageProtocol` object as an argument and return
+            `MessageProtocol | None`. If an auth plugin is provided, it
             will be used to check the message in addition to any auth
             plugin that is set on the node. If a cipher plugin is
             provided, it will be used to decrypt the message in addition
@@ -368,8 +368,8 @@ class NetworkNodeProtocol(Protocol):
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a handler for a specific key. The
-            handler must accept a MessageProtocol object as an argument
-            and return a MessageProtocol or None. If an auth plugin is
+            handler must accept a `MessageProtocol` object as an argument
+            and return `MessageProtocol | None`. If an auth plugin is
             provided, it will be used to check the message in addition to
             any auth plugin that is set on the node. If a cipher plugin
             is provided, it will be used to decrypt the message in
@@ -386,12 +386,12 @@ class NetworkNodeProtocol(Protocol):
             cipher_plugin: CipherPluginProtocol | None = None
         ):
         """Decorator to register a one-time handler for a specific key.
-            The handler must accept a MessageProtocol object as an
-            argument and return a MessageProtocol, None, or a Coroutine
-            that resolves to a MessageProtocol or None. If an auth
-            plugin is provided, it will be used to check the message in
-            addition to any auth plugin that is set on the client. If a
-            cipher plugin is provided, it will be used to decrypt the
+            The handler must accept a `MessageProtocol` object as an
+            argument and return `MessageProtocol`, `None`, or a
+            coroutine that resolves to a MessageProtocol or None. If an
+            auth plugin is provided, it will be used to check the message
+            in addition to any auth plugin that is set on the client. If
+            a cipher plugin is provided, it will be used to decrypt the
             message in addition to any cipher plugin that is set on the
             client.
         """
@@ -416,7 +416,7 @@ class MessageType(IntEnum):
         `UNSUBSCRIBE_URI`, `PUBLISH_URI`, `NOTIFY_URI`, `ADVERTISE_PEER`,
         `OK`, `CONFIRM_SUBSCRIBE`, `CONFIRM_UNSUBSCRIBE`,
         `PEER_DISCOVERED`, `ERROR`, `AUTH_ERROR`, `NOT_FOUND`,
-        `DISCONNECT`.
+        `NOT_PERMITTED`, `DISCONNECT`.
 
         To create a custom `IntEnum` for custom network protocols, use
         the `make_message_type_class` function to create the type, or
@@ -440,6 +440,7 @@ class MessageType(IntEnum):
     ERROR = 20
     AUTH_ERROR = 23
     NOT_FOUND = 24
+    NOT_PERMITTED = 25
     DISCONNECT = 30
 
 def make_message_type_class(
@@ -718,13 +719,13 @@ class AuthPluginProtocol(Protocol):
             node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
             peer_plugin: PeerPluginProtocol|None = None,
         ) -> None:
-        """Set auth_fields appropriate for a given body. Optional args
-            peer and peer_plugin will be provided if they are available.
-            The local peer information will be stored in node.local_peer
-            if it exists. If peer, peer_plugin, or node.local_peer are
-            required for functionality but are not provided/set, this
-            method should fail gracefully: log an error message using
-            node.logger (if provided) and return.
+        """Set `auth_fields` appropriate for a given body. Optional args
+            `peer` and `peer_plugin` will be provided if they are
+            available. The local peer information will be stored in
+            `node.local_peer` if it exists. If `peer`, `peer_plugin`, or
+            `node.local_peer` are required for functionality but are not
+            provided/set, this method should fail gracefully: log an
+            error message using `node.logger` (if provided) and return.
         """
         ...
 
@@ -896,7 +897,7 @@ class DefaultPeerPlugin:
     def encode_data(
             self, peer_data: dict[str, Any]|NamedTuple, peer_id: bytes|None = None
         ) -> bytes:
-        """Encode a peer's data. Ignores peer_id."""
+        """Encode a peer's data. Ignores `peer_id`."""
         return packify.pack(peer_data)
 
     def pack(self, peer: Peer) -> bytes:
@@ -925,25 +926,94 @@ def keys_extractor(
         message.header.message_type,
     ]
 
-def make_error_response(
-        msg: str,
+def make_respond_uri_msg(
+        content: bytes, uri: bytes, *,
         message_class: type[MessageProtocol] = Message,
         message_type_class: type[IntEnum] = MessageType,
         body_class: type[BodyProtocol] = Body
     ) -> MessageProtocol:
-    """Make an error response message."""
-    if "not found" in msg:
-        message_type = message_type_class.NOT_FOUND # type: ignore
-    elif "auth" in msg:
-        message_type = message_type_class.AUTH_ERROR # type: ignore
-    else:
-        message_type = message_type_class.ERROR # type: ignore
+    """Create a RESPOND_URI message with content and URI."""
+    body = body_class.prepare(
+        content=content,
+        uri=uri,
+    )
+    message_type = message_type_class.RESPOND_URI # type: ignore
+    return message_class.prepare(body, message_type)
+
+def make_ok_msg(
+        content: bytes = b'', uri: bytes = b'', *,
+        message_class: type[MessageProtocol] = Message,
+        message_type_class: type[IntEnum] = MessageType,
+        body_class: type[BodyProtocol] = Body
+    ) -> MessageProtocol:
+    """Create an OK message with optional content and URI."""
+    body = body_class.prepare(
+        content=content,
+        uri=uri,
+    )
+    message_type = message_type_class.OK # type: ignore
+    return message_class.prepare(body, message_type)
+
+def make_error_msg(
+        msg: str | bytes, uri: bytes = b'ERROR', *,
+        message_type: int | None = None,
+        message_class: type[MessageProtocol] = Message,
+        message_type_class: type[IntEnum] = MessageType,
+        body_class: type[BodyProtocol] = Body
+    ) -> MessageProtocol:
+    """Make an error message."""
+    if isinstance(msg, str):
+        msg = msg.encode()
+
+    if not message_type:
+        if b"not found" in msg:
+            message_type = message_type_class.NOT_FOUND # type: ignore
+        elif b"auth" in msg:
+            message_type = message_type_class.AUTH_ERROR # type: ignore
+        elif b"not permitted" in msg:
+            message_type = message_type_class.NOT_PERMITTED # type: ignore
+        else:
+            message_type = message_type_class.ERROR # type: ignore
 
     body = body_class.prepare(
-        content=msg.encode(),
-        uri=b'ERROR',
+        content=msg,
+        uri=uri,
     )
 
+    return message_class.prepare(body, message_type)
+
+def make_not_found_msg(
+        msg: str | bytes = "not found", uri: bytes = b'', *,
+        message_class: type[MessageProtocol] = Message,
+        message_type_class: type[IntEnum] = MessageType,
+        body_class: type[BodyProtocol] = Body
+    ) -> MessageProtocol:
+    """Create a NOT_FOUND message with optional error message and URI."""
+    if isinstance(msg, str):
+        msg = msg.encode()
+
+    body = body_class.prepare(
+        content=msg,
+        uri=uri,
+    )
+    message_type = message_type_class.NOT_FOUND # type: ignore
+    return message_class.prepare(body, message_type)
+
+def make_not_permitted_msg(
+        msg: str | bytes = "not permitted", uri: bytes = b'', *,
+        message_class: type[MessageProtocol] = Message,
+        message_type_class: type[IntEnum] = MessageType,
+        body_class: type[BodyProtocol] = Body
+    ) -> MessageProtocol:
+    """Create a NOT_PERMITTED message with optional error message and URI."""
+    if isinstance(msg, str):
+        msg = msg.encode()
+
+    body = body_class.prepare(
+        content=msg,
+        uri=uri,
+    )
+    message_type = message_type_class.NOT_PERMITTED # type: ignore
     return message_class.prepare(body, message_type)
 
 def auth_error_handler(

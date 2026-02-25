@@ -47,7 +47,7 @@ list[Hashable]]
 
 #### Methods
 
-##### `__init__(host: str = '127.0.0.1', port: int = 8888, /, *, timeout_error_handler: TimeoutErrorHandler | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x70dcbb23b6a0>, peer_plugin: PeerPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None, logger: logging.Logger = <Logger netaio.client (INFO)>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x70dcbb5e5e40>, message_class: type[MessageProtocol] = Message, body_class: type[BodyProtocol] = Body, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, message_type_class: type[IntEnum] = <enum 'MessageType'>, header_class: type[HeaderProtocol] = Header, local_peer: Peer | None = None):`
+##### `__init__(host: str = '127.0.0.1', port: int = 8888, /, *, timeout_error_handler: TimeoutErrorHandler | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x71ce273e7920>, peer_plugin: PeerPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None, logger: logging.Logger = <Logger netaio.client (INFO)>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x71ce27ce9e40>, message_class: type[MessageProtocol] = Message, body_class: type[BodyProtocol] = Body, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, message_type_class: type[IntEnum] = <enum 'MessageType'>, header_class: type[HeaderProtocol] = Header, local_peer: Peer | None = None):`
 
 Initialize the TCPClient. `host` is the default host IPv4 address to connect to.
 `port` is the default port to connect to. `local_peer` is the local peer
@@ -56,7 +56,7 @@ and `message_class` will be used for sending messages and parsing responses.
 `message_type_class` is the class to inject in calls to the decode method of the
 header class. `extract_keys` is a function that extracts the keys from a
 message. If `auth_plugin` is provided, it will be used to check the
-authenticity/authorization of all received messages and set the auth_fields of
+authenticity/authorization of all received messages and set the `auth_fields` of
 every sent message. If `cipher_plugin` is provided, it will be used to encrypt
 and decrypt all messages. If `peer_plugin` is provided, it will be used to
 encode and decode peer data. `auth_error_handler` is a function that handles
@@ -205,7 +205,9 @@ management.
 
 Start a receive loop for a specific server which will continue receiving
 messages from specified server indefinitely until stopped. If a receive loop is
-already running for this server, returns the existing task.
+already running for this server, returns the existing task. Also returns a
+`was_running` bool which is `True` if a task was already running and `False` if
+one was started.
 
 ##### `async stop_receive_loop(server: tuple[str, int] | None = None) -> bool:`
 
@@ -342,7 +344,7 @@ netaio.common.MessageProtocol | None]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', /, *, auth_error_handler: Callable = <function auth_error_handler at 0x70dcbb23b6a0>, peer_plugin: netaio.common.PeerPluginProtocol | None = None, cipher_plugin: netaio.common.CipherPluginProtocol | None = None, auth_plugin: netaio.common.AuthPluginProtocol | None = None, logger: Logger = <Logger netaio.server (INFO)>, default_handler: Union = <function not_found_handler at 0x70dcbb24cae0>, make_error_response: Callable = <function make_error_response at 0x70dcbb23b600>, keys_extractor: Callable = <function keys_extractor at 0x70dcbb5e5e40>, message_class: type[netaio.common.MessageProtocol] | None = None, body_class: type = Body, auth_fields_class: type = AuthFields, message_type_class: type = <enum 'MessageType'>, header_class: type[netaio.common.HeaderProtocol] | None = None, local_peer: netaio.common.Peer | None = None):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', /, *, auth_error_handler: Callable = <function auth_error_handler at 0x71ce273e7920>, peer_plugin: netaio.common.PeerPluginProtocol | None = None, cipher_plugin: netaio.common.CipherPluginProtocol | None = None, auth_plugin: netaio.common.AuthPluginProtocol | None = None, logger: Logger = <Logger netaio.server (INFO)>, default_handler: Union = <function not_found_handler at 0x71ce273fcd60>, make_error_msg: Callable = <function make_error_msg at 0x71ce273e7740>, keys_extractor: Callable = <function keys_extractor at 0x71ce27ce9e40>, message_class: type[netaio.common.MessageProtocol] | None = None, body_class: type = Body, auth_fields_class: type = AuthFields, message_type_class: type = <enum 'MessageType'>, header_class: type[netaio.common.HeaderProtocol] | None = None, local_peer: netaio.common.Peer | None = None):`
 
 Initialize the TCPServer. `interface` is the interface to listen on. `port` is
 the port to listen on. `local_peer` is the local peer information for this
@@ -350,19 +352,19 @@ server. `header_class`, `auth_fields_class`, `body_class`, and `message_class`
 will be used for sending messages and parsing responses. `message_type_class` is
 the class to inject in calls to the decode method of the header class.
 `keys_extractor` is a function that extracts the keys from a message.
-`make_error_response` is a function that makes an error response.
-`default_handler` is the default handler to use for messages that do not match
-any registered handler keys. If `auth_plugin` is provided, it will be used to
-check the authenticity/authorization of all received messages and set the
-auth_fields of every sent message. If `cipher_plugin` is provided, it will be
-used to encrypt and decrypt all messages. If `peer_plugin` is provided, it will
-be used to encode and decode peer data. `auth_error_handler` is a function that
-handles auth errors, i.e. when an auth check fails for a received message. If it
-returns a message, that message will be sent as a response to the sender of the
-message that failed the auth check. The default handler returns the error
-message generated by the auth plugin and should be replaced if you do not want
-to send error messages for failed auth checks (e.g. if the auth plugin is an
-anti-spam plugin and messages that fail the auth check should just be dropped).
+`make_error_msg` is a function that makes an error message. `default_handler` is
+the default handler to use for messages that do not match any registered handler
+keys. If `auth_plugin` is provided, it will be used to check the
+authenticity/authorization of all received messages and set the `auth_fields` of
+every sent message. If `cipher_plugin` is provided, it will be used to encrypt
+and decrypt all messages. If `peer_plugin` is provided, it will be used to
+encode and decode peer data. `auth_error_handler` is a function that handles
+auth errors, i.e. when an auth check fails for a received message. If it returns
+a message, that message will be sent as a response to the sender of the message
+that failed the auth check. The default handler returns the error message
+generated by the auth plugin and should be replaced if you do not want to send
+error messages for failed auth checks (e.g. if the auth plugin is an anti-spam
+plugin and messages that fail the auth check should just be dropped).
 
 ##### `add_handler(key: Hashable, handler: Union, /, *, cipher_plugin: netaio.common.CipherPluginProtocol | None = None, auth_plugin: netaio.common.AuthPluginProtocol | None = None):`
 
@@ -554,7 +556,7 @@ list[Hashable]]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer | None = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: AnyHandler = <function not_found_handler at 0x70dcbb24e0c0>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x70dcbb5e5e40>, make_error_response: Callable[[str], MessageProtocol] = <function make_error_response at 0x70dcbb23b600>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, peer_plugin: PeerPluginProtocol | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x70dcbb23b6a0>, timeout_error_handler: TimeoutErrorHandler | None = None, ignore_own_ip: bool = True):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer | None = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: AnyHandler = <function not_found_handler at 0x71ce273fe340>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x71ce27ce9e40>, make_error_msg: Callable[[str], MessageProtocol] = <function make_error_msg at 0x71ce273e7740>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, peer_plugin: PeerPluginProtocol | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x71ce273e7920>, timeout_error_handler: TimeoutErrorHandler | None = None, ignore_own_ip: bool = True):`
 
 Initialize the UDPNode. `port` is the port to listen on. `interface` is the
 interface to listen on. `multicast_group` is the multicast group to join.
@@ -564,11 +566,11 @@ messages and parsing responses. `message_type_class` is the class to inject in
 calls to the decode method of the header class. `default_handler` is the default
 handler to use for messages that do not match any registered handler keys.
 `extract_keys` is a function that extracts the keys from a message.
-`make_error_response` is a function that makes an error response. If
-`auth_plugin` is provided, it will be used to check the set the auth_fields of
-every sent message and check authenticity/authorization of all received
-messages. If `cipher_plugin` is provided, it will be used to encrypt and decrypt
-all messages. If `peer_plugin` is provided, it will be used to encode and decode
+`make_error_msg` is a function that makes an error message. If `auth_plugin` is
+provided, it will be used to check the set the `auth_fields` of every sent
+message and check authenticity/authorization of all received messages. If
+`cipher_plugin` is provided, it will be used to encrypt and decrypt all
+messages. If `peer_plugin` is provided, it will be used to encode and decode
 peer data. `auth_error_handler` is a function that handles auth errors, i.e.
 when an auth check fails for a received message. If it returns a message, that
 message will be sent as a response to the sender of the message that failed the
@@ -933,8 +935,8 @@ Some default message types: `REQUEST_URI`, `RESPOND_URI`, `CREATE_URI`,
 `UPDATE_URI`, `DELETE_URI`, `SUBSCRIBE_URI`, `UNSUBSCRIBE_URI`, `PUBLISH_URI`,
 `NOTIFY_URI`, `ADVERTISE_PEER`, `OK`, `CONFIRM_SUBSCRIBE`,
 `CONFIRM_UNSUBSCRIBE`, `PEER_DISCOVERED`, `ERROR`, `AUTH_ERROR`, `NOT_FOUND`,
-`DISCONNECT`. To create a custom `IntEnum` for custom network protocols, use the
-`make_message_type_class` function to create the type, or use
+`NOT_PERMITTED`, `DISCONNECT`. To create a custom `IntEnum` for custom network
+protocols, use the `make_message_type_class` function to create the type, or use
 `validate_message_type_class` function to validate one made with declarative
 syntax.
 
@@ -1064,11 +1066,12 @@ Initialize the auth plugin with a config.
 
 ##### `make(auth_fields: AuthFieldsProtocol, body: BodyProtocol, node: NetworkNodeProtocol | None = None, peer: Peer | None = None, peer_plugin: PeerPluginProtocol | None = None) -> None:`
 
-Set auth_fields appropriate for a given body. Optional args peer and peer_plugin
-will be provided if they are available. The local peer information will be
-stored in node.local_peer if it exists. If peer, peer_plugin, or node.local_peer
-are required for functionality but are not provided/set, this method should fail
-gracefully: log an error message using node.logger (if provided) and return.
+Set `auth_fields` appropriate for a given body. Optional args `peer` and
+`peer_plugin` will be provided if they are available. The local peer information
+will be stored in `node.local_peer` if it exists. If `peer`, `peer_plugin`, or
+`node.local_peer` are required for functionality but are not provided/set, this
+method should fail gracefully: log an error message using `node.logger` (if
+provided) and return.
 
 ##### `check(auth_fields: AuthFieldsProtocol, body: BodyProtocol, node: NetworkNodeProtocol | None = None, peer: Peer | None = None, peer_plugin: PeerPluginProtocol | None = None) -> bool:`
 
@@ -1188,19 +1191,19 @@ corresponding key is received and then removed.
 - default_handler: A class implementing this protocol must have a
 `default_handler` property referencing the default handler to use for messages
 that do not match any registered handler keys.
-- extract_keys: A class implementing this protocol must have an extract_keys
+- extract_keys: A class implementing this protocol must have an `extract_keys`
 property referencing a function that extracts the keys used for routing/choosing
 responses from a message.
-- make_error: A class implementing this protocol must have a make_error property
-referencing a function that makes error messages.
-- logger: A class implementing this protocol must have a logger property
+- make_error: A class implementing this protocol must have a `make_error`
+property referencing a function that makes error messages.
+- logger: A class implementing this protocol must have a `logger` property
 referencing a logger for logging messages.
-- auth_plugin: A class implementing this protocol must have an auth_plugin
+- auth_plugin: A class implementing this protocol must have an `auth_plugin`
 property referencing an auth plugin for authenticating/authorizing messages.
-- cipher_plugin: A class implementing this protocol must have a cipher_plugin
+- cipher_plugin: A class implementing this protocol must have a `cipher_plugin`
 property referencing a cipher plugin for encrypting and decrypting messages.
 - handle_auth_error: A class implementing this protocol must have a
-handle_auth_error property referencing a function that is called when the auth
+`handle_auth_error` property referencing a function that is called when the auth
 check fails for a received message. If the function returns a message, that
 message will be sent as a response to the sender of the message that failed the
 auth check.
@@ -1209,13 +1212,13 @@ auth check.
 
 ##### `add_handler(key: Hashable, handler: AnyHandler, /, *, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None):`
 
-Register a handler for a specific key. The handler must accept a MessageProtocol
-object as an argument and return a MessageProtocol or None. If an auth plugin is
-provided, it will be used to check the message in addition to any auth plugin
-that is set on the node. If a cipher plugin is provided, it will be used to
-decrypt the message in addition to any cipher plugin that is set on the node.
-These plugins will also be used for preparing any response message sent by the
-handler.
+Register a handler for a specific key. The handler must accept a
+`MessageProtocol` object as an argument and return `MessageProtocol | None`. If
+an auth plugin is provided, it will be used to check the message in addition to
+any auth plugin that is set on the node. If a cipher plugin is provided, it will
+be used to decrypt the message in addition to any cipher plugin that is set on
+the node. These plugins will also be used for preparing any response message
+sent by the handler.
 
 ##### `add_ephemeral_handler(key: Hashable, handler: AnyHandler, /, *, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None):`
 
@@ -1225,7 +1228,7 @@ after it is called the first time. Otherwise identical to `add_handler`.
 ##### `on(key: Hashable, /, *, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None):`
 
 Decorator to register a handler for a specific key. The handler must accept a
-MessageProtocol object as an argument and return a MessageProtocol or None. If
+`MessageProtocol` object as an argument and return `MessageProtocol | None`. If
 an auth plugin is provided, it will be used to check the message in addition to
 any auth plugin that is set on the node. If a cipher plugin is provided, it will
 be used to decrypt the message in addition to any cipher plugin that is set on
@@ -1235,8 +1238,8 @@ sent by the handler.
 ##### `once(key: Hashable, /, *, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None):`
 
 Decorator to register a one-time handler for a specific key. The handler must
-accept a MessageProtocol object as an argument and return a MessageProtocol,
-None, or a Coroutine that resolves to a MessageProtocol or None. If an auth
+accept a `MessageProtocol` object as an argument and return `MessageProtocol`,
+`None`, or a coroutine that resolves to a MessageProtocol or None. If an auth
 plugin is provided, it will be used to check the message in addition to any auth
 plugin that is set on the client. If a cipher plugin is provided, it will be
 used to decrypt the message in addition to any cipher plugin that is set on the
@@ -1297,7 +1300,7 @@ Parse a peer's data. Must return a dictionary or namedtuple.
 
 ##### `encode_data(peer_data: dict[str, Any] | NamedTuple, peer_id: bytes | None = None) -> bytes:`
 
-Encode a peer's data. Ignores peer_id.
+Encode a peer's data. Ignores `peer_id`.
 
 ##### `pack(peer: Peer) -> bytes:`
 
@@ -1403,9 +1406,25 @@ used to determine which handler to call for a given message, and it returns two
 keys: one that includes both the message type and the body uri, and one that is
 just the message type.
 
-### `make_error_response(msg: str, message_class: type[MessageProtocol] = Message, message_type_class: type[IntEnum] = <enum 'MessageType'>, body_class: type[BodyProtocol] = Body) -> MessageProtocol:`
+### `make_respond_uri_msg(content: bytes, uri: bytes, /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
 
-Make an error response message.
+Create a RESPOND_URI message with content and URI.
+
+### `make_ok_msg(content: bytes = b'', uri: bytes = b'', /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
+
+Create an OK message with optional content and URI.
+
+### `make_error_msg(msg: str | bytes, uri: bytes = b'ERROR', /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message, message_type: int | None = None) -> MessageProtocol:`
+
+Make an error message.
+
+### `make_not_found_msg(msg: str | bytes = 'not found', uri: bytes = b'', /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
+
+Create a NOT_FOUND message with optional error message and URI.
+
+### `make_not_permitted_msg(msg: str | bytes = 'not permitted', uri: bytes = b'', /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
+
+Create a NOT_PERMITTED message with optional error message and URI.
 
 ### `validate_message_type_class(message_type_class: type[IntEnum], /, *, suppress_errors: bool = False) -> bool:`
 

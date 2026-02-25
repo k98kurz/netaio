@@ -38,26 +38,72 @@ Brief examples are shown below. For more documentation, see the
 ### TCPServer
 
 ```python
-from netaio import TCPServer, Body, Message, MessageType, HMACAuthPlugin
+from netaio import (
+    TCPServer, Body, Message, MessageType, HMACAuthPlugin,
+    make_respond_uri_msg, make_ok_msg,
+    make_error_msg, make_not_found_msg, make_not_permitted_msg
+)
 import asyncio
 
 
 server = TCPServer(port=8888, auth_plugin=HMACAuthPlugin(config={"secret": "test"}))
+auth_plugin2 = HMACAuthPlugin(config={"secret": "adminpassword"})
+storage = {}
 
-@server.on((MessageType.REQUEST_URI, b'something'))
-async def something(msg: Message, writer: asyncio.StreamWriter):
-    body = Body.prepare(b'This is it.', uri=b'something')
-    return Message.prepare(body, MessageType.RESPOND_URI)
+permission_gate = lambda msg: auth_plugin2.check(msg.auth_data, msg.body)
+
+@server.on(MessageType.CREATE_URI)
+async def handle_create(msg: Message, writer: asyncio.StreamWriter):
+    if not permission_gate(msg):
+        return make_not_permitted_msg(uri=msg.body.uri)
+    if msg.body.uri in storage:
+        return make_error_msg('cannot overwrite', msg.body.uri)
+    storage[msg.body.uri] = msg.body.content
+    return make_ok_msg('stored', msg.body.uri)
+
+@server.on(MessageType.REQUEST_URI)
+async def handle_request(msg: Message, writer: asyncio.StreamWriter):
+    if msg.body.uri not in storage:
+        return make_not_found_msg(uri=msg.body.uri)
+    return make_respond_uri_msg(storage[msg.body.uri], msg.body.uri)
+
+@server.on((MessageType.REQUEST_URI, b'echo'))
+async def handle_echo(msg: Message, writer: asyncio.StreamWriter):
+    return make_respond_uri_msg(msg.body.content, b'echo')
+
+@server.on(MessageType.UPDATE_URI)
+async def handle_update(msg: Message, writer: asyncio.StreamWriter):
+    if not permission_gate(msg):
+        return make_not_permitted_msg(uri=msg.body.uri)
+    if msg.body.uri not in storage:
+        return make_not_found_msg(uri=msg.body.uri)
+    storage[msg.body.uri] = msg.body.content
+    return make_ok_msg('stored', msg.body.uri)
+
+@server.on(MessageType.DELETE_URI)
+async def handle_delete(msg: Message, writer: asyncio.StreamWriter):
+    if not permission_gate(msg):
+        return make_not_permitted_msg(uri=msg.body.uri)
+    if msg.body.uri not in storage:
+        return make_not_found_msg(uri=msg.body.uri)
+    storage.pop(msg.body.uri)
+    return make_ok_msg('deleted', msg.body.uri)
 
 @server.on(MessageType.SUBSCRIBE_URI)
 async def subscribe(msg: Message, writer: asyncio.StreamWriter):
     server.subscribe(msg.body.uri, writer)
-    return Message.prepare(Body.prepare(b'', uri=msg.body.uri), MessageType.CONFIRM_SUBSCRIBE)
+    return Message.prepare(
+        Body.prepare(b'', uri=msg.body.uri),
+        MessageType.CONFIRM_SUBSCRIBE
+    )
 
 @server.on(MessageType.UNSUBSCRIBE_URI)
 async def unsubscribe(msg: Message, writer: asyncio.StreamWriter):
     server.unsubscribe(msg.body.uri, writer)
-    return Message.prepare(Body.prepare(b'', uri=msg.body.uri), MessageType.CONFIRM_UNSUBSCRIBE)
+    return Message.prepare(
+        Body.prepare(b'', uri=msg.body.uri),
+        MessageType.CONFIRM_UNSUBSCRIBE
+    )
 
 asyncio.run(server.start())
 ```
@@ -66,26 +112,46 @@ asyncio.run(server.start())
 
 ```python
 from netaio import TCPClient, Body, Message, MessageType, HMACAuthPlugin
+from secrets import token_hex
 import asyncio
 
 
-client = TCPClient("127.0.0.1", 8888, auth_plugin=HMACAuthPlugin(config={"secret": "test"}))
-received_resources = {}
-
-@client.on(MessageType.RESPOND_URI)
-def echo(msg: Message, writer: asyncio.StreamWriter):
-    received_resources[msg.body.uri] = msg.body.content
+client = TCPClient(
+    "127.0.0.1", 8888, auth_plugin=HMACAuthPlugin(config={"secret": "test"})
+)
+auth_plugin2 = HMACAuthPlugin(config={"secret": "adminpassword"})
 
 async def run_client():
-    request_body = Body.prepare(b'pls gibs me dat', uri=b'something')
-    request_message = Message.prepare(request_body, MessageType.REQUEST_URI)
+    # connect, then test the echo endpoint
     await client.connect()
-    await client.send(request_message)
-    await client.receive_once()
+    response = await client.request(b'echo', content=b'test')
+    print(response)
+
+    # test full CRUD methods
+    content = ('testing it' + token_hex(4)).encode()
+    response = await client.create(b'test1', content, auth_plugin=auth_plugin2)
+    print(response)
+
+    response = await client.request(b'test1')
+    assert response.body.content == content, (response.body.content, content)
+    print(response)
+
+    new_content = ('testing it' + token_hex(4)).encode()
+    response = await client.update(b'test1', new_content, auth_plugin=auth_plugin2)
+    print(response)
+
+    response = await client.request(b'test1')
+    assert response.body.content == new_content, (response.body.content, new_content)
+    print(response)
+
+    response = await client.delete(b'test1', auth_plugin=auth_plugin2)
+    print(response)
+
+    response = await client.request(b'test1')
+    assert response.type == MessageType.NOT_FOUND, response.type
+    print(response)
 
 asyncio.run(run_client())
-
-print(received_resources)
 ```
 
 ### UDPNode
@@ -175,20 +241,21 @@ Each plugin is instantiated with a dict of configuration parameters, and it must
 implement the `AuthPluginProtocol`. Once the plugin has been instantiated, it
 can be passed to the `TCPServer`, `TCPClient`, and `UDPNode` constructors or set
 on the instances themselves. An auth plugin can also be set on a per-handler
-basis by passing the plugin as a second argument (or as the keyword argument
-`auth_plugin`) to the `on` or `add_handler` method. Currently, if an auth plugin
-is set both on the instance and per-handler, both will be checked before the
-handler function is called, and both will be applied to the response body; the
-per-handler plugin will be able to overwrite any auth fields set by the instance
-plugin, which may break communication -- each plugin instantiation should be
-configured to use its own writeable auth data fields.
+basis by passing the plugin as a keyword argument `auth_plugin` to the `on` or
+`once` decorations, or the `add_handler` or `add_ephemeral_handler` methods (and
+a handful of others). Currently, if an auth plugin is set both on the instance
+and per-handler, both will be checked before the handler function is called, and
+both will be applied to the response body; the per-handler plugin will be able to
+overwrite any auth fields set by the instance plugin, which may break
+communication -- each plugin instantiation should be configured to use its own
+writeable auth data fields.
 
 Currently, netaio includes an `HMACAuthPlugin` that can be used by the server
 and client to authenticate and authorize requests. This uses a shared secret to
 generate and check HMACs over message bodies.
 
 The `TapescriptAuthPlugin` is included in the optional `netaio.asymmetric`
-submodule, which requires the [tapescript](https://pypi.org/project/tapescript)
+submodule, which requires [tapescript](https://pypi.org/project/tapescript)
 as a dependency and allows for customizable authentication/authorization models
 using the tapescript DSL for access controls.
 
@@ -234,9 +301,10 @@ plugin is instantiated with a dict of configuration parameters, and it must
 implement the `CipherPluginProtocol`. Once the plugin has been instantiated, it
 can be passed to the `TCPServer`, `TCPClient`, and `UDPNode` constructors or set
 on the instances themselves. A cipher plugin can also be set on a per-handler
-basis by passing the plugin as a third argument (or as the keyword argument
-`auth_plugin`) to the `on` or `add_handler` method. If a cipher plugin is set
-both on the instance and per-handler, both will be applied to the message.
+basis by passing the plugin as a keyword argument `cipher_plugin` to the `on` or
+`once` decorations, or the `add_handler` or `add_ephemeral_handler` methods (and
+a handful of others). If a cipher plugin is set both on the instance and
+per-handler, both will be applied to the message.
 
 Currently, netaio includes a `Sha256StreamCipherPlugin` that can be used by
 the server and client to encrypt and decrypt messages using a simple symmetric
@@ -466,7 +534,7 @@ environment) using `pip install -r requirements.txt`, and run
 the output separated by test file, instead run
 `find tests/ -name test_*.py -print -exec python {} \;`.
 
-Currently, there are 13 unit tests and 12 e2e tests. The unit tests cover the
+Currently, there are 18 unit tests and 17 e2e tests. The unit tests cover the
 bundled plugins and miscellaneous features. The e2e tests start a server and
 client (or 2 clients), then send messages from the client to the server and
 receive responses; the UDP e2e test suite starts 2 nodes and treats them like a
@@ -477,7 +545,7 @@ tested.
 
 ## License
 
-Copyright (c) 2025 Jonathan Voss (k98kurz)
+Copyright (c) 2026 Jonathan Voss (k98kurz)
 
 Permission to use, copy, modify, and/or distribute this software
 for any purpose with or without fee is hereby granted, provided

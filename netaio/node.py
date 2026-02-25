@@ -16,7 +16,7 @@ from .common import (
     Peer,
     get_ip,
     keys_extractor,
-    make_error_response,
+    make_error_msg,
     auth_error_handler,
     AnyHandler,
     AuthErrorHandler,
@@ -35,7 +35,7 @@ import logging
 
 
 def not_found_handler(*_) -> MessageProtocol | None:
-    return make_error_response("not found")
+    return make_error_msg("not found")
 
 
 class UDPNode:
@@ -89,9 +89,9 @@ class UDPNode:
                 [MessageProtocol, tuple[str, int] | None],
                 list[Hashable]
             ] = keys_extractor,
-            make_error_response: Callable[
+            make_error_msg: Callable[
                 [str], MessageProtocol
-            ] = make_error_response,
+            ] = make_error_msg,
             logger: logging.Logger = default_node_logger,
             auth_plugin: AuthPluginProtocol | None = None,
             cipher_plugin: CipherPluginProtocol | None = None,
@@ -114,10 +114,10 @@ class UDPNode:
             that do not match any registered handler keys.
             `extract_keys` is a function that extracts the keys from a
             message.
-            `make_error_response` is a function that makes an error
-            response.
+            `make_error_msg` is a function that makes an error
+            message.
             If `auth_plugin` is provided, it will be used to check the
-            set the auth_fields of every sent message and check
+            set the `auth_fields` of every sent message and check
             authenticity/authorization of all received messages.
             If `cipher_plugin` is provided, it will be used to encrypt
             and decrypt all messages.
@@ -155,7 +155,7 @@ class UDPNode:
         self.ephemeral_handlers = {}
         self.default_handler = default_handler
         self.extract_keys = extract_keys
-        self.make_error = make_error_response
+        self.make_error = make_error_msg
         self.auth_plugin = auth_plugin
         self.cipher_plugin = cipher_plugin
         self.peer_plugin = peer_plugin or DefaultPeerPlugin()

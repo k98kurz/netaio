@@ -97,6 +97,10 @@ Used for optimization. Returns `True`.
 
 ## Functions
 
+### `make_error_msg(msg: str | bytes, uri: bytes = b'ERROR', /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message, message_type: int | None = None) -> MessageProtocol:`
+
+Make an error message.
+
 ### `validate_message_type_class(message_type_class: type[IntEnum], /, *, suppress_errors: bool = False) -> bool:`
 
 Validates a message type class. Raises `ValueError` for missing or redefined

@@ -16,7 +16,6 @@ from .common import (
     Peer,
     keys_extractor,
     auth_error_handler,
-    make_error_response,
     AnyHandler,
     Handler,
     AuthErrorHandler,
@@ -110,7 +109,7 @@ class TCPClient:
             message.
             If `auth_plugin` is provided, it will be used to check the
             authenticity/authorization of all received messages and set
-            the auth_fields of every sent message.
+            the `auth_fields` of every sent message.
             If `cipher_plugin` is provided, it will be used to encrypt
             and decrypt all messages.
             If `peer_plugin` is provided, it will be used to encode and
@@ -753,7 +752,9 @@ class TCPClient:
         """Start a receive loop for a specific server which will continue
             receiving messages from specified server indefinitely until
             stopped. If a receive loop is already running for this
-            server, returns the existing task.
+            server, returns the existing task. Also returns a
+            `was_running` bool which is `True` if a task was already
+            running and `False` if one was started.
         """
         server = server or self.default_host
         was_running = False

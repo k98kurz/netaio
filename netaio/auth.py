@@ -5,7 +5,7 @@ from .common import (
     MessageProtocol,
     NetworkNodeProtocol,
     PeerPluginProtocol,
-    make_error_response,
+    make_error_msg,
     Message,
     MessageType,
     Header,
@@ -99,7 +99,7 @@ class HMACAuthPlugin:
             body_class: type[BodyProtocol] = Body
         ) -> MessageProtocol:
         """Make an error message that says "HMAC auth failed"."""
-        return make_error_response(
+        return make_error_msg(
             "HMAC auth failed",
             message_class=message_class,
             message_type_class=message_type_class,

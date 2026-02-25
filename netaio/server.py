@@ -14,7 +14,8 @@ from .common import (
     PeerPluginProtocol,
     Peer,
     keys_extractor,
-    make_error_response,
+    make_error_msg,
+    make_not_found_msg,
     auth_error_handler,
     AnyHandler,
     AuthErrorHandler,
@@ -29,7 +30,7 @@ import logging
 
 
 def not_found_handler(*_) -> MessageProtocol | None:
-    return make_error_response("not found")
+    return make_not_found_msg()
 
 
 class TCPServer:
@@ -77,9 +78,9 @@ class TCPServer:
                 [MessageProtocol, tuple[str, int] | None],
                 list[Hashable]
             ] = keys_extractor,
-            make_error_response: Callable[
+            make_error_msg: Callable[
                 [str], MessageProtocol
-            ] = make_error_response,
+            ] = make_error_msg,
             default_handler: AnyHandler = not_found_handler,
             logger: logging.Logger = default_server_logger,
             auth_plugin: AuthPluginProtocol | None = None,
@@ -98,13 +99,13 @@ class TCPServer:
             decode method of the header class.
             `keys_extractor` is a function that extracts the keys from a
             message.
-            `make_error_response` is a function that makes an error
-            response.
+            `make_error_msg` is a function that makes an error
+            message.
             `default_handler` is the default handler to use for messages
             that do not match any registered handler keys.
             If `auth_plugin` is provided, it will be used to check the
             authenticity/authorization of all received messages and set
-            the auth_fields of every sent message.
+            the `auth_fields` of every sent message.
             If `cipher_plugin` is provided, it will be used to encrypt
             and decrypt all messages.
             If `peer_plugin` is provided, it will be used to encode and
@@ -135,7 +136,7 @@ class TCPServer:
         self.body_class = body_class
         self.message_class = message_class or Message
         self.extract_keys = keys_extractor
-        self.make_error = make_error_response
+        self.make_error = make_error_msg
         self.default_handler = default_handler
         self.logger = logger
         self.auth_plugin = auth_plugin

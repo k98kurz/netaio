@@ -4,8 +4,33 @@
     - `add_ephemeral_handler(key, handler, auth_plugin, cipher_plugin)` method
     - `remove_ephemeral_handler(key)` method
     - `@once(key, auth_plugin, cipher_plugin)` decorator method
-- Added `.request()` method to UDPNode and TCPClient, which uses ephemeral handlers
+- Added CRUD methods to UDPNode and TCPClient, which use ephemeral handlers
 scoped to the requested server/node
+    - `.create(...)` sends `CREATE_URI` message
+    - `.request(...)` sends `REQUEST_URI` message
+    - `.update(...)` sends `UPDATE_URI` message
+    - `.delete(...)` sends `DELETE_URI` message
+- Updated `Sha256StreamCipher` with a few security improvements
+    - Derive unique keys for HMAC and for encryption
+    - Include IV in HMAC calculation
+    - Small correction to HMAC implementation
+- Improved TCPClient's multi-server support and connection life-cycle management
+    - `.start_receive_loop(...)` begins an asyncio task to receive from a server
+    if one is not already running
+    - `.stop_receive_loop(...)` stops specific server receive loop
+    - `.stop_all_receive_loops()` stops all receive loops
+    - `.get_receive_loops()` queries active receive loops
+- Added `NOT_PERMITTED` value to `MessageType`
+- Renamed `make_error_response` message generator helper function to `make_error_msg`
+- Added new message generator helper functions:
+    - `make_respond_uri_msg`
+    - `make_ok_msg`
+    - `make_not_found_msg`
+    - `make_not_permitted_msg`
+- Added new `make_message_type_class` function for creating custom message type
+classes that comply with default requirements
+- Added new `validate_message_type_class` function for validating that a custom
+message type class complies with requirements
 
 ## 0.0.8
 

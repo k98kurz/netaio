@@ -41,6 +41,16 @@ class TestMisc(unittest.TestCase):
         decoded = netaio.Header.decode(data, message_type_class=TestMessageType)
         assert decoded.message_type is TestMessageType.TEST
 
+        # negative case
+        class TestMType2(IntEnum):
+            NOT_VALID = 0
+
+        assert not netaio.validate_message_type_class(TestMType2, suppress_errors=True)
+
+        with self.assertRaises(ValueError) as e:
+            netaio.validate_message_type_class(TestMType2)
+        assert 'missing' in str(e.exception), str(e.exception)
+
     def test_Message_encoding_decoding_and_copying(self):
         message = netaio.Message.prepare(
             body=netaio.Body.prepare(b'content', b'uri'),
@@ -110,6 +120,110 @@ class TestMisc(unittest.TestCase):
         # now remove the peer
         node.remove_peer(('0.0.0.0', 8888), b'test id')
         assert len(node.peers) == 0
+
+    def test_make_error_msg(self):
+        msg = netaio.make_error_msg("test error")
+        assert msg.header.message_type == netaio.MessageType.ERROR
+        assert msg.body.content == b'test error'
+        assert msg.body.uri == b'ERROR'
+
+        msg = netaio.make_error_msg(b'test error bytes')
+        assert msg.header.message_type == netaio.MessageType.ERROR
+        assert msg.body.content == b'test error bytes'
+
+        msg = netaio.make_error_msg("not found")
+        assert msg.header.message_type == netaio.MessageType.NOT_FOUND
+
+        msg = netaio.make_error_msg(b'not found')
+        assert msg.header.message_type == netaio.MessageType.NOT_FOUND
+
+        msg = netaio.make_error_msg("auth failed")
+        assert msg.header.message_type == netaio.MessageType.AUTH_ERROR
+
+        msg = netaio.make_error_msg(b'auth failed')
+        assert msg.header.message_type == netaio.MessageType.AUTH_ERROR
+
+        msg = netaio.make_error_msg("not permitted")
+        assert msg.header.message_type == netaio.MessageType.NOT_PERMITTED
+
+        msg = netaio.make_error_msg(b'not permitted')
+        assert msg.header.message_type == netaio.MessageType.NOT_PERMITTED
+
+    def test_make_ok_msg(self):
+        msg = netaio.make_ok_msg()
+        assert msg.header.message_type == netaio.MessageType.OK
+        assert msg.body.content == b''
+        assert msg.body.uri == b''
+
+        msg = netaio.make_ok_msg(content=b'success')
+        assert msg.header.message_type == netaio.MessageType.OK
+        assert msg.body.content == b'success'
+
+        msg = netaio.make_ok_msg(uri=b'/test')
+        assert msg.header.message_type == netaio.MessageType.OK
+        assert msg.body.uri == b'/test'
+
+        msg = netaio.make_ok_msg(content=b'response', uri=b'/api/test')
+        assert msg.header.message_type == netaio.MessageType.OK
+        assert msg.body.content == b'response'
+        assert msg.body.uri == b'/api/test'
+
+    def test_make_not_found_msg(self):
+        msg = netaio.make_not_found_msg()
+        assert msg.header.message_type == netaio.MessageType.NOT_FOUND
+        assert msg.body.content == b'not found'
+        assert msg.body.uri == b''
+
+        msg = netaio.make_not_found_msg("custom message")
+        assert msg.header.message_type == netaio.MessageType.NOT_FOUND
+        assert msg.body.content == b'custom message'
+
+        msg = netaio.make_not_found_msg(b'custom bytes')
+        assert msg.header.message_type == netaio.MessageType.NOT_FOUND
+        assert msg.body.content == b'custom bytes'
+
+        msg = netaio.make_not_found_msg(uri=b'/missing')
+        assert msg.header.message_type == netaio.MessageType.NOT_FOUND
+        assert msg.body.uri == b'/missing'
+
+        msg = netaio.make_not_found_msg(
+            msg="resource not found",
+            uri=b'/api/resource'
+        )
+        assert msg.header.message_type == netaio.MessageType.NOT_FOUND
+        assert msg.body.content == b'resource not found'
+        assert msg.body.uri == b'/api/resource'
+
+    def test_make_respond_uri_msg(self):
+        msg = netaio.make_respond_uri_msg(b'content', b'/api/endpoint')
+        assert msg.header.message_type == netaio.MessageType.RESPOND_URI
+        assert msg.body.content == b'content'
+        assert msg.body.uri == b'/api/endpoint'
+
+    def test_make_not_permitted_msg(self):
+        msg = netaio.make_not_permitted_msg()
+        assert msg.header.message_type == netaio.MessageType.NOT_PERMITTED
+        assert msg.body.content == b'not permitted'
+        assert msg.body.uri == b''
+
+        msg = netaio.make_not_permitted_msg("custom error")
+        assert msg.header.message_type == netaio.MessageType.NOT_PERMITTED
+        assert msg.body.content == b'custom error'
+
+        msg = netaio.make_not_permitted_msg(b'bytes error')
+        assert msg.header.message_type == netaio.MessageType.NOT_PERMITTED
+        assert msg.body.content == b'bytes error'
+
+        msg = netaio.make_not_permitted_msg(uri=b'/api/admin')
+        assert msg.header.message_type == netaio.MessageType.NOT_PERMITTED
+        assert msg.body.uri == b'/api/admin'
+
+        msg = netaio.make_not_permitted_msg(
+            msg="access denied", uri=b'/api/resource'
+        )
+        assert msg.header.message_type == netaio.MessageType.NOT_PERMITTED
+        assert msg.body.content == b'access denied'
+        assert msg.body.uri == b'/api/resource'
 
 
 if __name__ == "__main__":
