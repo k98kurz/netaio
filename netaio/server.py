@@ -308,8 +308,7 @@ class TCPServer:
             server will not be used.
         """
         addr = writer.get_extra_info("peername")
-        self.logger.info("Client connected from %s", addr)
-        self.clients.add(writer)
+        self.logger.debug("Received data from %s", addr)
         header_length = self.header_class.header_length()
         peer_id = self.peer_addrs.get(addr)
         peer = self.peers.get(peer_id) if peer_id is not None else None
