@@ -47,22 +47,20 @@ import asyncio
 
 
 server = TCPServer(port=8888, auth_plugin=HMACAuthPlugin(config={"secret": "test"}))
-auth_plugin2 = HMACAuthPlugin(config={"secret": "adminpassword"})
+auth_plugin2 = HMACAuthPlugin(config={"secret": "adminpassword", "hmac_field": "camh"})
 storage = {}
 
-permission_gate = lambda msg: auth_plugin2.check(msg.auth_data, msg.body)
-
-@server.on(MessageType.CREATE_URI)
+@server.on(MessageType.CREATE_URI, auth_plugin=auth_plugin2)
 async def handle_create(msg: Message, writer: asyncio.StreamWriter):
-    if not permission_gate(msg):
-        return make_not_permitted_msg(uri=msg.body.uri)
     if msg.body.uri in storage:
         return make_error_msg('cannot overwrite', msg.body.uri)
     storage[msg.body.uri] = msg.body.content
-    return make_ok_msg('stored', msg.body.uri)
+    server.logger.info(f'CREATED resource: {msg.body.uri}')
+    return make_ok_msg(b'stored', msg.body.uri)
 
 @server.on(MessageType.REQUEST_URI)
 async def handle_request(msg: Message, writer: asyncio.StreamWriter):
+    server.logger.info(f'REQUESTED resource: {msg.body.uri}')
     if msg.body.uri not in storage:
         return make_not_found_msg(uri=msg.body.uri)
     return make_respond_uri_msg(storage[msg.body.uri], msg.body.uri)
@@ -71,23 +69,21 @@ async def handle_request(msg: Message, writer: asyncio.StreamWriter):
 async def handle_echo(msg: Message, writer: asyncio.StreamWriter):
     return make_respond_uri_msg(msg.body.content, b'echo')
 
-@server.on(MessageType.UPDATE_URI)
+@server.on(MessageType.UPDATE_URI, auth_plugin=auth_plugin2)
 async def handle_update(msg: Message, writer: asyncio.StreamWriter):
-    if not permission_gate(msg):
-        return make_not_permitted_msg(uri=msg.body.uri)
     if msg.body.uri not in storage:
         return make_not_found_msg(uri=msg.body.uri)
     storage[msg.body.uri] = msg.body.content
-    return make_ok_msg('stored', msg.body.uri)
+    server.logger.info(f'UPDATED resource: {msg.body.uri}')
+    return make_ok_msg(b'stored', msg.body.uri)
 
-@server.on(MessageType.DELETE_URI)
+@server.on(MessageType.DELETE_URI, auth_plugin=auth_plugin2)
 async def handle_delete(msg: Message, writer: asyncio.StreamWriter):
-    if not permission_gate(msg):
-        return make_not_permitted_msg(uri=msg.body.uri)
     if msg.body.uri not in storage:
         return make_not_found_msg(uri=msg.body.uri)
     storage.pop(msg.body.uri)
-    return make_ok_msg('deleted', msg.body.uri)
+    server.logger.info(f'DELETED resource: {msg.body.uri}')
+    return make_ok_msg(b'deleted', msg.body.uri)
 
 @server.on(MessageType.SUBSCRIBE_URI)
 async def subscribe(msg: Message, writer: asyncio.StreamWriter):
@@ -119,36 +115,36 @@ import asyncio
 client = TCPClient(
     "127.0.0.1", 8888, auth_plugin=HMACAuthPlugin(config={"secret": "test"})
 )
-auth_plugin2 = HMACAuthPlugin(config={"secret": "adminpassword"})
+auth_plugin2 = HMACAuthPlugin(config={"secret": "adminpassword", "hmac_field": "camh"})
 
 async def run_client():
     # connect, then test the echo endpoint
     await client.connect()
     response = await client.request(b'echo', content=b'test')
     print(response)
-
-    # test full CRUD methods
+    # test full CRUD methods: starting with CREATE
     content = ('testing it' + token_hex(4)).encode()
     response = await client.create(b'test1', content, auth_plugin=auth_plugin2)
     print(response)
-
+    # now READ
     response = await client.request(b'test1')
     assert response.body.content == content, (response.body.content, content)
     print(response)
-
+    # now UPDATE
     new_content = ('testing it' + token_hex(4)).encode()
     response = await client.update(b'test1', new_content, auth_plugin=auth_plugin2)
     print(response)
-
+    # now READ again
     response = await client.request(b'test1')
     assert response.body.content == new_content, (response.body.content, new_content)
     print(response)
-
+    # now DELETE
     response = await client.delete(b'test1', auth_plugin=auth_plugin2)
     print(response)
-
+    # now READ to prove deletion
     response = await client.request(b'test1')
-    assert response.type == MessageType.NOT_FOUND, response.type
+    assert response.header.message_type == MessageType.NOT_FOUND, \
+        response.header.message_type
     print(response)
 
 asyncio.run(run_client())

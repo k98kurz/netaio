@@ -956,12 +956,15 @@ def keys_extractor(
     ]
 
 def make_respond_uri_msg(
-        content: bytes, uri: bytes, *,
+        content: str|bytes, uri: bytes, *,
         message_class: type[MessageProtocol] = Message,
         message_type_class: type[IntEnum] = MessageType,
         body_class: type[BodyProtocol] = Body
     ) -> MessageProtocol:
     """Create a RESPOND_URI message with content and URI."""
+    if isinstance(content, str):
+        content = content.encode()
+
     body = body_class.prepare(
         content=content,
         uri=uri,
@@ -970,12 +973,15 @@ def make_respond_uri_msg(
     return message_class.prepare(body, message_type)
 
 def make_ok_msg(
-        content: bytes = b'', uri: bytes = b'', *,
+        content: str | bytes = b'', uri: bytes = b'', *,
         message_class: type[MessageProtocol] = Message,
         message_type_class: type[IntEnum] = MessageType,
         body_class: type[BodyProtocol] = Body
     ) -> MessageProtocol:
     """Create an OK message with optional content and URI."""
+    if isinstance(content, str):
+        content = content.encode()
+
     body = body_class.prepare(
         content=content,
         uri=uri,
