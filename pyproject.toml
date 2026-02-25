@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/k98kurz/netaio"
+"Homepage" = "https://pycelium.com"
 "Repository" = "https://github.com/k98kurz/netaio"
 "Bug Tracker" = "https://github.com/k98kurz/netaio/issues"
 
