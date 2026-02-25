@@ -418,6 +418,9 @@ class MessageType(IntEnum):
         `PEER_DISCOVERED`, `ERROR`, `AUTH_ERROR`, `NOT_FOUND`,
         `NOT_PERMITTED`, `DISCONNECT`.
 
+        Values 0-30 are reserved for base protocol upgrades. Custom
+        message types must use values >= 31.
+
         To create a custom `IntEnum` for custom network protocols, use
         the `make_message_type_class` function to create the type, or
         use `validate_message_type_class` function to validate one made
@@ -449,13 +452,24 @@ def make_message_type_class(
     """Makes a valid `IntEnum` that is essentially a subclass of
         MessageType, containing all the required default message types.
         Raises `ValueError` if one of the `new_message_types` attempts
-        to overwrite a built-in message type for forward-compabitility
-        between uses of this library.
+        to overwrite a built-in message type or use a reserved value
+        (0-30) for forward-compabitility between uses of this library.
     """
     default_message_types = {m.name: m.value for m in MessageType}
     for k in default_message_types:
         if k in new_message_types:
             raise ValueError(f'cannot overwrite default message type {k}')
+    for custom_name, value in new_message_types.items():
+        if value <= 30:
+            raise ValueError(
+                f'custom message type {custom_name} uses reserved value {value}; '
+                f'values 0-30 are reserved for base protocol upgrades'
+            )
+        elif value > 255:
+            raise ValueError(
+                f'custom message type {custom_name} uses value above the upper '
+                f'limit of 255: {value}'
+            )
     return cast(
         type[IntEnum],
         IntEnum(name, {**default_message_types, **new_message_types})
@@ -466,9 +480,10 @@ def validate_message_type_class(
         suppress_errors: bool = False
     ) -> bool:
     """Validates a message type class. Raises `ValueError` for missing
-        or redefined default message types or `TypeError` for a
-        non-`type[IntEnum]` if `suppress_errors` is not made `True`.
-        Returns `True` if it is valid and `False` otherwise.
+        or redefined default message types, or for custom types using
+        reserved values (0-30), or `TypeError` for a non-`type[IntEnum]`
+        if `suppress_errors` is not made `True`. Returns `True` if it is
+        valid and `False` otherwise.
     """
     mtcname = message_type_class.__name__
     if not issubclass(message_type_class, IntEnum):
@@ -484,6 +499,20 @@ def validate_message_type_class(
             raise ValueError(
                 f'{mtcname} redefined required {m.name} from {m.value} to '
                 f'{mtypes[m.name]}'
+            )
+    required_names = {m.name for m in MessageType}
+    for name, value in mtypes.items():
+        if name not in required_names and value <= 30:
+            if suppress_errors: return False
+            raise ValueError(
+                f'{mtcname} custom type {name} uses reserved value {value}; '
+                f'values 0-30 are reserved for base protocol upgrades'
+            )
+        elif value > 255:
+            if suppress_errors: return False
+            raise ValueError(
+                f'custom message type {name} uses value above the upper limit '
+                f'of 255: {value}'
             )
     return True
 

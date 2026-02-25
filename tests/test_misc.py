@@ -41,16 +41,6 @@ class TestMisc(unittest.TestCase):
         decoded = netaio.Header.decode(data, message_type_class=TestMessageType)
         assert decoded.message_type is TestMessageType.TEST
 
-        # negative case
-        class TestMType2(IntEnum):
-            NOT_VALID = 0
-
-        assert not netaio.validate_message_type_class(TestMType2, suppress_errors=True)
-
-        with self.assertRaises(ValueError) as e:
-            netaio.validate_message_type_class(TestMType2)
-        assert 'missing' in str(e.exception), str(e.exception)
-
     def test_Message_encoding_decoding_and_copying(self):
         message = netaio.Message.prepare(
             body=netaio.Body.prepare(b'content', b'uri'),
@@ -225,6 +215,208 @@ class TestMisc(unittest.TestCase):
         assert msg.body.content == b'access denied'
         assert msg.body.uri == b'/api/resource'
 
+    def test_make_message_type_class_e2e(self):
+        valid_type = netaio.make_message_type_class(
+            "ValidMessageType",
+            {"CUSTOM_1": 50, "CUSTOM_2": 100}
+        )
+        assert hasattr(valid_type, "CUSTOM_1")
+        assert hasattr(valid_type, "CUSTOM_2")
+        assert valid_type.CUSTOM_1.value == 50
+        assert valid_type.CUSTOM_2.value == 100
+        assert hasattr(valid_type, "REQUEST_URI")
+        assert valid_type.REQUEST_URI.value == 0
+
+        for i in range(31):
+            with self.assertRaises(ValueError) as e:
+                netaio.make_message_type_class("BadType", {"BAD": i})
+            assert "reserved value" in str(e.exception).lower() \
+                or "cannot overwrite" in str(e.exception).lower(), e.exception
+            assert str(i) in str(e.exception)
+
+        with self.assertRaises(ValueError) as e:
+            netaio.make_message_type_class("BadType", {"BAD": 256})
+        assert "above the upper limit" in str(e.exception), e.exception
+
+        header = netaio.Header(
+            message_type=valid_type.CUSTOM_1,
+            auth_length=0,
+            body_length=0,
+            checksum=0,
+            message_type_class=valid_type,
+        )
+        data = header.encode()
+        decoded = netaio.Header.decode(data, message_type_class=valid_type)
+        assert decoded.message_type is valid_type.CUSTOM_1
+
+    def test_validate_message_type_class_e2e(self):
+        class ValidMessageType(IntEnum):
+            REQUEST_URI = 0
+            RESPOND_URI = 1
+            CREATE_URI = 2
+            UPDATE_URI = 3
+            DELETE_URI = 4
+            SUBSCRIBE_URI = 5
+            UNSUBSCRIBE_URI = 6
+            PUBLISH_URI = 7
+            NOTIFY_URI = 8
+            ADVERTISE_PEER = 9
+            OK = 10
+            CONFIRM_SUBSCRIBE = 11
+            CONFIRM_UNSUBSCRIBE = 12
+            PEER_DISCOVERED = 13
+            ERROR = 20
+            AUTH_ERROR = 23
+            NOT_FOUND = 24
+            NOT_PERMITTED = 25
+            DISCONNECT = 30
+            CUSTOM_TYPE = 50
+
+        assert netaio.validate_message_type_class(ValidMessageType)
+
+        class MissingType(IntEnum):
+            REQUEST_URI = 0
+            OK = 10
+            DISCONNECT = 30
+
+        assert not netaio.validate_message_type_class(
+            MissingType, suppress_errors=True
+        )
+        with self.assertRaises(ValueError) as e:
+            netaio.validate_message_type_class(MissingType)
+        assert "missing" in str(e.exception).lower(), e.exception
+
+        class RedefinedType(IntEnum):
+            REQUEST_URI = 0
+            RESPOND_URI = 99
+
+        assert not netaio.validate_message_type_class(
+            RedefinedType, suppress_errors=True
+        )
+        with self.assertRaises(ValueError) as e:
+            netaio.validate_message_type_class(RedefinedType)
+        assert "redefined" in str(e.exception).lower()
+
+        class ReservedValue15Type(IntEnum):
+            REQUEST_URI = 0
+            RESPOND_URI = 1
+            CREATE_URI = 2
+            UPDATE_URI = 3
+            DELETE_URI = 4
+            SUBSCRIBE_URI = 5
+            UNSUBSCRIBE_URI = 6
+            PUBLISH_URI = 7
+            NOTIFY_URI = 8
+            ADVERTISE_PEER = 9
+            OK = 10
+            CONFIRM_SUBSCRIBE = 11
+            CONFIRM_UNSUBSCRIBE = 12
+            PEER_DISCOVERED = 13
+            ERROR = 20
+            AUTH_ERROR = 23
+            NOT_FOUND = 24
+            NOT_PERMITTED = 25
+            DISCONNECT = 30
+            BAD_CUSTOM = 15
+
+        assert not netaio.validate_message_type_class(
+            ReservedValue15Type, suppress_errors=True
+        )
+        with self.assertRaises(ValueError) as e:
+            netaio.validate_message_type_class(ReservedValue15Type)
+        assert "reserved value" in str(e.exception).lower()
+        assert "15" in str(e.exception)
+
+        class NotIntEnum:
+            pass
+
+        assert not netaio.validate_message_type_class(
+            NotIntEnum, suppress_errors=True
+        )
+        with self.assertRaises(TypeError) as e:
+            netaio.validate_message_type_class(NotIntEnum)
+        assert "subclass" in str(e.exception).lower(), e.exception
+        assert "intenum" in str(e.exception).lower(), e.exception
+
+        class Boundary29Type(IntEnum):
+            REQUEST_URI = 0
+            RESPOND_URI = 1
+            CREATE_URI = 2
+            UPDATE_URI = 3
+            DELETE_URI = 4
+            SUBSCRIBE_URI = 5
+            UNSUBSCRIBE_URI = 6
+            PUBLISH_URI = 7
+            NOTIFY_URI = 8
+            ADVERTISE_PEER = 9
+            OK = 10
+            CONFIRM_SUBSCRIBE = 11
+            CONFIRM_UNSUBSCRIBE = 12
+            PEER_DISCOVERED = 13
+            ERROR = 20
+            AUTH_ERROR = 23
+            NOT_FOUND = 24
+            NOT_PERMITTED = 25
+            DISCONNECT = 30
+            BAD_CUSTOM = 29
+
+        assert not netaio.validate_message_type_class(
+            Boundary29Type, suppress_errors=True
+        )
+        with self.assertRaises(ValueError) as e:
+            netaio.validate_message_type_class(Boundary29Type)
+        assert "reserved value" in str(e.exception).lower()
+        assert "29" in str(e.exception)
+
+        class Boundary31Type(IntEnum):
+            REQUEST_URI = 0
+            RESPOND_URI = 1
+            CREATE_URI = 2
+            UPDATE_URI = 3
+            DELETE_URI = 4
+            SUBSCRIBE_URI = 5
+            UNSUBSCRIBE_URI = 6
+            PUBLISH_URI = 7
+            NOTIFY_URI = 8
+            ADVERTISE_PEER = 9
+            OK = 10
+            CONFIRM_SUBSCRIBE = 11
+            CONFIRM_UNSUBSCRIBE = 12
+            PEER_DISCOVERED = 13
+            ERROR = 20
+            AUTH_ERROR = 23
+            NOT_FOUND = 24
+            NOT_PERMITTED = 25
+            DISCONNECT = 30
+            GOOD_CUSTOM = 31
+
+        assert netaio.validate_message_type_class(Boundary31Type) is True
+
+        class TooLargeType(IntEnum):
+            REQUEST_URI = 0
+            RESPOND_URI = 1
+            CREATE_URI = 2
+            UPDATE_URI = 3
+            DELETE_URI = 4
+            SUBSCRIBE_URI = 5
+            UNSUBSCRIBE_URI = 6
+            PUBLISH_URI = 7
+            NOTIFY_URI = 8
+            ADVERTISE_PEER = 9
+            OK = 10
+            CONFIRM_SUBSCRIBE = 11
+            CONFIRM_UNSUBSCRIBE = 12
+            PEER_DISCOVERED = 13
+            ERROR = 20
+            AUTH_ERROR = 23
+            NOT_FOUND = 24
+            NOT_PERMITTED = 25
+            DISCONNECT = 30
+            BAD_VALUE = 256
+
+        assert not netaio.validate_message_type_class(
+            TooLargeType, suppress_errors=True
+        )
 
 if __name__ == "__main__":
     unittest.main()

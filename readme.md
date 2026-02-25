@@ -220,6 +220,56 @@ single machine by changing the `.port` property after one has started.)
 Note also that when a peer is removed from the node's peer list, it is also
 unsubscribed from all URIs.
 
+### Custom Message Types
+
+Custom message type classes can be created for protocols. Two helper
+functions are provided for creating and validating custom message types:
+
+- `make_message_type_class(name: str, new_message_types: dict[str, int])`
+  Creates a new IntEnum that includes all default message types plus any
+  custom types defined.
+
+- `validate_message_type_class(message_type_class: type[IntEnum], suppress_errors: bool = False)`
+  Validates a message type class created declaratively. Returns `True` if valid,
+  `False` if invalid with `suppress_errors=True`, or raises an exception
+  otherwise.
+
+**Reserved Values**: Values 0-30 are reserved for base protocol upgrades.
+Custom message types must use values >= 31.
+
+**Max Value**: The maximum allowable value is 255. (Serialized as 1 byte.)
+
+Example using `make_message_type_class`:
+
+```python
+from netaio import make_message_type_class
+
+CustomMessageType = make_message_type_class(
+    "CustomMessageType",
+    {"CUSTOM_ACTION": 50, "ANOTHER_ACTION": 51}
+)
+```
+
+Example using declarative syntax with validation:
+
+```python
+from netaio import validate_message_type_class
+from enum import IntEnum
+
+class MyMessageType(IntEnum):
+    REQUEST_URI = 0
+    RESPOND_URI = 1
+    # ... all required default types ...
+    DISCONNECT = 30
+    CUSTOM_ACTION = 50  # Must be >= 31
+
+validate_message_type_class(MyMessageType)  # Raises ValueError if invalid
+```
+
+Using a reserved value (0-30) for a custom message type causes
+functions to raise a `ValueError` with a clear message indicating the
+issue.
+
 ### Plugin System
 
 The plugin system is designed to be simple and easy to understand. Each plugin
@@ -251,7 +301,7 @@ communication -- each plugin instantiation should be configured to use its own
 writeable auth data fields.
 
 Currently, netaio includes an `HMACAuthPlugin` that can be used by the server
-and client to authenticate and authorize requests. This uses a shared secret to
+and client to authenticate and authorize messages. This uses a shared secret to
 generate and check HMACs over message bodies.
 
 The `TapescriptAuthPlugin` is included in the optional `netaio.asymmetric`
@@ -326,7 +376,9 @@ layer of encryption with automatic peer management and local peer data including
 <summary>Example of additional encryption layer</summary>
 
 ```python
-from netaio import TCPServer, TCPClient, Sha256StreamCipherPlugin, MessageType, Body, Message
+from netaio import (
+    TCPServer, TCPClient, Sha256StreamCipherPlugin, MessageType, Body, Message
+)
 import asyncio
 
 outer_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "test"})
@@ -534,7 +586,7 @@ environment) using `pip install -r requirements.txt`, and run
 the output separated by test file, instead run
 `find tests/ -name test_*.py -print -exec python {} \;`.
 
-Currently, there are 18 unit tests and 17 e2e tests. The unit tests cover the
+Currently, there are 20 unit tests and 17 e2e tests. The unit tests cover the
 bundled plugins and miscellaneous features. The e2e tests start a server and
 client (or 2 clients), then send messages from the client to the server and
 receive responses; the UDP e2e test suite starts 2 nodes and treats them like a

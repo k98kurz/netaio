@@ -31,6 +31,8 @@ scoped to the requested server/node
 classes that comply with default requirements
 - Added new `validate_message_type_class` function for validating that a custom
 message type class complies with requirements
+- Reserved message type values 0-30 for future base protocol updates; enforce no
+message type values above 255
 
 ## 0.0.8
 

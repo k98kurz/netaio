@@ -256,8 +256,8 @@ class TestTCPE2E(unittest.TestCase):
 
     def test_ephemeral_handler_request_response_pattern(self):
         async def run_test():
-            server_log: list[netaio.Message] = []
-            client_log: list[netaio.Message] = []
+            server_log = []
+            client_log = []
             auth_plugin = netaio.HMACAuthPlugin(config={"secret": "test"})
             cipher_plugin = netaio.Sha256StreamCipherPlugin(config={"key": "test"})
 
