@@ -52,7 +52,7 @@ that locking script will be used instead of the plugin's locking script.
 
 ##### `error(message_class: type = Message, message_type_class: type = <enum 'MessageType'>, header_class: type = Header, auth_fields_class: type = AuthFields, body_class: type = Body) -> MessageProtocol:`
 
-Make an error message that says "HMAC auth failed".
+Make an error message that says "tapescript auth failed".
 
 ##### `@staticmethod is_peer_specific() -> bool:`
 

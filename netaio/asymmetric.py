@@ -146,7 +146,7 @@ class TapescriptAuthPlugin:
             auth_fields_class: type[AuthFieldsProtocol] = AuthFields,
             body_class: type[BodyProtocol] = Body
         ) -> MessageProtocol:
-        """Make an error message that says "HMAC auth failed"."""
+        """Make an error message that says "tapescript auth failed"."""
         return make_error_msg(
             "tapescript auth failed",
             message_class=message_class,
