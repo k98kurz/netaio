@@ -294,7 +294,9 @@ and per-handler, both will be checked before the handler function is called, and
 both will be applied to the response body; the per-handler plugin will be able to
 overwrite any auth fields set by the instance plugin, which may break
 communication -- each plugin instantiation should be configured to use its own
-writeable auth data fields.
+writeable auth data fields. Fields that are safe to reuse are `nonce` and `ts`,
+as long as plugins are configured to only write those fields if they are not
+already populated; see the bundled plugins for example implementations.
 
 Currently, netaio includes an `HMACAuthPlugin` that can be used by the server
 and client to authenticate and authorize messages. This uses a shared secret to
@@ -313,7 +315,10 @@ from netaio import TCPServer, TCPClient, HMACAuthPlugin, MessageType, Body, Mess
 import asyncio
 
 outer_auth_plugin = HMACAuthPlugin(config={"secret": "test"})
-inner_auth_plugin = HMACAuthPlugin(config={"secret": "tset", "hmac_field": "camh"})
+inner_auth_plugin = HMACAuthPlugin(config={
+    "secret": "tset",
+    "hmac_field": "camh" # must be different to avoid overwriting the outer auth field
+})
 server = TCPServer(port=8888, auth_plugin=outer_auth_plugin)
 client = TCPClient(host="127.0.0.1", port=8888, auth_plugin=outer_auth_plugin)
 
@@ -350,7 +355,9 @@ on the instances themselves. A cipher plugin can also be set on a per-handler
 basis by passing the plugin as a keyword argument `cipher_plugin` to the `on` or
 `once` decorations, or the `add_handler` or `add_ephemeral_handler` methods (and
 a handful of others). If a cipher plugin is set both on the instance and
-per-handler, both will be applied to the message.
+per-handler, both will be applied to the message, and care must be taken to
+configure the inner plugin so that it does not overwrite the fields of the outer
+plugin.
 
 Currently, netaio includes a `Sha256StreamCipherPlugin` that can be used by
 the server and client to encrypt and decrypt messages using a simple symmetric
@@ -378,7 +385,10 @@ from netaio import (
 import asyncio
 
 outer_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "test"})
-inner_cipher_plugin = Sha256StreamCipherPlugin(config={"key": "tset", "iv_field": "iv2"})
+inner_cipher_plugin = Sha256StreamCipherPlugin(config={
+    "key": "tset",
+    "iv_field": "iv2" # must be changed to avoid overwriting the outer auth field
+})
 server = TCPServer(port=8888, cipher_plugin=outer_cipher_plugin)
 client = TCPClient(host="127.0.0.1", port=8888, cipher_plugin=outer_cipher_plugin)
 
@@ -440,9 +450,9 @@ custom plugins:
 from netaio import HMACAuthPlugin
 auth_plugin = HMACAuthPlugin({
     "secret": "we attack at dawn",
-    "hmac_field": "hmac", #default
-    "nonce_field": "nonce", # default
-    "ts_field": "ts", # default
+    "hmac_field": "hmac", # default; must be changed for inner plugin
+    "nonce_field": "nonce", # default; can be used by all plugins at all layers
+    "ts_field": "ts", # default; can be used by all plugins at all layers
 })
 ```
 </details>
@@ -454,7 +464,7 @@ auth_plugin = HMACAuthPlugin({
 from netaio import Sha256StreamCipherPlugin
 cipher_plugin = Sha256StreamCipherPlugin({
     "key": "the key to success is held by people better than you",
-    "iv_field": "iv", # default
+    "iv_field": "iv", # default; must be changed for inner cipher plugins
     "encrypt_uri": True, # default; should be False for inner cipher plugins
 })
 ```
@@ -488,9 +498,9 @@ witness_func = lambda seed, sigfields: tapescript.make_taproot_witness_keyspend(
 auth_plugin = TapescriptAuthPlugin({
     'seed': seed,
     'lock': lock,
-    'nonce_field': 'nonce', # default
-    'ts_field': 'ts', # default
-    'witness_field': 'witness', # default
+    'nonce_field': 'nonce', # default; can be used by all plugins at all layers
+    'ts_field': 'ts', # default; can be used by all plugins at all layers
+    'witness_field': 'witness', # default; must be changed for inner plugin
     'witness_func': witness_func,
     'contracts': {}, # default
     'plugins': {}, # default

@@ -110,9 +110,9 @@ class TapescriptAuthPlugin:
             peer_plugin: PeerPluginProtocol|None = None,
         ) -> bool:
         """Check the witness script. If the peer is set, and the
-            peer_plugin parses peer.data to a dict containing a "lock",
-            and self.use_peer_lock is True, that locking script will be
-            used instead of the plugin's locking script.
+            `peer_plugin` parses `peer.data` to a dict containing a
+            "lock", and `self.use_peer_lock` is `True`, that locking
+            script will be used instead of the plugin's locking script.
         """
         ts_raw = auth_fields.fields.get(self.ts_field, 0)
         ts = ts_raw if isinstance(ts_raw, int) else int.from_bytes(ts_raw, 'big')
@@ -191,10 +191,8 @@ class X25519CipherPlugin(CipherPluginProtocol):
             node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
             peer_plugin: PeerPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Encrypt the message body, setting the self.iv_field in the
-            auth_data. This will overwrite any existing value in that
-            auth_data field. If the self.encrypt_uri is True, the uri
-            will be encrypted as well as the content.
+        """Encrypt the message body. If `self.encrypt_uri` is `True`,
+            the uri will be encrypted as well as the content.
         """
         if peer is None or peer_plugin is None:
             raise ValueError("peer and peer_plugin must be provided")
@@ -232,8 +230,8 @@ class X25519CipherPlugin(CipherPluginProtocol):
             node: NetworkNodeProtocol|None = None, peer: Peer|None = None,
             peer_plugin: PeerPluginProtocol|None = None
         ) -> MessageProtocol:
-        """Decrypt the message body, reading the self.iv_field from
-            the auth_data. Returns a new message with the decrypted body.
+        """Decrypt the message body. Returns a new message with the
+            decrypted body.
         """
         if peer is None or peer_plugin is None:
             raise ValueError("peer and peer_plugin must be provided")

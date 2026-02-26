@@ -46,9 +46,9 @@ function with the seed and the sigfields dict to produce a witness.
 
 ##### `check(auth_fields: AuthFieldsProtocol, body: BodyProtocol, node: netaio.common.NetworkNodeProtocol | None = None, peer: netaio.common.Peer | None = None, peer_plugin: netaio.common.PeerPluginProtocol | None = None) -> bool:`
 
-Check the witness script. If the peer is set, and the peer_plugin parses
-peer.data to a dict containing a "lock", and self.use_peer_lock is True, that
-locking script will be used instead of the plugin's locking script.
+Check the witness script. If the peer is set, and the `peer_plugin` parses
+`peer.data` to a dict containing a "lock", and `self.use_peer_lock` is `True`,
+that locking script will be used instead of the plugin's locking script.
 
 ##### `error(message_class: type = Message, message_type_class: type = <enum 'MessageType'>, header_class: type = Header, auth_fields_class: type = AuthFields, body_class: type = Body) -> MessageProtocol:`
 
@@ -82,14 +82,12 @@ the uri; the default is False.
 
 ##### `encrypt(message: MessageProtocol, node: netaio.common.NetworkNodeProtocol | None = None, peer: netaio.common.Peer | None = None, peer_plugin: netaio.common.PeerPluginProtocol | None = None) -> MessageProtocol:`
 
-Encrypt the message body, setting the self.iv_field in the auth_data. This will
-overwrite any existing value in that auth_data field. If the self.encrypt_uri is
-True, the uri will be encrypted as well as the content.
+Encrypt the message body. If `self.encrypt_uri` is `True`, the uri will be
+encrypted as well as the content.
 
 ##### `decrypt(message: MessageProtocol, node: netaio.common.NetworkNodeProtocol | None = None, peer: netaio.common.Peer | None = None, peer_plugin: netaio.common.PeerPluginProtocol | None = None) -> MessageProtocol:`
 
-Decrypt the message body, reading the self.iv_field from the auth_data. Returns
-a new message with the decrypted body.
+Decrypt the message body. Returns a new message with the decrypted body.
 
 ##### `@staticmethod is_peer_specific() -> bool:`
 

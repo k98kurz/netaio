@@ -47,7 +47,7 @@ list[Hashable]]
 
 #### Methods
 
-##### `__init__(host: str = '127.0.0.1', port: int = 8888, /, *, timeout_error_handler: TimeoutErrorHandler | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x7a7040de79c0>, peer_plugin: PeerPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None, logger: logging.Logger = <Logger netaio.client (INFO)>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x7a70416e9e40>, message_class: type[MessageProtocol] = Message, body_class: type[BodyProtocol] = Body, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, message_type_class: type[IntEnum] = <enum 'MessageType'>, header_class: type[HeaderProtocol] = Header, local_peer: Peer | None = None):`
+##### `__init__(host: str = '127.0.0.1', port: int = 8888, /, *, timeout_error_handler: TimeoutErrorHandler | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x78a5047e3920>, peer_plugin: PeerPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, auth_plugin: AuthPluginProtocol | None = None, logger: logging.Logger = <Logger netaio.client (INFO)>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x78a5050e5e40>, message_class: type[MessageProtocol] = Message, body_class: type[BodyProtocol] = Body, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, message_type_class: type[IntEnum] = <enum 'MessageType'>, header_class: type[HeaderProtocol] = Header, local_peer: Peer | None = None):`
 
 Initialize the TCPClient. `host` is the default host IPv4 address to connect to.
 `port` is the default port to connect to. `local_peer` is the local peer
@@ -344,7 +344,7 @@ netaio.common.MessageProtocol | None]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', /, *, auth_error_handler: Callable = <function auth_error_handler at 0x7a7040de79c0>, peer_plugin: netaio.common.PeerPluginProtocol | None = None, cipher_plugin: netaio.common.CipherPluginProtocol | None = None, auth_plugin: netaio.common.AuthPluginProtocol | None = None, logger: Logger = <Logger netaio.server (INFO)>, default_handler: Union = <function not_found_handler at 0x7a7040dfce00>, make_error_msg: Callable = <function make_error_msg at 0x7a7040de77e0>, keys_extractor: Callable = <function keys_extractor at 0x7a70416e9e40>, message_class: type[netaio.common.MessageProtocol] | None = None, body_class: type = Body, auth_fields_class: type = AuthFields, message_type_class: type = <enum 'MessageType'>, header_class: type[netaio.common.HeaderProtocol] | None = None, local_peer: netaio.common.Peer | None = None):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', /, *, auth_error_handler: Callable = <function auth_error_handler at 0x78a5047e3920>, peer_plugin: netaio.common.PeerPluginProtocol | None = None, cipher_plugin: netaio.common.CipherPluginProtocol | None = None, auth_plugin: netaio.common.AuthPluginProtocol | None = None, logger: Logger = <Logger netaio.server (INFO)>, default_handler: Union = <function not_found_handler at 0x78a5047f8d60>, make_error_msg: Callable = <function make_error_msg at 0x78a5047e3740>, keys_extractor: Callable = <function keys_extractor at 0x78a5050e5e40>, message_class: type[netaio.common.MessageProtocol] | None = None, body_class: type = Body, auth_fields_class: type = AuthFields, message_type_class: type = <enum 'MessageType'>, header_class: type[netaio.common.HeaderProtocol] | None = None, local_peer: netaio.common.Peer | None = None):`
 
 Initialize the TCPServer. `interface` is the interface to listen on. `port` is
 the port to listen on. `local_peer` is the local peer information for this
@@ -556,7 +556,7 @@ list[Hashable]]
 
 #### Methods
 
-##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer | None = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: AnyHandler = <function not_found_handler at 0x7a7040dfe3e0>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x7a70416e9e40>, make_error_msg: Callable[[str], MessageProtocol] = <function make_error_msg at 0x7a7040de77e0>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, peer_plugin: PeerPluginProtocol | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x7a7040de79c0>, timeout_error_handler: TimeoutErrorHandler | None = None, ignore_own_ip: bool = True):`
+##### `__init__(port: int = 8888, interface: str = '0.0.0.0', multicast_group: str = '224.0.0.1', local_peer: Peer | None = None, header_class: type[HeaderProtocol] = Header, message_type_class: type[IntEnum] = <enum 'MessageType'>, auth_fields_class: type[AuthFieldsProtocol] = AuthFields, body_class: type[BodyProtocol] = Body, message_class: type[MessageProtocol] = Message, default_handler: AnyHandler = <function not_found_handler at 0x78a5047fa340>, extract_keys: Callable[[MessageProtocol, tuple[str, int] | None], list[Hashable]] = <function keys_extractor at 0x78a5050e5e40>, make_error_msg: Callable[[str], MessageProtocol] = <function make_error_msg at 0x78a5047e3740>, logger: logging.Logger = <Logger netaio.node (INFO)>, auth_plugin: AuthPluginProtocol | None = None, cipher_plugin: CipherPluginProtocol | None = None, peer_plugin: PeerPluginProtocol | None = None, auth_error_handler: AuthErrorHandler = <function auth_error_handler at 0x78a5047e3920>, timeout_error_handler: TimeoutErrorHandler | None = None, ignore_own_ip: bool = True):`
 
 Initialize the UDPNode. `port` is the port to listen on. `interface` is the
 interface to listen on. `multicast_group` is the multicast group to join.
@@ -1407,11 +1407,11 @@ used to determine which handler to call for a given message, and it returns two
 keys: one that includes both the message type and the body uri, and one that is
 just the message type.
 
-### `make_respond_uri_msg(content: bytes, uri: bytes, /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
+### `make_respond_uri_msg(content: str | bytes, uri: bytes, /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
 
 Create a RESPOND_URI message with content and URI.
 
-### `make_ok_msg(content: bytes = b'', uri: bytes = b'', /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
+### `make_ok_msg(content: str | bytes = b'', uri: bytes = b'', /, *, body_class: type[BodyProtocol] = Body, message_type_class: type[IntEnum] = <enum 'MessageType'>, message_class: type[MessageProtocol] = Message) -> MessageProtocol:`
 
 Create an OK message with optional content and URI.
 
