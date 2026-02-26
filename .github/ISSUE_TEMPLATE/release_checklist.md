@@ -22,3 +22,4 @@ Once all other issues are complete, prepare to release the next version.
 - [ ] Close milestone on GitHub
 - [ ] Push tag and make release on GitHub
 - [ ] Update PyPI
+- [ ] E2e tests across network
