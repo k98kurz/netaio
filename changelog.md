@@ -1,5 +1,6 @@
 ## 0.0.9
 
+- Fixed for compatibility with Python 3.12+
 - Added ephemeral handlers to UDPNode, TCPClient, and TCPServer:
     - `add_ephemeral_handler(key, handler, auth_plugin, cipher_plugin)` method
     - `remove_ephemeral_handler(key)` method
